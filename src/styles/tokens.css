@@ -1,0 +1,83 @@
+/* ==========================================================================
+   AGENT / ZERO — tokens.css
+   AZ-DESIGN v1.0 设计令牌。所有颜色、间距、字号只在此处定义一次。
+   ========================================================================== */
+:root {
+  /* 色彩语义（DESIGN_SYSTEM §2.1） */
+  --void: #07090d;
+  --panel: #10151d;
+  --panel-2: #0c1117;
+  --raised: #17212c;
+  --border: #2b3845;
+  --border-soft: rgba(43, 56, 69, 0.55);
+  --border-faint: rgba(43, 56, 69, 0.3);
+  --text-1: #e8edf2;
+  --text-2: #a6b5c1;
+  --text-3: #6f808d;
+  --signal: #77d8ec;
+  --attention: #f0bd78;
+  --success: #80d9b4;
+  --error: #ff8585;
+
+  --signal-dim: rgba(119, 216, 236, 0.16);
+  --signal-line: rgba(119, 216, 236, 0.42);
+  --attention-dim: rgba(240, 189, 120, 0.14);
+  --success-dim: rgba(128, 217, 180, 0.14);
+  --error-dim: rgba(255, 133, 133, 0.14);
+
+  /* 空间尺度：4px 基准，组件间距 8 的倍数（DESIGN_SYSTEM §2.3） */
+  --u: 4px;
+  --gap-1: 8px;
+  --gap-2: 16px;
+  --gap-3: 24px;
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+
+  /* 字体（全部为系统字体栈，零远程字体请求，符合 P0 资源本地化） */
+  --font-sans: 'Inter', 'Inter var', 'Helvetica Neue', 'Noto Sans SC', 'Source Han Sans SC',
+    'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', Consolas, 'Liberation Mono', monospace;
+
+  --fs-micro: 10.5px;
+  --fs-tag: 11.5px;
+  --fs-body: 13px;
+  --fs-explain: 14.5px;
+  --fs-title: 17px;
+  --fs-page: 30px;
+  --fs-mega: clamp(38px, 7vw, 74px);
+
+  --track: 0.18em;
+  --track-tight: 0.06em;
+
+  /* 动效节奏（DESIGN_SYSTEM §10） */
+  --dur-fast: 150ms;
+  --dur-mid: 240ms;
+  --dur-slow: 620ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0.02, 0.28, 1);
+
+  /* 舞台内部层级：装饰与画布在下，二维投影层居中，控制条必须在最上层，
+     否则切到二维后返回三维的按钮会被盖住（曾出现的真实缺陷） */
+  --layer-vignette: 2;
+  --layer-stage: 1;
+  --layer-grid: 3;
+  --layer-projection: 4;
+  --layer-chrome: 20;
+  --layer-drawer-scrim: 30;
+  --layer-drawer: 31;
+  --layer-boot: 40;
+  --layer-toast: 50;
+
+  --shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* 空间与层级：桌面 1440×900 为基准（DESIGN_SYSTEM §6） */
+:root {
+  --topbar-h: 60px;
+  --dock-w: 232px;
+  --dock-w-min: 60px;
+  --inspect-w: 332px;
+  --status-h: 136px;
+  --stage-pad: 20px;
+}

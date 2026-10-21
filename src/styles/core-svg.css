@@ -1,0 +1,132 @@
+/* ==========================================================================
+   AGENT / ZERO — core-svg.css
+   2D 投影视图 / WebGL 兜底视图的图形语法（与 3D 共用同一份几何参数）
+   ========================================================================== */
+.svg-stage {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 6px 0;
+}
+.svg-stage svg {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: visible;
+}
+.svg-labels text {
+  fill: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-anchor: middle;
+}
+.svg-facet {
+  fill: none;
+  stroke: rgba(140, 190, 210, 0.32);
+  stroke-width: 0.8;
+}
+.svg-shell {
+  stroke: rgba(160, 200, 220, 0.4);
+  stroke-width: 0.9;
+}
+.svg-energy {
+  fill: none;
+  stroke: rgba(190, 240, 255, 0.55);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+.svg-constraint {
+  fill: none;
+  stroke: rgba(119, 216, 236, 0.28);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 5;
+}
+.svg-ring {
+  fill: none;
+  stroke: rgba(170, 190, 208, 0.72);
+  stroke-width: 1.5;
+}
+.svg-ring-halo {
+  fill: none;
+  stroke: rgba(119, 216, 236, 0.14);
+  stroke-width: 5;
+}
+.svg-back {
+  opacity: 0.42;
+}
+.svg-front .svg-part polygon:first-child {
+  fill: #1c2733;
+  stroke: rgba(150, 180, 200, 0.6);
+  stroke-width: 0.8;
+}
+.svg-port-core {
+  fill: var(--signal);
+  opacity: 0.55;
+}
+.svg-part {
+  transition: opacity var(--dur-mid) var(--ease-out), filter var(--dur-mid) var(--ease-out);
+  cursor: pointer;
+}
+.svg-part.is-dim {
+  opacity: 0.34;
+}
+.svg-part.is-selected .svg-ring,
+.svg-part.is-selected .svg-shell,
+.svg-part.is-selected .svg-constraint {
+  stroke: var(--attention);
+}
+.svg-part.is-selected .svg-ring-halo {
+  stroke: rgba(240, 189, 120, 0.3);
+}
+.svg-part.is-selected .svg-port-core,
+.svg-part.is-selected polygon:first-child {
+  fill: var(--attention);
+}
+.svg-part.is-selected {
+  filter: drop-shadow(0 0 6px rgba(240, 189, 120, 0.45));
+}
+.svg-part:focus-visible {
+  outline: none;
+}
+.svg-part:focus-visible .svg-ring,
+.svg-part:focus-visible .svg-shell {
+  stroke: var(--signal);
+  stroke-width: 2;
+}
+
+/* --------------------------------------------------------------------------
+   M0.2：两个兼容接口（SEARCH_PORT / READER_PORT）在二维结构投影上获得独立
+   标记与状态，使二维投影与三维装配状态、系统图保持同一份说法。
+   状态不只用颜色表达，端口同时带有 data-state 与无障碍标签。
+   -------------------------------------------------------------------------- */
+.svg-port--target polygon:first-child {
+  stroke: rgba(240, 189, 120, 0.7);
+  stroke-width: 1.1;
+}
+.svg-port--target .svg-port-core {
+  fill: var(--attention);
+  opacity: 0.6;
+}
+.svg-port[data-state='preview'] polygon:first-child {
+  fill: rgba(240, 189, 120, 0.4);
+  stroke: var(--attention);
+  stroke-width: 1.5;
+}
+.svg-port[data-state='occupied'] polygon:first-child {
+  fill: rgba(119, 216, 236, 0.22);
+  stroke: rgba(119, 216, 236, 0.8);
+  stroke-width: 1.2;
+}
+.svg-port[data-state='ready'] polygon:first-child {
+  fill: rgba(119, 216, 236, 0.42);
+  stroke: var(--signal);
+  stroke-width: 1.3;
+}
+.svg-port[data-state='invalid'] polygon:first-child {
+  fill: rgba(255, 133, 133, 0.3);
+  stroke: var(--error);
+  stroke-width: 1.4;
+}

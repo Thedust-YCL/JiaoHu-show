@@ -1,0 +1,626 @@
+/* ==========================================================================
+   AGENT / ZERO — constructor.css
+   M0.2 装配原型：能力架、模块配置表单、三维端口标注、二维系统图、拖拽层。
+   严格沿用 AZ-DESIGN v1.0 令牌，不引入新的颜色与字体。
+   ========================================================================== */
+
+/* ---------- 能力架 ---------- */
+.bay {
+  padding: 0 0 6px;
+}
+.bay__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 4px;
+}
+.bay-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 6px;
+  padding: 8px 8px 8px 6px;
+  border: 1px solid var(--border-faint);
+  border-left: 2px solid var(--border);
+  border-radius: var(--radius-s);
+  background: rgba(255, 255, 255, 0.014);
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.bay-card:hover {
+  background: rgba(255, 255, 255, 0.028);
+}
+.bay-card[data-status='Ready'] {
+  border-left-color: var(--signal);
+}
+.bay-card[data-status='Unconfigured'],
+.bay-card[data-status='Preview'] {
+  border-left-color: var(--attention);
+}
+.bay-card[data-status='Invalid'] {
+  border-left-color: var(--error);
+}
+.bay-card[data-status='Disabled'] {
+  border-left-color: var(--text-3);
+}
+.bay-card[data-installed='true'] {
+  background: rgba(119, 216, 236, 0.035);
+}
+.bay-card__grip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: grab;
+  touch-action: none;
+  border-radius: 3px;
+}
+.bay-card__grip:active {
+  cursor: grabbing;
+}
+.bay-card__grip span {
+  display: block;
+  width: 9px;
+  height: 1px;
+  background: var(--text-3);
+}
+.bay-card__body {
+  min-width: 0;
+}
+.bay-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.bay-card__idx {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: var(--track);
+  color: var(--text-3);
+}
+.bay-card__name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bay-card__cn {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+  margin-top: 1px;
+}
+.bay-card__port {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.bay-card__port-k {
+  font-family: var(--font-mono);
+  letter-spacing: var(--track-tight);
+  text-transform: uppercase;
+  font-size: 9px;
+}
+.bay-card__port b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--signal);
+  letter-spacing: 0.04em;
+}
+.bay-card__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.bay-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+.bay__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 6px 0;
+  border-top: 1px solid var(--border-faint);
+}
+.bay__hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+.bay__foot .btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* 折叠为图标栏时隐藏能力架正文，避免图标栏被卡片撑破 */
+.dock[data-collapsed='true'] .bay {
+  display: none;
+}
+
+/* ---------- 模块配置表单 ---------- */
+.field {
+  margin-bottom: 10px;
+  padding: 8px 9px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  background: rgba(255, 255, 255, 0.012);
+}
+.field[data-error='true'] {
+  border-color: rgba(255, 133, 133, 0.42);
+  background: rgba(255, 133, 133, 0.05);
+}
+.field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: var(--fs-body);
+  color: var(--text-1);
+}
+.field__en {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.field__control {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: rgba(7, 9, 13, 0.72);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+}
+.field__control:hover {
+  border-color: rgba(119, 216, 236, 0.45);
+}
+.field__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  font-size: var(--fs-body);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.field__check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--signal);
+}
+.field__hint {
+  margin-top: 5px;
+  font-size: var(--fs-micro);
+  line-height: 1.55;
+  color: var(--text-3);
+}
+.field__error {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: var(--fs-tag);
+  line-height: 1.5;
+  color: var(--error);
+}
+.field__error span {
+  color: var(--text-2);
+}
+.field-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.field-error-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-faint);
+  border-left: 2px solid var(--attention);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  background: rgba(240, 189, 120, 0.06);
+  font-size: var(--fs-tag);
+  line-height: 1.55;
+}
+.field-error-note--error {
+  border-left-color: var(--error);
+  background: rgba(255, 133, 133, 0.07);
+}
+.field-error-note b {
+  color: var(--text-1);
+  font-weight: 500;
+}
+.field-error-note span {
+  color: var(--text-2);
+}
+.field-error-note em {
+  font-style: normal;
+  color: var(--attention);
+}
+.field-error-note--error em {
+  color: var(--error);
+}
+
+/* ---------- 装配概览（Inspector 顶部） ---------- */
+.summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.summary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'name tag' 'port tag';
+  align-items: center;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.012);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.summary-row:hover {
+  border-color: rgba(119, 216, 236, 0.4);
+}
+.summary-row__name {
+  grid-area: name;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-1);
+}
+.summary-row__name em {
+  margin-left: 6px;
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.summary-row__port {
+  grid-area: port;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--track-tight);
+  color: var(--text-3);
+}
+.summary-row .tag {
+  grid-area: tag;
+}
+.summary-row[data-status='Ready'] {
+  border-left: 2px solid var(--signal);
+}
+.summary-row[data-status='Unconfigured'] {
+  border-left: 2px solid var(--attention);
+}
+.summary-row[data-status='Invalid'] {
+  border-left: 2px solid var(--error);
+}
+.summary-row[data-status='Disabled'] {
+  border-left: 2px solid var(--text-3);
+}
+
+/* ---------- 三维端口标注层 ---------- */
+.port-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--layer-grid);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-mid) var(--ease-out);
+}
+.port-overlay[data-open='true'] {
+  opacity: 1;
+}
+.port-chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 7px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: rgba(6, 8, 12, 0.82);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.port-chip[data-visible='false'] {
+  opacity: 0;
+  visibility: hidden;
+}
+.port-chip__name {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--track);
+  color: var(--text-2);
+}
+.port-chip__state {
+  font-size: 9.5px;
+  color: var(--text-3);
+}
+.port-chip[data-state='free'] {
+  border-style: dashed;
+}
+.port-chip[data-state='preview'] {
+  border-color: var(--attention);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.port-chip[data-state='preview'] .port-chip__name {
+  color: var(--attention);
+}
+.port-chip[data-state='ready'] {
+  border-color: rgba(119, 216, 236, 0.6);
+}
+.port-chip[data-state='ready'] .port-chip__name {
+  color: var(--signal);
+}
+.port-chip[data-state='occupied'] .port-chip__name {
+  color: var(--signal);
+}
+.port-chip[data-state='invalid'] {
+  border-color: var(--error);
+}
+.port-chip[data-state='invalid'] .port-chip__name,
+.port-chip[data-state='invalid'] .port-chip__state {
+  color: var(--error);
+}
+
+/* ---------- 引导拖拽层 ---------- */
+.drag-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-toast);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.drag-layer[data-open='true'] {
+  opacity: 1;
+}
+.drag-ghost {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 128px;
+  padding: 7px 10px;
+  border: 1px solid var(--attention);
+  border-radius: var(--radius-s);
+  background: rgba(9, 12, 17, 0.92);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  will-change: transform;
+}
+.drag-ghost[data-tone='valid'] {
+  border-color: var(--signal);
+}
+.drag-ghost[data-tone='invalid'] {
+  border-color: var(--error);
+}
+.drag-ghost__idx {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: var(--track);
+  color: var(--text-3);
+}
+.drag-ghost__name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-1);
+}
+.drag-ghost__cn {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.drag-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 82px;
+  transform: translateX(-50%);
+  max-width: min(76vw, 560px);
+  padding: 8px 14px;
+  border: 1px solid var(--attention);
+  border-radius: 999px;
+  background: rgba(6, 8, 12, 0.94);
+  color: var(--attention);
+  font-size: var(--fs-tag);
+  text-align: center;
+}
+.drag-hint[data-tone='valid'] {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+.drag-hint[data-tone='invalid'] {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* ---------- 重置构建器确认层 ---------- */
+.confirm {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-boot);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 6, 9, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-mid) var(--ease-out);
+}
+.confirm[data-open='true'] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.confirm__box {
+  width: min(400px, 100%);
+  padding: 18px;
+  box-shadow: var(--shadow-panel);
+}
+.confirm__title {
+  font-size: var(--fs-title);
+  color: var(--text-1);
+  margin-bottom: 8px;
+}
+.confirm__text {
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  color: var(--text-2);
+}
+.confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ---------- 二维系统图面板 ---------- */
+.sg-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sg-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+.sg-panel__svg {
+  padding: 4px 0 8px;
+}
+.sg-node--core .sg-disc {
+  fill: rgba(19, 27, 36, 0.95);
+  stroke: rgba(119, 216, 236, 0.55);
+}
+.sg-node .sg-cn--name {
+  fill: var(--text-2);
+}
+.sg-node[data-status='Ready'] .sg-disc {
+  stroke: var(--signal);
+}
+.sg-node[data-status='Unconfigured'] .sg-disc,
+.sg-node[data-status='Preview'] .sg-disc {
+  stroke: var(--attention);
+}
+.sg-node[data-status='Disabled'] .sg-disc {
+  stroke: rgba(140, 160, 176, 0.45);
+}
+.sg-node[data-status='Invalid'] .sg-disc {
+  stroke: var(--error);
+}
+.sg-node[data-status='Available'] .sg-disc {
+  stroke-dasharray: 3 3;
+}
+.sg-panel__slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.slot-card {
+  padding: 9px 10px;
+  border: 1px solid var(--border-faint);
+  border-left: 2px solid var(--border);
+  border-radius: var(--radius-s);
+  background: rgba(255, 255, 255, 0.014);
+}
+.slot-card[data-status='Ready'] {
+  border-left-color: var(--signal);
+}
+.slot-card[data-status='Unconfigured'],
+.slot-card[data-status='Preview'] {
+  border-left-color: var(--attention);
+}
+.slot-card[data-status='Invalid'] {
+  border-left-color: var(--error);
+}
+.slot-card[data-status='Disabled'] {
+  border-left-color: var(--text-3);
+}
+.slot-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.slot-card__port {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.slot-card__name {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+.slot-card__link {
+  margin-top: 2px;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.slot-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+.sg-panel__notes {
+  margin-top: 10px;
+}
+
+/* ---------- 窄视图：端口标注与拖拽提示收敛 ---------- */
+@media (max-width: 1100px) {
+  .port-chip__state {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .port-overlay {
+    display: none;
+  }
+  .drag-hint {
+    bottom: 24px;
+  }
+}
+
+/* M0.3：紧凑控件（执行台的运行设置、时间轴调速） */
+.field__control--sm {
+  width: auto;
+  min-height: 26px;
+  padding: 0 6px;
+  font-size: var(--fs-micro);
+}

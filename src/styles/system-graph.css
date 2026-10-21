@@ -1,0 +1,257 @@
+/* ==========================================================================
+   AGENT / ZERO — system-graph.css
+   2D System Graph（PRD §5.3 System Graph 的 M0.1 视觉雏形）
+   ========================================================================== */
+.sg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.sg-edge {
+  stroke: rgba(140, 170, 190, 0.42);
+  stroke-width: 1.1;
+}
+.sg-edge[data-type='USES'] {
+  stroke: rgba(119, 216, 236, 0.55);
+}
+.sg-edge[data-type='PART_OF'] {
+  stroke: rgba(166, 181, 193, 0.5);
+}
+.sg-edge[data-type='RELATED'] {
+  stroke: rgba(240, 189, 120, 0.45);
+}
+.sg-legend text {
+  fill: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+}
+/* 关系图例改为 HTML 呈现：不随 SVG 裁切丢失，也更容易读中文 */
+.sg-key {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  background: rgba(255, 255, 255, 0.014);
+  font-size: var(--fs-tag);
+  color: var(--text-2);
+}
+.sg-key__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.sg-key__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--text-3);
+  min-width: 52px;
+}
+.sg-key__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-1);
+}
+.sg-key__item em {
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.sg-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 1.4px solid rgba(140, 170, 190, 0.6);
+}
+.sg-line[data-type='USES'] {
+  border-top-color: rgba(119, 216, 236, 0.7);
+}
+.sg-line[data-type='PART_OF'] {
+  border-top-style: dashed;
+}
+.sg-line[data-type='RELATED'] {
+  border-top-color: rgba(240, 189, 120, 0.6);
+  border-top-style: dotted;
+}
+.sg-line[data-type='CONTRASTS'] {
+  border-top-color: var(--error);
+  border-top-style: double;
+}
+.sg-node {
+  cursor: pointer;
+  transition: opacity var(--dur-mid) var(--ease-out);
+}
+.sg-node .sg-halo {
+  fill: none;
+  stroke: rgba(119, 216, 236, 0.14);
+  stroke-width: 1;
+}
+.sg-node .sg-disc {
+  fill: rgba(14, 20, 27, 0.92);
+  stroke: rgba(150, 180, 200, 0.5);
+  stroke-width: 1;
+}
+.sg-node .sg-title {
+  fill: var(--text-1);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-anchor: middle;
+  letter-spacing: 0.04em;
+}
+.sg-node .sg-cn {
+  fill: var(--text-3);
+  font-size: 9.5px;
+  text-anchor: middle;
+}
+.sg-node:hover .sg-disc {
+  stroke: var(--signal);
+}
+.sg-node.is-dim {
+  opacity: 0.34;
+}
+.sg-node.is-selected .sg-disc {
+  stroke: var(--attention);
+  fill: rgba(43, 33, 18, 0.9);
+}
+.sg-node.is-selected .sg-halo {
+  stroke: rgba(240, 189, 120, 0.4);
+}
+.sg-node:focus-visible {
+  outline: none;
+}
+.sg-node:focus-visible .sg-disc {
+  stroke: var(--signal);
+  stroke-width: 2;
+}
+
+/* 2D 结构投影（SYSTEM 视图 / WebGL 兜底）
+   注意：层级必须低于舞台控制条（--layer-chrome），否则「返回三维」按钮会被盖住 */
+.projection {
+  position: absolute;
+  inset: 0;
+  z-index: var(--layer-projection);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: radial-gradient(110% 80% at 50% 40%, #0c1119 0%, #07090d 66%, #05070a 100%);
+}
+.projection__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 14px;
+  min-height: 0;
+  padding: 14px;
+}
+.projection__core {
+  position: relative;
+  min-height: 0;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  background: rgba(255, 255, 255, 0.012);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 10px 12px;
+}
+.projection__core-head,
+.projection__core-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+.projection__core-head {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-faint);
+}
+.projection__core-foot {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-faint);
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  font-size: var(--fs-tag);
+  line-height: 1.5;
+}
+.projection__graph {
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 6px;
+}
+@media (max-width: 1100px) {
+  .projection__main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(200px, 1fr) auto;
+  }
+}
+.projection__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 44px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--text-3);
+}
+.projection__bar-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.projection__sim {
+  color: var(--signal);
+}
+.projection__bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.projection__bar-actions .btn {
+  font-family: var(--font-sans);
+  font-size: var(--fs-tag);
+  letter-spacing: 0;
+}
+.projection__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-faint);
+  color: var(--text-3);
+  font-size: var(--fs-tag);
+}
+.projection__legend {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 6px 12px;
+}
+.projection__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.projection__foot .mono {
+  flex: none;
+}
+.projection__legend i {
+  width: 14px;
+  height: 2px;
+  display: inline-block;
+}

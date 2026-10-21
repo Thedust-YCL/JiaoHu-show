@@ -1,0 +1,488 @@
+/* ==========================================================================
+   AGENT / ZERO — knowledge.css
+   Tool Calling 知识页：四步学习路径、UNDERSTAND / INSPECT 两个深度层、
+   内嵌实验与事件详情。
+   ========================================================================== */
+
+.kn-body {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr) 316px;
+  gap: 10px;
+  padding: 10px;
+  min-height: 0;
+}
+
+/* ---------------- 学习路径 ---------------- */
+.kn-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+.kn-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  background: rgba(12, 17, 23, 0.6);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.kn-step:hover {
+  border-color: rgba(119, 216, 236, 0.4);
+}
+.kn-step:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+.kn-step[aria-current='true'] {
+  border-color: rgba(240, 189, 120, 0.5);
+  background: rgba(240, 189, 120, 0.08);
+}
+.kn-step__idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-step__body {
+  display: flex;
+  flex-direction: column;
+}
+.kn-step__en {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  letter-spacing: 0.06em;
+  color: var(--text-1);
+}
+.kn-step__cn {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+
+/* ---------------- 主区 ---------------- */
+.kn-main {
+  overflow: auto;
+  min-height: 0;
+  padding: 2px 4px 18px;
+}
+.kn-hero {
+  padding: 4px 2px 12px;
+  border-bottom: 1px solid var(--border-faint);
+  margin-bottom: 14px;
+}
+.kn-hero__idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--signal);
+}
+.kn-hero__title {
+  margin: 6px 0 8px;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-1);
+  max-width: 62ch;
+}
+.kn-hero__lead {
+  margin: 0;
+  font-size: var(--fs-explain);
+  line-height: 1.75;
+  color: var(--text-2);
+  max-width: 74ch;
+}
+.kn-next {
+  margin-top: 16px;
+}
+
+/* ---------------- DISCOVER：对照 ---------------- */
+.kn-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+.kn-compare__col {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  padding: 11px 12px;
+  background: rgba(12, 17, 23, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kn-compare__col[data-side='no-tool'] {
+  border-color: rgba(255, 133, 133, 0.24);
+}
+.kn-compare__col[data-side='with-tool'] {
+  border-color: rgba(119, 216, 236, 0.28);
+}
+.kn-compare__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.kn-compare__tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  color: var(--text-1);
+}
+.kn-sample {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  padding: 8px 9px;
+  background: rgba(7, 9, 13, 0.7);
+}
+.kn-sample--real {
+  border-color: rgba(128, 217, 180, 0.32);
+}
+.kn-sample__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--attention);
+  margin-bottom: 4px;
+}
+.kn-reveal__note,
+.kn-sample__note {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+  line-height: 1.6;
+}
+.kn-reveal__note {
+  margin-top: 6px;
+}
+.kn-sample__body {
+  font-size: var(--fs-tag);
+  line-height: 1.7;
+  color: var(--text-1);
+}
+.kn-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---------------- UNDERSTAND：三段职责 ---------------- */
+.kn-layers {
+  display: inline-flex;
+  gap: 0;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.kn-layers button {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-tag);
+  cursor: pointer;
+}
+.kn-layers button + button {
+  border-left: 1px solid var(--border-faint);
+}
+.kn-layers button[aria-pressed='true'] {
+  background: rgba(119, 216, 236, 0.14);
+  color: var(--text-1);
+}
+.kn-layers button:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: -2px;
+}
+
+.kn-flow__rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+/* INSPECT 深入层：左列三段职责（纵向），右列当前段的深入说明 */
+.kn-flow[data-layer='inspect'] .kn-flow__body {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+.kn-flow[data-layer='inspect'] .kn-flow__rail {
+  grid-template-columns: minmax(0, 1fr);
+}
+.kn-flow__link {
+  display: none;
+}
+.kn-stage {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  padding: 10px 11px;
+  background: rgba(12, 17, 23, 0.55);
+  /* 非当前段仍然必须可读：只降低强调，不把正文压到看不清 */
+  opacity: 0.82;
+  transition: opacity 200ms var(--ease-out), border-color 200ms var(--ease-out), background 200ms var(--ease-out);
+}
+.kn-stage[data-active='true'] {
+  opacity: 1;
+  border-color: rgba(119, 216, 236, 0.5);
+  background: rgba(19, 32, 42, 0.75);
+}
+.kn-stage__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kn-stage__idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--signal);
+}
+.kn-stage__title {
+  font-size: var(--fs-body);
+  color: var(--text-1);
+}
+.kn-stage__en {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-stage__claim,
+.kn-stage__detail {
+  margin: 7px 0 0;
+  font-size: var(--fs-tag);
+  line-height: 1.7;
+  color: var(--text-2);
+}
+.kn-stage__detail {
+  color: var(--text-3);
+}
+.kn-stage__list {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  font-size: var(--fs-micro);
+  line-height: 1.7;
+  color: var(--text-3);
+}
+.kn-flow__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.kn-flow__state {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-inspect {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  padding: 10px 12px 12px;
+  background: rgba(9, 12, 17, 0.6);
+}
+.kn-inspect__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border-faint);
+}
+.kn-inspect__idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--signal);
+}
+.kn-inspect__title {
+  font-size: var(--fs-body);
+  color: var(--text-1);
+  flex: 1;
+  min-width: 0;
+}
+.code-block {
+  margin: 6px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-faint);
+  border-left: 2px solid var(--signal);
+  border-radius: var(--radius-s);
+  background: rgba(5, 7, 10, 0.85);
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  line-height: 1.65;
+  color: var(--text-1);
+  overflow: auto;
+  white-space: pre;
+}
+
+/* ---------------- EXPERIMENT ---------------- */
+.note--isolation {
+  border-color: rgba(240, 189, 120, 0.4);
+  margin-bottom: 12px;
+}
+.kn-exp__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.kn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kn-field__label {
+  font-size: var(--fs-micro);
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+}
+.kn-field__hint {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+  line-height: 1.5;
+}
+.kn-field--check {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kn-field--check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--signal);
+}
+.kn-exp__transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.kn-exp__state {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-exp__cols {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+.kn-exp__list,
+.kn-exp__detail {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  padding: 8px 9px 10px;
+  background: rgba(9, 12, 17, 0.6);
+  max-height: 460px;
+  overflow: auto;
+}
+.ev-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.ev-detail__type {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  color: var(--text-1);
+}
+
+/* ---------------- CONNECT ---------------- */
+.kn-relations {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.kn-relation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 9px 10px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  background: rgba(12, 17, 23, 0.6);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.kn-relation:hover {
+  border-color: rgba(119, 216, 236, 0.4);
+}
+.kn-relation:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+.kn-relation__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kn-relation__name {
+  font-size: var(--fs-body);
+  color: var(--text-1);
+}
+.kn-relation__desc {
+  font-size: var(--fs-tag);
+  line-height: 1.65;
+  color: var(--text-2);
+}
+.kn-finish {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* ---------------- 侧栏 ---------------- */
+.kn-dist {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  padding: 7px 9px;
+  margin-bottom: 6px;
+  background: rgba(12, 17, 23, 0.5);
+}
+.kn-dist__term {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  color: var(--signal);
+}
+.kn-dist__what,
+.kn-dist__note {
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.kn-dist__note {
+  color: var(--text-3);
+}
+.kn-progress {
+  font-size: var(--fs-micro);
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+@media (max-width: 1180px) {
+  .kn-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: min-content;
+    overflow: auto;
+  }
+  .kn-steps {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .kn-main {
+    overflow: visible;
+  }
+  .kn-exp__cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

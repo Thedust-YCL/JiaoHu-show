@@ -1,0 +1,230 @@
+/* ==========================================================================
+   AGENT / ZERO — base.css  重置、排版基线、无障碍基线
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  background: var(--void);
+}
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+ul,
+ol {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+a {
+  color: var(--signal);
+  text-decoration: none;
+}
+
+canvas {
+  display: block;
+}
+
+::selection {
+  background: rgba(119, 216, 236, 0.28);
+  color: #fff;
+}
+
+/* 可见焦点环（DESIGN_SYSTEM §11） */
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* 等宽系统标签 */
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  letter-spacing: var(--track-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.tag--signal {
+  color: var(--signal);
+  border-color: rgba(119, 216, 236, 0.38);
+  background: var(--signal-dim);
+}
+.tag--attention {
+  color: var(--attention);
+  border-color: rgba(240, 189, 120, 0.38);
+  background: var(--attention-dim);
+}
+.tag--success {
+  color: var(--success);
+  border-color: rgba(128, 217, 180, 0.38);
+  background: var(--success-dim);
+}
+.tag--error {
+  color: var(--error);
+  border-color: rgba(255, 133, 133, 0.38);
+  background: var(--error-dim);
+}
+.tag--muted {
+  color: var(--text-3);
+  border-color: var(--border-faint);
+}
+
+/* 状态点：形状 + 文字双通道，不仅靠颜色（DESIGN_SYSTEM §2.4） */
+.dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+.dot--round {
+  border-radius: 50%;
+  transform: none;
+}
+.dot--fill {
+  background: currentColor;
+}
+
+.rule {
+  height: 1px;
+  background: var(--border-faint);
+  border: 0;
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.noscript {
+  padding: 48px;
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--text-2);
+}
+.noscript h1 {
+  font-size: var(--fs-page);
+  letter-spacing: var(--track);
+  color: var(--text-1);
+  margin-bottom: 12px;
+}
+
+/* 自定义细滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 面板通用表面（DESIGN_SYSTEM §2.3：1px 边框、6–8px 圆角、近黑半透明） */
+.surface {
+  background: linear-gradient(180deg, rgba(16, 21, 29, 0.92), rgba(9, 12, 17, 0.92));
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-m);
+  backdrop-filter: blur(6px);
+}
+
+.surface--raised {
+  background: linear-gradient(180deg, rgba(23, 33, 44, 0.96), rgba(13, 18, 25, 0.96));
+  border-color: var(--border);
+}
+
+/* 面板标题行 */
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-1);
+  padding: 11px 12px 10px;
+  border-bottom: 1px solid var(--border-faint);
+}
+.panel-head__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
