@@ -6,8 +6,13 @@
  *
  * 名词策略（DESIGN_SYSTEM §1.1）：专有名词与系统标签保持英文，
  * 中文作为分类与教学解释；不翻译成似是而非的中文造词。
+ *
+ * M1.1：六章蓝图与术语索引改为**由知识层派生**，不再手写第二份
+ * （见文件末尾 CHAPTERS / TERM_INDEX），避免两处章节或术语对不上。
  * ------------------------------------------------------------------
  */
+import { CHAPTERS as CHAPTER_REGISTRY } from '../knowledge/chapters.js';
+import { CONCEPTS, CONCEPT_ORDER, getConceptsByChapter } from '../knowledge/concepts/index.js';
 
 /** AZ-CORE 01 归一化几何参数（原文来自 DESIGN_SYSTEM §3.3 与 M0.1_TASK §4.2） */
 export const GEOMETRY = Object.freeze({
@@ -288,10 +293,10 @@ export const NAV = Object.freeze([
     name: '引导叙事',
     en: 'Story',
     cn: '六章节知识主线',
-    milestone: 'M3',
-    locked: true,
+    milestone: 'M1.1 已实现 · 目录优先',
+    locked: false,
     detail:
-      '按 01 智能诞生 → 06 可靠性 的顺序建立连贯认知，每章围绕一个贯穿问题展开。当前阶段未开放，仅展示章节蓝图与名词范围。',
+      '六章统一目录：编号、双语标题、贯穿问题、简介与章内概念清单。每章与每个概念都显示真实开放状态（可读 / 建设中 / 计划阶段 M1.2 或 M1.3），点开即进入统一知识模板。整章电影级滚动叙事与星图联动属于 M1.4，本轮不虚构完成度。',
   },
   {
     id: 'atlas',
@@ -299,10 +304,10 @@ export const NAV = Object.freeze([
     name: '知识星图',
     en: 'Atlas',
     cn: '概念节点与关系',
-    milestone: 'M0.3 已实现',
+    milestone: 'M0.3 已实现 · M1.1 扩展',
     locked: false,
     detail:
-      '10 个经过审校的概念节点与人工配置的 USES / RELATED / CONTRASTS 语义关系：可搜索、可聚焦、可缩放平移，并提供键盘可达的概念清单。只有 Tool Calling 拥有完整分层知识页与内嵌实验，其余节点明确标注后续阶段开放。',
+      '36 个概念按六章分组进入目录与搜索；星图画布只绘制 10 个已开放节点，避免把尚未审校的节点画成已完成。关系共 47 条人工配置的 USES / PART_OF / RELATED / CONTRASTS，方向与说明逐条可查。Tool Calling 拥有完整四步学习路径与可操作实验，其余概念在统一模板中按状态呈现。',
   },
   {
     id: 'lab',
@@ -310,10 +315,10 @@ export const NAV = Object.freeze([
     name: '实验空间',
     en: 'Laboratory',
     cn: '动手观察技术机制',
-    milestone: 'M0.4 起',
-    locked: true,
+    milestone: 'M1.1 已实现 · 登记表',
+    locked: false,
     detail:
-      '包含 Token Lab、Context Lab、Connection Lab、Knowledge Vault、Execution Lab、Reliability Lab 六类实验。当前阶段未开放，仅提供 Tool Calling 节点内的一个内嵌实验。',
+      '六类实验按章节登记：本轮只有 Tool Calling 内嵌实验真实可操作（本地模拟引擎 + 本地虚构语料），其余显示「后续阶段开放」，不提供可点击的假运行按钮，也不显示虚构进度。第 01–02 章实验属于 M1.2，第 04–06 章属于 M1.3。',
   },
   {
     id: 'constructor',
@@ -332,10 +337,21 @@ export const NAV = Object.freeze([
     name: '执行台',
     en: 'Execution',
     cn: '模拟运行与事件回放',
-    milestone: 'M0.3 已实现',
+    milestone: 'M0.3 已实现 · M0.4 扩展',
     locked: false,
     detail:
-      '读取装配台已确认的配置快照，在浏览器本地运行一次教学模拟：左侧显示本次真正走过的事件路径，中央联动 AZ-CORE 01，右侧可查看每个事件的输入输出与分支依据，底部支持播放、暂停、单步、Seek、调速与复位。不接入真实搜索服务、真实 MCP 或在线 AI。',
+      '读取装配台已确认的配置快照，在浏览器本地运行一次教学模拟：左侧显示本次真正走过的事件路径（执行分支 + 证据分支），中央联动 AZ-CORE 01，右侧可查看每个事件的输入输出、参与判断的可见声明与核验必要条件，底部支持播放、暂停、单步、Seek、调速与复位。本次研究策略（VERIFY_REVISIONS / COLLECT_ONLY）与故障模式都是单次运行的本地规则选项，不是装进能力架的第三个工具。不接入真实搜索服务、真实 MCP 或在线 AI。',
+  },
+  {
+    id: 'report',
+    idx: '06',
+    name: '研究报告',
+    en: 'Report',
+    cn: '证据溯源与引用导航',
+    milestone: 'M0.4 已实现',
+    locked: false,
+    detail:
+      '本次 Run 的结构化研究报告：左侧目录与真实指标，中间正文与 [S1] 引用标记，右侧来源检视（来源、可见元数据、片段高亮、进入本次研究的事件）。点击引用可跳到执行轨迹中的真实 eventId，再返回原段落；报告可导出为本地 Markdown。报告由本地规则与模板装配，不是真实语言模型撰写的结论。',
   },
   {
     id: 'system',
@@ -349,51 +365,31 @@ export const NAV = Object.freeze([
   },
 ]);
 
-/** 六章知识体系蓝图（PRD §4） */
-export const CHAPTERS = Object.freeze([
-  { no: '01', en: 'INTELLIGENCE', cn: '智能诞生', terms: 'AI · ML · LLM · Transformer · Token · Inference', q: '模型为什么能回答，却不一定拥有可验证的外部事实？' },
-  { no: '02', en: 'CONTEXT', cn: '指令与上下文', terms: 'Prompt · Instructions · System Prompt · Context Window · Context Engineering · Hallucination', q: '同一个模型为什么表现不同？' },
-  { no: '03', en: 'CONNECTION', cn: '外部能力', terms: 'API · Tool Calling · Function Calling · MCP · MCP Server', q: 'AI 如何读取外部资料？' },
-  { no: '04', en: 'KNOWLEDGE', cn: '信息与方法', terms: 'Retrieval · RAG · Embedding · Memory · Skills', q: '信息怎样被检索、引入上下文、保留、复用？' },
-  { no: '05', en: 'RUNTIME', cn: '执行系统', terms: 'Agent · Agent Loop · Workflow · Harness · Orchestration · Multi-Agent', q: '多步骤任务如何规划、执行、检验与调整？' },
-  { no: '06', en: 'RELIABILITY', cn: '可靠性与边界', terms: 'Permissions · Sandbox · Prompt Injection · Guardrails · Tracing · Evals', q: 'AI 系统的结果怎样验证、权限怎样控制？' },
-]);
+/** 六章知识体系蓝图（M1.1：由知识层的章节注册表派生，不再手写第二份）
+ *  Story 目录与锁定面板都读取这里，保证「章数、编号、标题、问题」只有一个来源。 */
+export const CHAPTERS = Object.freeze(
+  CHAPTER_REGISTRY.map((chapter) => ({
+    no: chapter.no,
+    en: chapter.title.en,
+    cn: chapter.title.zh,
+    terms: getConceptsByChapter(chapter.id)
+      .map((concept) => concept.name)
+      .join(' · '),
+    q: chapter.question,
+  }))
+);
 
 /**
  * 术语索引：[英文专有名词, 中文名, 所属章节, 一句话中文解释]
  * 规则：专有名词保留英文；凡是难懂的名词，都必须能就地看到中文解释。
+ * M1.1 起直接由 36 个概念派生：术语表与知识层不可能再对不上。
  */
-export const TERM_INDEX = Object.freeze([
-  ['LLM', '大语言模型', '01', '只处理语言的模型本体，本身不会搜索、不会调用工具。'],
-  ['Transformer', '注意力架构', '01', '当前主流模型的网络结构，靠注意力机制处理长序列。'],
-  ['Token', '文本最小单位', '01', '模型读写文本的切分单位，中文一个字常占 1–2 个 token。'],
-  ['Inference', '推理过程', '01', '把输入变成输出的一次前向计算，不等于“思考”。'],
-  ['Context Window', '上下文窗口', '02', '模型一次能看到的文本总量上限，超出就要裁剪或摘要。'],
-  ['System Prompt', '系统指令', '02', '开发者写死的最高优先级指令，用户输入通常不能覆盖它。'],
-  ['Context Engineering', '上下文工程', '02', '决定“这一轮到底把哪些信息放进窗口”的工程方法。'],
-  ['Hallucination', '幻觉', '02', '模型给出流畅但无依据的内容，本质是概率生成而非查询。'],
-  ['Tool Calling', '工具调用', '03', '模型输出结构化请求，由运行环境去执行外部函数。'],
-  ['Function Calling', '函数调用', '03', '工具调用的具体实现形式：按约定 schema 返回参数。'],
-  ['MCP', '模型连接协议', '03', 'Model Context Protocol：把工具与资源标准化接入的统一协议，不是模型也不是工具。'],
-  ['MCP Server', '协议服务端', '03', '按 MCP 规范对外提供工具/资源的一方，由 Host 连接。'],
-  ['Retrieval', '检索', '04', '按查询去资料库里找出相关片段，可以是关键词也可以是向量。'],
-  ['RAG', '检索增强生成', '04', '先检索、再把片段放进上下文让模型作答的组合流程。'],
-  ['Embedding', '向量表示', '04', '把文本压成向量，用距离衡量语义相近程度。'],
-  ['Memory', '记忆', '04', '跨轮次保留的信息，可以是摘要、事实表或向量库。'],
-  ['Skills', '按需加载能力说明', '04', '一份任务说明文件（如 SKILL.md）与随附资源，按需读入上下文。'],
-  ['Agent', '智能体执行系统', '05', '模型 + 运行环境 + 工具与控制的整体，不是模型的别名。'],
-  ['Agent Loop', '执行循环', '05', '观察 → 决策 → 调用 → 核验 → 再决策的反复过程。'],
-  ['Workflow', '固定流程', '05', '步骤预先写死的编排，稳定可控，但不会临场改变路线。'],
-  ['Harness', '运行环境与协调层', '05', '承载循环、调度工具、注入指令的“外壳”，不是第二个模型。'],
-  ['Orchestration', '编排', '05', '决定谁先谁后、如何合并结果与失败重试的调度逻辑。'],
-  ['Multi-Agent', '多智能体', '05', '多个 Agent 分工协作，带来能力上限也带来协调成本。'],
-  ['Permissions', '权限', '06', '规定能碰哪些数据、能做哪些动作，越权必须被拒绝。'],
-  ['Sandbox', '沙箱', '06', '受限的执行环境，用来降低误操作与恶意代码的影响范围。'],
-  ['Prompt Injection', '提示注入', '06', '外部内容里夹带指令，试图劫持原本的可信指令。'],
-  ['Guardrails', '护栏', '06', '输入输出侧的规则检查，用来拦截越界与高风险行为。'],
-  ['Tracing', '追踪', '06', '完整记录每一步调用与来源，便于回放与定位问题。'],
-  ['Evals', '评估', '06', '用可计算的指标衡量任务完成度，而不是编一个“智能分”。'],
-]);
+export const TERM_INDEX = Object.freeze(
+  CONCEPT_ORDER.map((id) => {
+    const concept = CONCEPTS[id];
+    return [concept.name, concept.cn, concept.chapterNo, concept.oneLiner || concept.tagline];
+  })
+);
 
 /** 术语速查：在任意界面按英文名取中文解释 */
 export const TERM_GLOSSARY = Object.freeze(
@@ -418,7 +414,7 @@ export const BOUNDARIES = Object.freeze([
 
 /** 系统日志的固定启动序列（真实时间戳，非伪造内容） */
 export const BOOT_LOG = Object.freeze([
-  ['系统', 'AGENT / ZERO · M0.3 知识与执行原型'],
+  ['系统', 'AGENT / ZERO · M1.1 知识架构与学习基础'],
   ['范围', '纯前端静态原型 · 无业务后端 · 无真实 AI API'],
   ['资源', '本地打包资源校验通过 · 无外部 CDN 请求'],
   ['模拟', '本地教学模拟已启用 · 不表示真实模型执行'],
@@ -428,6 +424,9 @@ export const BOOT_LOG = Object.freeze([
 export const MILESTONES = Object.freeze([
   ['M0.1', '视觉基础', '品牌系统 · AZ-CORE 01 · 五镜头开场 · 控制台 · 响应式降级', '已完成'],
   ['M0.2', '装配原型', '能力架 · 点击自动装配 · 引导拖拽 · 接口兼容 · 三维/二维/检视面板状态同步', '已完成'],
-  ['M0.3', '知识与执行', '10 个星图节点 · Tool Calling 知识页 · 本地模拟引擎与四条分支 · 事件回放与执行图', '当前阶段'],
-  ['M0.4', '完整闭环', '资料冲突核验 · 引用溯源 · 简版研究报告 · Golden Path', '未开始'],
+  ['M0.3', '知识与执行', '10 个星图节点 · Tool Calling 知识页 · 本地模拟引擎与四条分支 · 事件回放与执行图', '已完成'],
+  ['M0.4', '完整闭环', '资料冲突核验 · 引用溯源 · 结构化研究报告 · Markdown 导出', '已完成'],
+  ['M1.1', '知识架构', '六章注册表 · 36 概念索引 · 统一内容/关系接口 · 学习进度 v2 迁移 · 统一知识模板', '当前阶段'],
+  ['M1.2–M1.3', '章节正文', '第 01–03 章正文与实验 → M1.2；第 04–06 章 → M1.3', '未开始'],
+  ['M1.4', '知识宇宙', '星图视觉与 Story 联动 · Knowledge Journal', '未开始'],
 ]);

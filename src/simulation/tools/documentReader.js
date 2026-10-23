@@ -3,16 +3,19 @@
  * ------------------------------------------------------------------
  * 本地模拟工具 `document_reader`（文档读取）—— 纯函数，无副作用。
  *
- * 两条必须遵守的规则（M0.3_TASK §6.1 / §6.2）：
+ * 两条必须遵守的规则（M0.3_TASK §6.1 / §6.2，M0.4_TASK §4.4）：
  *   1. `readMode=summary` 只返回**预先定义的摘要**，不返回正文、不发全文读取
- *      事件；`readMode=full_text` 才返回完整正文段落。
+ *      事件；`readMode=full_text` 才返回完整正文段落与**片段级文本**。
  *   2. `includeMetadata=false` 时，用户可见的模拟工具响应里**不得**悄悄补回
- *      已被关闭的来源 / 日期元数据。引擎内部仍会用 sourceId 做事件追踪，
- *      但那是内部追踪元数据，与工具返回的公开数据分开存放。
+ *      已被关闭的来源 / 日期 / 更正关系元数据。引擎内部仍会用 sourceId 做
+ *      事件追踪，但那是内部追踪元数据，与工具返回的公开数据分开存放。
+ *
+ * M0.4 增量：返回值增加 `chunks`（片段级文本，供证据抽取与引用高亮）。
+ * 只有在 full_text 下才包含正文片段；summary 下只有一个摘要片段。
  * ------------------------------------------------------------------
  */
 import { getModule } from '../../features/constructor/model/modules.js';
-import { getNotice } from '../../research-packs/mission-001-mini/notices.js';
+import { getNotice } from '../../research-packs/mission-001/notices.js';
 
 export const TOOL_ID = 'document_reader';
 
@@ -47,9 +50,22 @@ export function validateReadSettings(settings = {}) {
   return { ok: errors.length === 0, errors };
 }
 
+/** 片段级文本：摘要模式只有一个摘要片段，全文模式才有正文片段 */
+function chunksOf(notice, isFullText) {
+  const declared = Array.isArray(notice.chunks) && notice.chunks.length
+    ? notice.chunks
+    : [
+        { chunkId: notice.chunkId, kind: 'summary', text: notice.summary },
+        ...notice.body.map((text, i) => ({ chunkId: `${notice.sourceId}#body-${i + 1}`, kind: 'body', text })),
+      ];
+  return declared
+    .filter((c) => (isFullText ? c.kind === 'body' : c.kind === 'summary'))
+    .map((c) => Object.freeze({ chunkId: c.chunkId, kind: c.kind, text: clampText(c.text).text }));
+}
+
 /**
  * 读取一条本地语料。
- * @param {{settings?:object, sourceId:unknown, corpus?:object}} params
+ * @param {{settings?:object, sourceId:unknown}} params
  * @returns {{ok:true,payload:object,meta:object}|{ok:false,error:{code:string,message:string}}}
  */
 export function runDocumentReader({ settings = {}, sourceId } = {}) {
@@ -82,7 +98,9 @@ export function runDocumentReader({ settings = {}, sourceId } = {}) {
 
   const rawText = isFullText ? notice.body.join('\n\n') : notice.summary;
   const { text, truncated } = clampText(rawText);
-  const chunkIds = isFullText ? notice.chunkIds.filter((c) => c.includes('#body')) : [notice.chunkId];
+  const chunks = chunksOf(notice, isFullText);
+  /* 片段 ID 与片段内容必须来自同一份清单，避免「载荷里有 2 段、ID 只有 1 个」 */
+  const chunkIds = chunks.map((c) => c.chunkId);
 
   return {
     ok: true,
@@ -96,13 +114,25 @@ export function runDocumentReader({ settings = {}, sourceId } = {}) {
       /** 内容范围：知识页与 Inspector 都据此说明「拿到的是摘要还是全文」 */
       textScope: isFullText ? 'full_text' : 'summary',
       chunkIds,
+      /** 片段级文本：证据抽取与引用高亮只认这里的内容 */
+      chunks,
       textTruncated: truncated,
       /** 只有 full_text 才带正文；summary 永远拿不到 body */
       content: isFullText ? text : null,
       summary: isFullText ? null : text,
       metadataIncluded: includeMetadata,
       /** includeMetadata=false 时为 null：不悄悄补回被关闭的元数据 */
-      metadata: includeMetadata ? { publishedAt: notice.publishedAt, publisher: notice.publisher, noticeScope: notice.scope } : null,
+      metadata: includeMetadata
+        ? {
+            publishedAt: notice.publishedAt,
+            publisher: notice.publisher,
+            publisherId: notice.publisherId || notice.publisher,
+            noticeScope: notice.scope,
+            eventKey: notice.eventKey || null,
+            supersedes: Array.isArray(notice.supersedes) ? [...notice.supersedes] : [],
+            validity: notice.validity || 'active',
+          }
+        : null,
     },
     meta: {
       sourceId: notice.sourceId,
@@ -110,9 +140,18 @@ export function runDocumentReader({ settings = {}, sourceId } = {}) {
       readMode,
       textScope: isFullText ? 'full_text' : 'summary',
       chunkIds,
+      chunks,
       isFictional: notice.isFictional === true,
       /** 内部追踪元数据：引擎调试与资料定位用，不进入用户可见的工具响应 */
-      internal: { publisher: notice.publisher, publishedAt: notice.publishedAt, noticeScope: notice.scope, validity: notice.validity },
+      internal: {
+        publisher: notice.publisher,
+        publisherId: notice.publisherId,
+        publishedAt: notice.publishedAt,
+        noticeScope: notice.scope,
+        eventKey: notice.eventKey || null,
+        supersedes: Array.isArray(notice.supersedes) ? [...notice.supersedes] : [],
+        validity: notice.validity,
+      },
     },
   };
 }
@@ -123,3 +162,4 @@ export const documentReaderTool = Object.freeze({
   run: runDocumentReader,
   validate: validateReadSettings,
 });
+

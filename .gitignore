@@ -22,4 +22,5 @@ npm-debug.log*
 *.temp
 
 # ---- 误建的垃圾文件（命令行重定向残留，0 字节且被进程占用）----
-{console.log*
+\{console.log*
+console.log*

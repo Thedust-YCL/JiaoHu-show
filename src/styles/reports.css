@@ -1,0 +1,666 @@
+/* ==========================================================================
+   AGENT / ZERO — reports.css
+   M0.4 REPORT / SOURCE INSPECTOR：科研档案阅读模式。
+   沿用 AZ-DESIGN v1 的 Void 色板、细线、刻度与微光语言——
+   不为报告另做一套 SaaS 风格。真正的视觉重点是「冲突被发现 → 证据链展开
+   → 决策结果回写报告」，而不是满屏能量粒子。
+   ========================================================================== */
+
+/* ---------------- 工作区视图切换 ---------------- */
+.workspace--execution[data-view='report'] .ex-grid {
+  display: none;
+}
+.workspace--execution[data-view='execution'] .rp {
+  display: none;
+}
+/* 报告视图优先保证阅读面积：运行上下文已经完整呈现在报告页头与目录里 */
+.workspace--execution[data-view='report'] .ex-info {
+  display: none;
+}
+
+/* ---------------- 三栏骨架 ---------------- */
+.rp {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr) 348px;
+  gap: 10px;
+  padding: 10px;
+  min-height: 0;
+  flex: 1;
+}
+.rp[data-toc='collapsed'] {
+  grid-template-columns: 62px minmax(0, 1fr) 348px;
+}
+.rp[data-toc='collapsed'] .rp-toc__nav,
+.rp[data-toc='collapsed'] .rp-toc__meta {
+  display: none;
+}
+
+/* ---------------- 左：目录 ---------------- */
+.rp-toc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 0 10px;
+}
+.rp-toc__toggle {
+  margin: 6px 9px 2px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-tight);
+  color: var(--text-2);
+  background: rgba(119, 216, 236, 0.06);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  text-align: left;
+}
+.rp-toc__toggle:hover {
+  color: var(--signal);
+  border-color: var(--signal-line);
+}
+.rp-toc__nav {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.rp-toc__item {
+  padding: 6px 7px;
+  text-align: left;
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  color: var(--text-2);
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--border-faint);
+  cursor: pointer;
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+}
+.rp-toc__item:hover,
+.rp-toc__item:focus-visible {
+  color: var(--signal);
+  border-left-color: var(--signal);
+  background: rgba(119, 216, 236, 0.06);
+  outline: none;
+}
+.rp-toc__meta {
+  flex: none;
+  padding: 6px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border-faint);
+}
+.rp-toc__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 9px 0;
+  border-top: 1px solid var(--border-faint);
+  margin-top: auto;
+}
+
+/* ---------------- 中央：正文 ---------------- */
+.rp-doc {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+.rp-doc__scroll {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 18px 26px 40px;
+  background: linear-gradient(180deg, rgba(16, 21, 29, 0.92), rgba(9, 12, 17, 0.94));
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-panel);
+  outline: none;
+}
+.rp-doc__scroll:focus-visible {
+  border-color: var(--signal-line);
+}
+.rp-doc__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--signal);
+  text-transform: uppercase;
+}
+.rp-doc__title {
+  margin: 8px 0 4px;
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.rp-doc__sub {
+  margin: 0 0 12px;
+  font-size: var(--fs-explain);
+  line-height: 1.7;
+  color: var(--text-2);
+  max-width: 62ch;
+}
+.rp-doc__chips {
+  margin-bottom: 12px;
+}
+.rp-banner {
+  margin-bottom: 18px;
+}
+
+/* 正文排版：报告必须可读，行宽受控 */
+.rp-section {
+  margin: 0 0 26px;
+  scroll-margin-top: 12px;
+}
+.rp-section.is-flash {
+  animation: rp-flash 900ms var(--ease-out);
+}
+@keyframes rp-flash {
+  0% {
+    background: rgba(119, 216, 236, 0.1);
+  }
+  100% {
+    background: transparent;
+  }
+}
+.rp-section__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-faint);
+  margin-bottom: 12px;
+}
+.rp-section__id {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--signal);
+  border: 1px solid var(--signal-line);
+  border-radius: var(--radius-s);
+  padding: 1px 6px;
+}
+.rp-section__title {
+  font-size: var(--fs-title);
+  font-weight: 500;
+  color: var(--text-1);
+  margin: 0;
+}
+.rp-note {
+  margin-bottom: 12px;
+}
+
+/* 陈述块 */
+.rp-claim {
+  position: relative;
+  padding: 10px 12px 10px 14px;
+  margin-bottom: 10px;
+  border-left: 2px solid var(--border);
+  background: rgba(12, 17, 23, 0.6);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  cursor: default;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.rp-claim[data-status='supported'] {
+  border-left-color: var(--success);
+}
+.rp-claim[data-status='unresolved'],
+.rp-claim[data-status='insufficient'] {
+  border-left-color: var(--attention);
+}
+.rp-claim.is-active {
+  border-left-color: var(--signal);
+  background: rgba(119, 216, 236, 0.07);
+}
+.rp-claim.is-flash {
+  animation: rp-flash 1100ms var(--ease-out);
+}
+.rp-claim[hidden] {
+  display: none;
+}
+.rp-claim__text {
+  margin: 0;
+  font-size: var(--fs-explain);
+  line-height: 1.85;
+  color: var(--text-1);
+  max-width: 68ch;
+}
+.rp-claim__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 7px;
+}
+.rp-claim__rule {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+/* 引用标记：[S1] */
+.rp-cite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 18px;
+  margin-left: 3px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1;
+  color: var(--signal);
+  background: rgba(119, 216, 236, 0.1);
+  border: 1px solid var(--signal-line);
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: 1px;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.rp-cite:hover,
+.rp-cite:focus-visible {
+  background: rgba(119, 216, 236, 0.24);
+  outline: none;
+}
+.rp-cite--inline {
+  margin-left: 0;
+}
+
+/* 列表 / 表格 */
+.rp-list {
+  margin: 0 0 0 2px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rp-list li {
+  font-size: var(--fs-explain);
+  line-height: 1.8;
+  color: var(--text-2);
+  max-width: 70ch;
+}
+.rp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-micro);
+}
+.rp-table th {
+  text-align: left;
+  font-weight: 500;
+  letter-spacing: var(--track-tight);
+  color: var(--text-3);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.rp-table td {
+  padding: 7px 8px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-faint);
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.rp-table__event {
+  color: var(--signal) !important;
+  white-space: nowrap;
+}
+.rp-table__excerpt {
+  max-width: 420px;
+}
+.rp-hit {
+  padding: 0 2px;
+  color: var(--void);
+  background: var(--attention);
+  border-radius: 2px;
+}
+
+/* 指标 */
+.rp-metrics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4px 14px;
+  margin: 0 0 10px;
+}
+.rp-metrics dt {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-faint);
+}
+.rp-metrics dd {
+  font-size: var(--fs-micro);
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  padding: 4px 0;
+  text-align: right;
+  border-bottom: 1px solid var(--border-faint);
+}
+.rp-metrics--compact {
+  grid-template-columns: 1fr;
+  gap: 2px;
+}
+.rp-metrics--compact dt,
+.rp-metrics--compact dd {
+  border-bottom: 0;
+  padding: 2px 0;
+  font-size: 10px;
+}
+.rp-metrics--compact dd {
+  text-align: left;
+  color: var(--text-2);
+}
+
+/* 筛选 */
+.rp-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.rp-filter {
+  padding: 3px 9px;
+  font-size: var(--fs-micro);
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.rp-filter[aria-pressed='true'] {
+  color: var(--void);
+  background: var(--signal);
+  border-color: var(--signal);
+}
+.rp-filters__hint {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+/* ---------------- 右：来源检视 ---------------- */
+.rp-source {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.rp-source__body {
+  overflow: auto;
+  padding: 0 10px 12px;
+  min-height: 0;
+}
+.rp-source__hero {
+  padding: 4px 0 8px;
+}
+.rp-source__title {
+  margin: 6px 0 8px;
+  font-size: var(--fs-title);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+.rp-source__actions {
+  margin-top: 8px;
+}
+.rp-excerpt {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: var(--fs-body);
+  line-height: 1.9;
+  color: var(--text-1);
+  background: rgba(7, 9, 13, 0.7);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.rp-export-note {
+  margin: 0 9px 8px;
+  font-size: var(--fs-micro);
+}
+
+/* ---------------- 执行台：证据分支 / 声明 / 必要条件 ---------------- */
+.ex-branches--evidence {
+  border-bottom: 1px solid var(--border-faint);
+  background: rgba(240, 189, 120, 0.03);
+}
+.ex-branches--evidence {
+  padding: 3px 8px;
+}
+.ex-branches--evidence .ex-branch {
+  padding: 2px 6px;
+}
+.ex-branches__label {
+  flex: none;
+  align-self: center;
+  padding: 0 6px 0 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-tight);
+  color: var(--attention);
+  border-right: 1px solid var(--border-faint);
+  margin-right: 2px;
+}
+.ex-branch--evidence[data-active='true'] {
+  border-color: rgba(240, 189, 120, 0.5);
+  background: rgba(240, 189, 120, 0.08);
+}
+.ex-branch--evidence[data-active='true'][data-tone='success'] {
+  border-color: rgba(128, 217, 180, 0.6);
+  background: rgba(128, 217, 180, 0.1);
+}
+.ex-branch--evidence[data-active='true'][data-tone='muted'] {
+  border-color: var(--border);
+  background: rgba(43, 56, 69, 0.25);
+}
+
+.ex-claims {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ex-claim {
+  padding: 7px 9px;
+  border: 1px solid var(--border-faint);
+  border-left: 2px solid var(--signal-line);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  background: rgba(9, 12, 17, 0.55);
+}
+.ex-claim__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-micro);
+  color: var(--text-1);
+}
+.ex-claim__meta {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text-3);
+  word-break: break-all;
+}
+.ex-claim__text {
+  margin: 5px 0 0;
+  font-size: var(--fs-micro);
+  line-height: 1.7;
+  color: var(--text-2);
+  max-height: 96px;
+  overflow: auto;
+}
+
+.ex-req {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ex-req__item {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 6px;
+  align-items: start;
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.ex-req__mark {
+  color: var(--success);
+  font-family: var(--font-mono);
+}
+.ex-req__item[data-pass='false'] .ex-req__mark {
+  color: var(--attention);
+}
+.ex-req__item[data-pass='false'] .ex-req__text {
+  color: var(--text-1);
+}
+.ex-req__why {
+  grid-column: 2;
+  font-size: 10px;
+  color: var(--attention);
+}
+
+/* 运行历史切换 */
+.ex-history {
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.ex-history[data-active='true'] {
+  color: var(--signal);
+  border-style: solid;
+  border-color: var(--signal-line);
+  background: rgba(119, 216, 236, 0.08);
+}
+
+/* ---------------- 窄屏 / 二维降级 ---------------- */
+@media (max-width: 1180px) {
+  .rp {
+    grid-template-columns: 200px minmax(0, 1fr) 280px;
+  }
+  .rp-doc__scroll {
+    padding: 16px 18px 32px;
+  }
+}
+
+@media (max-width: 960px) {
+  /* 窄屏：改为纵向流式阅读（目录 → 正文 → 来源），整列可滚动。
+     用 flex + 明确的最小高度，避免 grid 的 auto 行在空间不足时被压成 0。 */
+  .rp,
+  .rp[data-toc='collapsed'] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    overflow-y: auto;
+  }
+  .rp-toc {
+    flex: none;
+    max-height: 190px;
+    overflow: auto;
+  }
+  .rp-toc__nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    overflow: visible;
+    flex: none;
+  }
+  .rp-toc__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-top: 0;
+    padding-top: 4px;
+  }
+  .rp-doc {
+    flex: none;
+    /* 正文自己有滚动条：来源检视必须留在附近，而不是被推到整篇报告之后 */
+    height: clamp(320px, 58vh, 460px);
+  }
+  .rp-doc__scroll {
+    padding: 14px 14px 28px;
+  }
+  .rp-source {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+  }
+  .rp-source__body {
+    max-height: 300px;
+  }
+  .rp-metrics {
+    grid-template-columns: 1fr;
+  }
+  .rp-metrics dd {
+    text-align: left;
+  }
+  /* 报告视图下把回放控制条收成一行：事件条仍然可用，点击即回到执行视图 */
+  .workspace--execution[data-view='report'] .ex-timeline__head .ex-transport {
+    display: none;
+  }
+  .workspace--execution .ws-head__meta {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rp-section.is-flash,
+  .rp-claim.is-flash {
+    animation: none;
+  }
+  .rp-toc__item,
+  .rp-cite,
+  .rp-claim {
+    transition: none;
+  }
+}
+
+
+
+/* ---------------- 执行台页头压缩 ----------------
+   M0.4 的页头多了「报告视图」入口与「证据分支」，按钮一多就会换行，
+   把三列主区（尤其三维核心）挤成一条缝。这里只针对执行台收紧页头，
+   让主区拿回高度；窄屏仍沿用 .ws-head 的换行规则。 */
+@media (min-width: 960px) {
+  .workspace--execution .ws-head {
+    flex-wrap: nowrap;
+    padding: 8px 14px;
+    gap: 10px;
+  }
+  .workspace--execution .ws-head__id {
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .workspace--execution .ws-head__meta {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .workspace--execution .ws-head__actions {
+    flex-wrap: nowrap;
+    flex: none;
+  }
+  .workspace--execution .seg button,
+  .workspace--execution .ws-head__actions .btn {
+    white-space: nowrap;
+  }
+}
+
+
+

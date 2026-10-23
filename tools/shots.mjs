@@ -15,6 +15,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { runM03Acceptance } from './m03-acceptance.mjs';
+import { runM04Acceptance } from './m04-acceptance.mjs';
+import { runM11Acceptance } from './m11-acceptance.mjs';
+import { runM12Acceptance } from './m12-acceptance.mjs';
 
 const URL_ARG = process.argv[2] || null;
 const PORT = 9333;
@@ -75,7 +78,11 @@ class CDP {
       awaitPromise,
       userGesture: true,
     });
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || 'evaluate 异常');
+    if (r.exceptionDetails) {
+      // 自检脚本出错时打印被求值表达式的开头，便于定位（不打印整个脚本）
+      console.error('[shots] 求值失败，表达式开头：\n' + expression.split('\n').slice(0, 5).join('\n'));
+      throw new Error(r.exceptionDetails.exception?.description || 'evaluate 异常');
+    }
     return r.result?.value;
   }
   async shot(file) {
@@ -310,10 +317,12 @@ async function main() {
       );
       const lockedNav = [...document.querySelectorAll('.navitem[data-locked="true"]')].length;
       const realNav = [...document.querySelectorAll('.navitem[data-locked="false"]')].map((n) => n.textContent);
-      rec('T07', '未开放入口状态明确（无假按钮）',
-        lockedNav === 2 && fakeBtns.length === 0
-          && realNav.some((t) => /知识星图/.test(t)) && realNav.some((t) => /执行台/.test(t)),
-        '未开放入口=' + lockedNav + ' 个（引导叙事 / 实验空间，均带阶段说明面板）· 已开放=' + realNav.length + ' 个（含知识星图与执行台）· 隐藏却可点的控件=' + fakeBtns.length);
+      // M1.1：导航全部为真实入口（Story / Atlas / Lab / Constructor / Execution / Report / System）
+      rec('T07', '入口状态明确：全部导航均为真实入口，且无「隐藏却可点」的假按钮',
+        lockedNav === 0 && fakeBtns.length === 0
+          && realNav.some((t) => /知识星图/.test(t)) && realNav.some((t) => /执行台/.test(t))
+          && realNav.some((t) => /引导叙事/.test(t)) && realNav.some((t) => /实验空间/.test(t)),
+        '未开放入口=' + lockedNav + ' 个 · 已开放=' + realNav.length + ' 个（含六章目录与实验登记）· 隐藏却可点的控件=' + fakeBtns.length);
 
       // T08 主视口无横向溢出
       const overflow = document.documentElement.scrollWidth - window.innerWidth;
@@ -998,9 +1007,60 @@ async function main() {
       failed: m03.filter((t) => !t.pass).map((t) => t.id),
     };
 
+    /* ==================================================================
+       M0.4 研究闭环与来源追溯验收（A31–A70 + F23–F30）
+       ================================================================== */
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    const m04 = await runM04Acceptance({
+      cdp,
+      sleep,
+      waitReady,
+      shot: (name) => cdp.shot(path.join(OUT, name)),
+    });
+    report.m04 = m04;
+    report.m04Summary = {
+      total: m04.length,
+      passed: m04.filter((t) => t.pass).length,
+      failed: m04.filter((t) => !t.pass).map((t) => t.id),
+    };
+
+    /* ==================================================================
+       M1.1 知识架构与学习基础验收（A01–A24 + F31–F34）
+       ================================================================== */
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    const m11 = await runM11Acceptance({
+      cdp,
+      sleep,
+      waitReady,
+      shot: (name) => cdp.shot(path.join(OUT, name)),
+    });
+    report.m11 = m11;
+    report.m11Summary = {
+      total: m11.length,
+      passed: m11.filter((t) => t.pass).length,
+      failed: m11.filter((t) => !t.pass).map((t) => t.id),
+    };
+
+    /* ==================================================================
+       M1.2 AI 基础与工具交互验收（A01–A30 + F35–F45）
+       ================================================================== */
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    const m12 = await runM12Acceptance({
+      cdp,
+      sleep,
+      waitReady,
+      shot: (name) => cdp.shot(path.join(OUT, name)),
+    });
+    report.m12 = m12;
+    report.m12Summary = {
+      total: m12.length,
+      passed: m12.filter((t) => t.pass).length,
+      failed: m12.filter((t) => !t.pass).map((t) => t.id),
+    };
+
     // 回到三维路径，供后续多视口截图使用
     await cdp.send('Page.reload', { ignoreCache: false });
-    if (!(await waitReady(cdp))) throw new Error('M0.3 验收后恢复页面失败');
+    if (!(await waitReady(cdp))) throw new Error('M1.1 验收后恢复页面失败');
     await cdp.eval(`window.__AZ.skipIntro('视口截图')`);
     await sleep(700);
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -1055,6 +1115,18 @@ async function main() {
     }
     const m03Failed = (report.m03 || []).filter((t) => !t.pass);
     console.log(`\nM0.3 合计：${(report.m03 || []).length - m03Failed.length}/${(report.m03 || []).length} 通过`);
+
+    console.log('\n=== M1.1 知识架构与学习基础验收（A01–A24） ===');
+    for (const t of report.m12 || []) {
+      console.log(`${t.pass ? 'PASS' : 'FAIL'} ${t.id} ${t.name}\n      ${t.note}`);
+    }
+    const m12Failed = (report.m12 || []).filter((t) => !t.pass);
+    console.log(`\nM1.2 合计：${(report.m12 || []).length - m12Failed.length}/${(report.m12 || []).length} 通过`);
+    for (const t of report.m11 || []) {
+      console.log(`${t.pass ? 'PASS' : 'FAIL'}  ${t.id}  ${t.name}  —  ${t.note}`);
+    }
+    const m11Failed = (report.m11 || []).filter((t) => !t.pass);
+    console.log(`\nM1.1 合计：${(report.m11 || []).length - m11Failed.length}/${(report.m11 || []).length} 通过`);
     console.log('截图目录：verify/shots');
   } finally {
     proc.kill();
@@ -1066,3 +1138,6 @@ main().catch((e) => {
   if (process.env.AZ_DEBUG_STACK === '1') console.error(e.stack);
   process.exit(1);
 });
+
+
+

@@ -40,8 +40,32 @@ import { createLearningStore } from './features/atlas/state/learning.js';
 import { createAtlasWorkspace } from './features/atlas/components/atlasWorkspace.js';
 import { createToolCallingKnowledge } from './features/atlas/knowledge/toolCalling.js';
 import { getConcept } from './features/atlas/data/index.js';
+/* M1.1 知识架构：六章目录 / 统一知识模板 / 实验登记 */
+import { createStoryWorkspace } from './features/knowledge/components/storyWorkspace.js';
+import { createKnowledgePage } from './features/knowledge/components/knowledgePage.js';
+import { createLabWorkspace } from './features/knowledge/components/labWorkspace.js';
+/* M1.2 三章叙事与三个实验 */
+import { createChapterNarrative } from './features/knowledge/components/chapterNarrative.js';
+import { createTokenLab } from './features/laboratory/token/tokenLab.js';
+import { createContextLab } from './features/laboratory/context/contextLab.js';
+import { getChapterStory } from './content/chapters/index.js';
+import {
+  CHAPTERS as KNOWLEDGE_CHAPTERS,
+  CONCEPT_ORDER as KNOWLEDGE_CONCEPT_ORDER,
+  EXPERIMENTS as KNOWLEDGE_EXPERIMENTS,
+  SOURCES as KNOWLEDGE_SOURCES,
+  conceptAvailability as knowledgeAvailability,
+  experimentByLabKind,
+  experimentStats as knowledgeExperimentStats,
+  getExperiment as knowledgeGetExperiment,
+  knowledgeStats,
+  validateKnowledge,
+} from './knowledge/index.js';
 import { createExecutionWorkspace } from './features/execution/components/executionWorkspace.js';
 import { deriveToolAvailability } from './simulation/rules/availability.js';
+import { MISSION_001 } from './research-packs/mission-001/index.js';
+import { MISSION_001_MINI } from './research-packs/mission-001-mini/index.js';
+import { prepareCorpus, validateMissionPack } from './research-packs/mission-001/validate.js';
 
 const STORE = {
   intro: 'az0.intro.seen.v1',
@@ -403,10 +427,30 @@ export function createApp(root) {
       openAtlas();
       return;
     }
+    // M1.1：六章目录（Story）与实验登记（Lab）同样是真实入口
+    if (nav.id === 'story') {
+      setState({ mode: 'story' }, 'mode');
+      dock.setMode('story');
+      openStory();
+      return;
+    }
+    if (nav.id === 'lab') {
+      setState({ mode: 'lab' }, 'mode');
+      dock.setMode('lab');
+      openLab();
+      return;
+    }
     if (nav.id === 'execution') {
       setState({ mode: 'execution' }, 'mode');
       dock.setMode('execution');
       openExecution();
+      return;
+    }
+    if (nav.id === 'report') {
+      // 报告是本次 Run 的产物：打开执行台并直接切到 REPORT 视图（不另起第二个 Run）
+      setState({ mode: 'execution' }, 'mode');
+      dock.setMode('execution');
+      openExecution({ view: 'report' });
       return;
     }
     closeWorkspace();
@@ -1120,6 +1164,14 @@ export function createApp(root) {
   }
 
   /* ---------------- 三维画布停靠：执行台中央列复用同一个 WebGL 上下文 ---------------- */
+  /**
+   * 画布尺寸跟随停靠容器。
+   * 停靠发生在布局完成之前时，量到的仍是旧尺寸（实测会把三维核心渲染成
+   * 82×586 的拉伸画面）。ResizeObserver 在下一帧布局完成后回调，是唯一
+   * 可靠时机；另外再补一次 rAF 作为不支持该 API 时的兜底。
+   */
+  let canvasObserver = null;
+
   function parkCanvas(target) {
     if (!scene?.ok || !target) return;
     const host = stage.canvasHost;
@@ -1127,9 +1179,22 @@ export function createApp(root) {
     target.append(host);
     canvasParked = true;
     scene.resize();
+    canvasObserver?.disconnect();
+    if (typeof ResizeObserver === 'function') {
+      canvasObserver = new ResizeObserver(() => {
+        if (canvasParked) scene?.resize?.();
+      });
+      canvasObserver.observe(target);
+    }
+    requestAnimationFrame(() => {
+      if (!canvasParked) return;
+      scene?.resize?.();
+    });
   }
 
   function unparkCanvas() {
+    canvasObserver?.disconnect();
+    canvasObserver = null;
     if (!scene?.ok) return;
     const host = stage.canvasHost;
     if (host.parentElement === stage.el) {
@@ -1139,6 +1204,10 @@ export function createApp(root) {
     stage.el.prepend(host);
     canvasParked = false;
     scene.resize();
+    requestAnimationFrame(() => {
+      if (canvasParked) return;
+      scene?.resize?.();
+    });
   }
 
   /** 事件 → 三维表现：只做聚焦表现，不改变任何装配或运行数据 */
@@ -1219,6 +1288,7 @@ export function createApp(root) {
         onLog: (kind, message, level) => log(kind, message, level),
         onBackToHub: () => goHub(),
         onOpenKnowledge: (id) => openKnowledge(id, { from: 'atlas', conceptId }),
+        onOpenStory: () => openStory(),
         onViewInConstructor: (concept) => locateInConstructor(concept, { from: 'atlas' }),
       })
     );
@@ -1231,38 +1301,214 @@ export function createApp(root) {
     return api;
   }
 
-  function openKnowledge(conceptId = 'tool_calling', context = {}) {
-    const concept = getConcept(conceptId);
-    const api = openWorkspace('knowledge', () =>
-      createToolCallingKnowledge({
+  /** STORY：六章目录（M1.1）+ 前三章叙事入口（M1.2） */
+  function openStory({ conceptId = null } = {}) {
+    const stats = knowledgeStats();
+    const api = openWorkspace('story', () =>
+      createStoryWorkspace({
         learning,
         reducedMotion,
         onLog: (kind, message, level) => log(kind, message, level),
         onBackToHub: () => goHub(),
+        onOpenConcept: (id, ctx = {}) => openKnowledge(id, { from: 'story', chapterId: ctx.chapterId || null }),
+        onOpenAtlas: () => openAtlas(),
+        onOpenLab: () => openLab(),
+        onOpenChapter: (chapterId) => openChapterStory(chapterId),
+      })
+    );
+    api.activate();
+    log(
+      '导航',
+      `六章目录已打开：${stats.chapters} 章 · ${stats.concepts} 个概念（${stats.byStatus.reviewed + stats.byStatus.published} 个已审校可用 / ${stats.byStatus.outline} 个建设中）· 打开目录不触发任何模拟运行`,
+      'signal'
+    );
+    return api;
+  }
+
+  /**
+   * STORY 章节叙事（M1.2 D02）：第 01–03 章有完整叙事与实验入口。
+   * 未知或未交付章节（04–06）会被叙事页自己拦下并给出「后续阶段」提示。
+   */
+  function openChapterStory(chapterId = 'intelligence') {
+    const story = getChapterStory(chapterId);
+    const api = openWorkspace('chapter', () =>
+      createChapterNarrative({
+        chapterId,
+        learning,
+        onLog: (kind, message, level) => log(kind, message, level),
+        onOpenConcept: (id, ctx = {}) => openKnowledge(id, { from: 'chapter', chapterId: ctx.chapterId || chapterId }),
+        onOpenLab: () => openLab(),
+        onOpenLabExperiment: (experimentId, entryConceptId) => openLabExperiment(experimentId, entryConceptId),
+        onOpenChapter: (id) => openChapterStory(id),
+        onOpenAtlas: () => openAtlas(),
+        onOpenStory: () => openStory(),
+        onBackToHub: () => goHub(),
+      })
+    );
+    api.activate();
+    log(
+      '导航',
+      story
+        ? `第 ${story.no} 章叙事已打开：${story.subtitle}（${story.beats.length} 个节拍 · 实验 ${story.lab.experimentId}）`
+        : `章节 ${chapterId} 的叙事尚未开放（M1.3），已显示后续阶段说明`,
+      'signal'
+    );
+    return api;
+  }
+
+  /** LAB：实验登记表（M1.1）+ 三个真实实验的入口路由（M1.2） */
+  function openLab() {
+    const stats = knowledgeExperimentStats();
+    const api = openWorkspace('lab', () =>
+      createLabWorkspace({
+        learning,
+        onLog: (kind, message, level) => log(kind, message, level),
+        onBackToHub: () => goHub(),
+        onOpenConcept: (id) => openKnowledge(id, { from: 'lab' }),
+        onOpenExperiment: (experiment, entryConceptId) => openLabExperiment(experiment, entryConceptId),
+        onOpenStory: () => openStory(),
+        onOpenChapterStory: (chapterId) => openChapterStory(chapterId),
+      })
+    );
+    api.activate();
+    log(
+      '导航',
+      `实验空间已打开：${stats.total} 个实验登记，其中 ${stats.available} 个本轮可操作、${stats.planned} 个后续阶段开放（未开放项不渲染运行按钮）`,
+      'signal'
+    );
+    return api;
+  }
+
+  /**
+   * 打开某个实验（M1.2 §6 / D03–D05）：
+   *   · lab-workspace → 独立实验工作区（Lab 01 / Lab 02）；
+   *   · knowledge-step → 知识页 EXPERIMENT 步骤（Lab 03 复用 M0.3 引擎）。
+   * 两种方式都不写入装配配置、不产生真实网络请求。
+   */
+  function openLabExperiment(experimentOrId, entryConceptId = null) {
+    const experiment =
+      typeof experimentOrId === 'string' ? knowledgeGetExperiment(experimentOrId) : experimentOrId;
+    if (!experiment) {
+      log('实验', '未知实验标识，已忽略打开请求（不会启动任何模拟）', 'attention');
+      return null;
+    }
+    if (experiment.status !== 'available') {
+      log('实验', `${experiment.title} 尚未开放（计划阶段 ${experiment.milestone}）：不提供运行入口`, 'attention');
+      return null;
+    }
+    const conceptId = entryConceptId || experiment.entryConceptId;
+    if (experiment.openMode === 'lab-workspace') {
+      const factory = experiment.labKind === 'token' ? createTokenLab : experiment.labKind === 'context' ? createContextLab : null;
+      if (!factory) {
+        log('实验', `实验 ${experiment.id} 的实验室类型未知：${String(experiment.labKind)}`, 'error');
+        return null;
+      }
+      const api = openWorkspace(experiment.labKind === 'token' ? 'lab-token' : 'lab-context', () =>
+        factory({
+          learning,
+          entryConceptId: conceptId,
+          onLog: (kind, message, level) => log(kind, message, level),
+          onBackToHub: () => goHub(),
+          onOpenLab: () => openLab(),
+          onOpenConcept: (id, ctx = {}) => openKnowledge(id, { from: 'lab', experimentId: experiment.id, ...ctx }),
+        })
+      );
+      api.activate();
+      log('实验', `已打开 ${experiment.title}（${experiment.dataNote}）`, 'signal');
+      return api;
+    }
+    // knowledge-step：工具调用实验保留 M0.3 的四步路径，M1.2 增加 MCP 对照模式
+    return openKnowledge(conceptId, { from: 'lab', step: experiment.entryStep || 'experiment' });
+  }
+
+  /** 兼容旧入口：按 labKind 直接打开（Lab 03 走知识页，不在此列） */
+  function openLabByKind(labKind, entryConceptId = null) {
+    const experiment = experimentByLabKind(labKind);
+    return experiment ? openLabExperiment(experiment, entryConceptId) : null;
+  }
+
+  /**
+   * 统一知识入口（M1.1）：
+   *   · tool_calling 保留 M0.3 的四步学习路径与内嵌实验（不复制第二套引擎）；
+   *   · 其余概念走统一知识模板：已审校者呈现 UNDERSTAND / INSPECT，
+   *     仅索引者显示「内容建设中」与计划阶段，绝不伪装完成。
+   */
+  function openKnowledge(conceptId = 'tool_calling', context = {}) {
+    const concept = getConcept(conceptId);
+
+    /** 返回上一处：按来源回到原上下文，绝不重置 M0.4 研究 Run */
+    function returnToOrigin() {
+      if (context.from === 'constructor') {
+        openConstructorContext({
+          selectedModuleId: context.selectedModuleId || null,
+          reason: `从 ${concept ? concept.cn : conceptId} 知识节点返回装配台 · 保持原有 Inspector 上下文（${context.selectedModuleId || '未选中模块'}）`,
+        });
+      } else if (context.from === 'execution') {
+        openExecution();
+      } else if (context.from === 'atlas') {
+        openAtlas(context.conceptId || conceptId);
+      } else if (context.from === 'story') {
+        openStory({ conceptId });
+      } else if (context.from === 'chapter') {
+        openChapterStory(context.chapterId || concept?.chapterId || 'intelligence');
+      } else if (context.from === 'lab') {
+        openLab();
+      } else {
+        goHub();
+      }
+    }
+
+    if (conceptId === 'tool_calling') {
+      const api = openWorkspace('knowledge', () =>
+        createToolCallingKnowledge({
+          learning,
+          reducedMotion,
+          onLog: (kind, message, level) => log(kind, message, level),
+          onBackToHub: () => goHub(),
+          onOpenAtlas: (id) => openAtlas(id),
+          /** M1.2：知识页里的关联概念可以直接打开对应知识节点（而不是只跳星图） */
+          onOpenConcept: (id) => openKnowledge(id, { from: 'knowledge', chapterId: 'connection' }),
+          onViewInConstructor: (c) => locateInConstructor(c, { from: 'knowledge' }),
+          onReturn: returnToOrigin,
+        })
+      );
+      api.activate();
+      // 从 Lab / 概念页的实验入口直接落到 EXPERIMENT 步骤（与点击步骤按钮同一条路径）
+      if (context.step === 'experiment') api.setStep?.('experiment');
+      log('导航', '已进入 Tool Calling 知识页（四步学习路径；实验为知识示范，不修改构建器配置）', 'signal');
+      return api;
+    }
+
+    const api = openWorkspace('knowledge', () =>
+      createKnowledgePage({
+        conceptId,
+        learning,
+        onBack: returnToOrigin,
+        onBackToHub: () => goHub(),
         onOpenAtlas: (id) => openAtlas(id),
+        onOpenStory: () => openStory({ conceptId }),
         onViewInConstructor: (c) => locateInConstructor(c, { from: 'knowledge' }),
-        onReturn: () => {
-          if (context.from === 'constructor') {
-            openConstructorContext({
-              selectedModuleId: context.selectedModuleId || null,
-              reason: `从 Tool Calling 知识节点返回装配台 · 保持原有 Inspector 上下文（${context.selectedModuleId || '未选中模块'}）`,
-            });
-          } else if (context.from === 'execution') {
-            openExecution();
-          } else if (context.from === 'atlas') {
-            openAtlas(context.conceptId || conceptId);
-          } else {
-            goHub();
-          }
+        /** 实验入口统一交给实验路由器：区分「独立实验工作区」与「知识页步骤」 */
+        onOpenExperiment: (id, experiment) => openLabExperiment(experiment, id),
+        // 统一模板内导航到有专属学习路径的概念时，交给应用层换页（不复制第二套页面）
+        onSelectConcept: (id) => {
+          if (id === 'tool_calling') openKnowledge(id, context);
         },
       })
     );
     api.activate();
-    log('导航', `已进入 ${concept ? concept.cn : conceptId} 知识页（四步学习路径；实验为知识示范，不修改构建器配置）`, 'signal');
+    const availability = knowledgeAvailability(conceptId);
+    log(
+      '导航',
+      `已进入 ${concept ? concept.cn : conceptId} 知识页 · ${availability ? availability.statusMeta.cn : '索引页'} · ${
+        availability?.hasBody ? '可读正文与关系' : '仅索引，正文在后续阶段开放'
+      }`,
+      'signal'
+    );
     return api;
   }
 
-  function openExecution({ autorun = false } = {}) {
+  function openExecution({ autorun = false, view = null } = {}) {
     const api = openWorkspace('execution', () => {
       execApi = createExecutionWorkspace({
         getConfigSnapshot: constructorSnapshot,
@@ -1279,6 +1525,7 @@ export function createApp(root) {
       });
       return execApi;
     });
+    if (view) api.setRunView?.(view);
     log('导航', '执行台已打开：使用装配台当前配置快照在浏览器本地运行教学模拟（无真实检索、无在线 AI）', 'signal');
     if (autorun) api.newRun();
     return api;
@@ -1299,6 +1546,20 @@ export function createApp(root) {
       if (activeWorkspace) {
         if (activeWorkspace.kind === 'atlas' && activeWorkspace.api.clearSelection?.()) return;
         if (activeWorkspace.kind === 'execution') return; // 执行台不因误触 Esc 丢失当前事件定位
+        if (activeWorkspace.kind === 'knowledge' && activeWorkspace.api.escape?.()) return; // 知识页先回上一处
+        if (activeWorkspace.kind === 'story' || activeWorkspace.kind === 'lab') {
+          goHub();
+          return;
+        }
+        // M1.2：实验工作区与章节叙事按 Esc 先回到各自的上级，而不是直接丢掉上下文
+        if (activeWorkspace.kind === 'lab-token' || activeWorkspace.kind === 'lab-context') {
+          openLab();
+          return;
+        }
+        if (activeWorkspace.kind === 'chapter') {
+          openStory({});
+          return;
+        }
         closeWorkspace();
         return;
       }
@@ -1322,7 +1583,9 @@ export function createApp(root) {
   }
 
   function onResize() {
-    scene?.resize();
+    // 兜底路径下 scene 是没有 resize 的降级对象：这里必须用可选调用，
+    // 否则无 WebGL 时改变窗口尺寸会抛出 TypeError（M1.1 验收发现并修复）
+    scene?.resize?.();
     applyShellState();
     updatePortLabels();
     // 视口比例变化会改变取景距离：入场后重新收敛到标准镜位，避免主体被裁切
@@ -1387,13 +1650,22 @@ export function createApp(root) {
   );
   if (!scene?.ok) log('渲染', `兜底原因：${fallbackReason}`, 'error');
 
+  const kStats = knowledgeStats();
   log(
     '知识',
-    'M0.3 知识星图已载入：10 个概念节点 + 10 条人工配置的语义关系（USES 3 / RELATED 6 / CONTRASTS 1，本轮不编造 PART_OF）',
+    `M1.1 知识层已载入：${kStats.chapters} 章 · ${kStats.concepts} 个概念（已审校 ${kStats.byStatus.reviewed} + 已发布 ${kStats.byStatus.published} / 建设中 ${kStats.byStatus.outline}）· ${kStats.edges} 条语义关系（USES ${kStats.byType?.USES ?? '—'} / PART_OF ${kStats.byType?.PART_OF ?? '—'} / RELATED ${kStats.byType?.RELATED ?? '—'} / CONTRASTS ${kStats.byType?.CONTRASTS ?? '—'}）`,
     'signal'
   );
-  log('执行', 'M0.3 本地模拟引擎就绪：配置快照派生可用性 → 确定性事件（B01–B05）· 运行期零网络请求', 'signal');
-  log('配置', `学习进度命名空间 ${'agent-zero:learning:v1'} · 运行记录命名空间 agent-zero:execution:v1（与装配台配置互不覆盖）`, 'info');
+  log(
+    '知识',
+    `统一内容接口就绪：getConcept / getChapter / getConceptsByChapter / searchConcepts / getRelations · 星图画布只绘制 ${kStats.canvas.nodes} 个已开放节点、${kStats.canvas.edges} 条边，其余概念在目录中标注「内容建设中」`,
+    'info'
+  );
+  log('执行', 'M0.4 研究引擎就绪：配置快照派生可用性 → 确定性事件（B01–B05）→ 可见声明 → 冲突分组 → 更正核验 → 报告装配 · 运行期零网络请求', 'signal');
+  log('报告', 'M0.4 MISSION 001 研究包已载入：10 份虚构公告（含 10/18 → 10/20 更正链与一组未决冲突）+ 3 张方案比较卡 · 数据包 mission-001@2', 'signal');
+  log('配置', `学习进度命名空间 agent-zero:learning:v2（旧键 agent-zero:learning:v1 只读迁移、原样保留）· 运行记录 agent-zero:research:v2（最近两次）· M0.3 旧记录 agent-zero:execution:v1 只读兼容 · 与装配台配置互不覆盖`, 'info');
+  if (learning.notice) log('学习', learning.notice.message, learning.notice.level === 'error' ? 'error' : 'attention');
+  else if (learning.migratedFrom) log('学习', `已从旧命名空间 ${learning.migratedFrom} 迁移学习进度：原有标志全部保留`, 'attention');
 
   applyShellState();
   dock.setMode('system');
@@ -1460,6 +1732,11 @@ export function createApp(root) {
     /* M0.3 知识与执行域：自检脚本使用与界面按钮完全相同的入口 */
     learning,
     openAtlas: (conceptId = null) => openAtlas(conceptId),
+    openStory: (options = {}) => openStory(options),
+    openLab: () => openLab(),
+    openChapterStory: (chapterId = 'intelligence') => openChapterStory(chapterId),
+    openLabExperiment: (experimentOrId, entryConceptId = null) => openLabExperiment(experimentOrId, entryConceptId),
+    openLabByKind: (labKind, entryConceptId = null) => openLabByKind(labKind, entryConceptId),
     openKnowledge: (conceptId = 'tool_calling', context = {}) => openKnowledge(conceptId, context),
     openExecution: (options = {}) => openExecution(options),
     closeWorkspace,
@@ -1467,16 +1744,109 @@ export function createApp(root) {
     workspaceKind: () => activeWorkspace?.kind || null,
     atlasApi: () => (activeWorkspace?.kind === 'atlas' ? activeWorkspace.api : null),
     knowledgeApi: () => (activeWorkspace?.kind === 'knowledge' ? activeWorkspace.api : null),
+    storyApi: () => (activeWorkspace?.kind === 'story' ? activeWorkspace.api : null),
+    labApi: () => (activeWorkspace?.kind === 'lab' ? activeWorkspace.api : null),
+    chapterApi: () => (activeWorkspace?.kind === 'chapter' ? activeWorkspace.api : null),
+    tokenLabApi: () => (activeWorkspace?.kind === 'lab-token' ? activeWorkspace.api : null),
+    contextLabApi: () => (activeWorkspace?.kind === 'lab-context' ? activeWorkspace.api : null),
     executionApi: () => (activeWorkspace?.kind === 'execution' ? activeWorkspace.api : null),
+    /* M1.1 知识层只读快照：供自检脚本核对章节 / 概念 / 实验 / 数据自洽 */
+    knowledgeStats: () => knowledgeStats(),
+    knowledgeValidation: () => validateKnowledge(),
+    chapters: () => KNOWLEDGE_CHAPTERS.map((c) => ({ id: c.id, no: c.no, zh: c.title.zh, en: c.title.en, question: c.question })),
+    conceptIds: () => [...KNOWLEDGE_CONCEPT_ORDER],
+    conceptAvailability: (id) => knowledgeAvailability(id),
+    /**
+     * M1.2 只读快照：18 个概念的分层字段与来源，供验收脚本逐条核对
+     * （不在界面里展示，也不可被写入）。
+     */
+    knowledgeConcepts: () =>
+      KNOWLEDGE_CONCEPT_ORDER.map((id) => {
+        const concept = getConcept(id);
+        const availability = knowledgeAvailability(id);
+        return {
+          id: concept.id,
+          chapterId: concept.chapterId,
+          no: concept.chapterNo,
+          cn: concept.cn,
+          name: concept.name,
+          status: concept.contentStatus,
+          hasBody: availability.hasBody,
+          oneLiner: concept.oneLiner,
+          understand: concept.understand.length,
+          understandChars: concept.understand.join('').length,
+          inspect: concept.inspect.length,
+          inspectChars: concept.inspect.join('').length,
+          misconceptions: concept.misconceptions.map((m) => ({ claim: m.claim, correction: m.correction })),
+          example: concept.example ? { label: concept.example.label, body: concept.example.body, isSimulated: concept.example.isSimulated } : null,
+          sources: concept.sources.slice(),
+          reviewedAt: concept.reviewedAt || null,
+          experimentId: concept.experimentId || availability.experiment?.id || null,
+          canRunExperiment: availability.canRunExperiment,
+          related: concept.related.slice(),
+        };
+      }),
+    knowledgeSources: () =>
+      Object.values(KNOWLEDGE_SOURCES).map((s) => ({
+        id: s.id,
+        type: s.type,
+        title: s.title,
+        url: s.url,
+        reviewed: s.reviewed,
+        checkedAt: s.checkedAt,
+        versionOrDate: s.versionOrDate,
+      })),
+    /** 章节叙事（前三章）的只读快照：验收脚本据此核对结构完整性 */
+    storyChapters: () =>
+      ['intelligence', 'context', 'connection'].map((id) => {
+        const story = getChapterStory(id);
+        if (!story) return { id, available: false };
+        return {
+          id,
+          available: true,
+          opening: story.opening.goal,
+          task: story.opening.task,
+          beats: story.beats.map((b) => ({ id: b.id, kind: b.kind, hasObservation: !!b.observation, title: b.title })),
+          limitation: story.limitation.text,
+          labId: story.lab.experimentId,
+          labSteps: story.lab.steps.length,
+          reading: story.reading.items.length,
+          transition: story.transition.text,
+          next: story.transition.toChapterId,
+          concepts: story.concepts.slice(),
+        };
+      }),
+    experiments: () =>
+      KNOWLEDGE_EXPERIMENTS.map((e) => ({
+        id: e.id,
+        status: e.status,
+        chapterId: e.chapterId,
+        openMode: e.openMode,
+        labKind: e.labKind || null,
+        entryConceptId: e.entryConceptId,
+        conceptIds: e.conceptIds.slice(),
+        milestone: e.milestone,
+      })),
+    experimentStats: () => knowledgeExperimentStats(),
     runCondition: () => {
       const c = runCondition();
       return { searchReady: c.search.ready, readerReady: c.reader.ready, searchCode: c.search.blockCode, readerCode: c.reader.blockCode, bothReady: c.bothReady };
     },
     toolAvailability: () => deriveToolAvailability(constructorSnapshot()),
     constructorConfigSnapshot: () => constructorSnapshot(),
-    learningSnapshot: () => ({ summary: learning.summary(), concepts: { ...learning.getState().concepts } }),
-    learningStorageKey: 'agent-zero:learning:v1',
+    learningSnapshot: () => ({ summary: learning.summary(), concepts: { ...learning.getState().concepts }, lastViewed: learning.lastViewed(), migratedFrom: learning.migratedFrom }),
+    learningStorageKey: 'agent-zero:learning:v2',
+    learningLegacyKeys: ['agent-zero:learning:v1'],
     executionStorageKey: 'agent-zero:execution:v1',
+    researchStorageKey: 'agent-zero:research:v2',
+    /** 研究包与校验器：验收脚本用它检查数据完整性与事实可见性边界 */
+    mission001: MISSION_001,
+    mission001Mini: MISSION_001_MINI,
+    validateMissionPack,
+    prepareCorpus,
+    simulationToolIds: Object.keys(MODULES),
+    /** 直接从任意位置打开研究报告视图（当前 Run 的产物） */
+    openReport: () => openExecution({ view: 'report' }),
     locateInConstructor: (conceptId) => {
       const concept = getConcept(conceptId);
       if (!concept) return false;
@@ -1567,3 +1937,9 @@ export function createApp(root) {
   window.__AZ = api;
   return api;
 }
+
+
+
+
+
+

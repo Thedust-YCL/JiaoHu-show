@@ -213,7 +213,8 @@ test('A28 运行记录：损坏 / 错版本 / 空数据都安全降级，不抛�
   assert.equal(readExecution(storage, EXECUTION_STORAGE_KEY).notice.code, 'EXECUTION_STORAGE_VERSION');
 
   const empty = readExecution(memoryStorage(), EXECUTION_STORAGE_KEY);
-  assert.deepEqual(empty, { run: null, savedAt: null, notice: null });
+  // M0.4：返回值新增 legacy 标记（旧版轨迹没有结构化报告）
+  assert.deepEqual(empty, { run: null, savedAt: null, legacy: false, notice: null });
 });
 
 test('A28 运行记录：不与构建器命名空间互相覆盖', () => {

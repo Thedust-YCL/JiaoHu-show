@@ -18,6 +18,13 @@ import { SIMULATION_TOOLS, paramText } from '../../../simulation/tools/registry.
 import { runSimulation } from '../../../simulation/engine/runSimulation.js';
 import { MISSION_001_MINI } from '../../../research-packs/mission-001-mini/index.js';
 import { eventMetaTable, eventRow, payloadBlock, statusChip } from '../../execution/components/eventView.js';
+import {
+  CAPABILITY_TYPES,
+  MCP_ROLES,
+  buildProtocolTrace,
+  comparePaths,
+  protocolStepStats,
+} from '../../laboratory/tool-calling/mcpPath.js';
 
 /** 一句话定义（UNDERSTAND 层的核心表述） */
 export const ONE_LINER =
@@ -32,7 +39,7 @@ const STAGES = Object.freeze([
     cn: '模型提出调用请求',
     actor: 'model_core',
     claim: '模型根据上下文判断需要外部能力，产出一段结构化请求：要调用哪个工具、参数是什么。',
-    detail: '请求本身**不是执行结果**。模型能输出合法的工具 JSON，只说明格式正确，不说明工具已经执行成功。',
+    detail: '请求本身<strong>不是执行结果</strong>。模型能输出合法的工具 JSON，只说明格式正确，不说明工具已经执行成功。',
     observe: ['请求里必须写明工具名与参数', '参数是模型生成的，可能不合法或多余', '此时外部世界里还没有发生任何动作'],
   },
   {
@@ -42,7 +49,7 @@ const STAGES = Object.freeze([
     cn: '运行环境检查并调用本地模拟工具',
     actor: 'system',
     claim: '外部应用接收请求，检查工具是否已提供、是否启用、参数是否合法、权限是否满足，然后才执行。',
-    detail: '权限与工具注册都在这一侧控制。**工具不存在、被禁用或未授权时，请求只会被阻断**，不会有结果返回。',
+    detail: '权限与工具注册都在这一侧控制。<strong>工具不存在、被禁用或未授权时，请求只会被阻断</strong>，不会有结果返回。',
     observe: ['工具未装配 → 阻断，不会假装成功', '权限不足 → 阻断，不会越权执行', '参数非法 → 拒绝执行并给出原因'],
   },
   {
@@ -52,7 +59,7 @@ const STAGES = Object.freeze([
     cn: '模拟结果返回任务上下文',
     actor: 'system',
     claim: '执行产生的结果被写回模型上下文，作为新的一轮输入，模型据此继续作答或提出下一步。',
-    detail: '返回的是**本地教学模拟的固定响应**：它来自随页面打包的虚构语料，不是真实网络检索结果。',
+    detail: '返回的是<strong>本地教学模拟的固定响应</strong>：它来自随页面打包的虚构语料，不是真实网络检索结果。',
     observe: ['结果里可能是摘要，也可能是全文，取决于读取方式', '关闭元数据时不会悄悄补回来源与日期', '取得样本 ≠ 资料真实性已经核验'],
   },
 ]);
@@ -73,7 +80,17 @@ const CONDITIONS = Object.freeze([
   { id: 'no_search', cn: 'Search 未装配', note: '检索工具不存在：运行会在校验阶段被阻断。' },
   { id: 'no_reader', cn: 'Reader 未装配', note: '检索成功，但没有读取工具，只能拿到检索摘要。' },
   { id: 'reader_unauthorized', cn: 'Reader 未授权', note: 'Reader 已装配但缺少只读模拟权限，同样不能读取。' },
+  { id: 'search_timeout', cn: '检索超时（失败预设）', note: '注入一次确定性超时：不会出现成功响应，也不会补出任何资料。' },
 ]);
+
+/**
+ * 构造本次演示的 run：条件为「检索超时」时注入确定性故障模式，
+ * 其余条件只改装配快照。两种方式都走同一个模拟引擎，不旁路它。
+ */
+function buildRun(state) {
+  const options = state.condition === 'search_timeout' ? { faultMode: 'search_timeout' } : {};
+  return runSimulation(buildDemoSnapshot(state), MISSION_001_MINI, options);
+}
 
 /**
  * 构造实验用的**固定演示快照**。
@@ -105,6 +122,7 @@ export function createToolCallingKnowledge({
   learning,
   onBackToHub,
   onOpenAtlas,
+  onOpenConcept,
   onViewInConstructor,
   onReturn,
   onLog,
@@ -127,6 +145,8 @@ export function createToolCallingKnowledge({
     stepIndex: 0,
     playing: false,
     run: null,
+    /** 路径模式：direct = 应用直连调用；mcp = 经协议路径（教学仿真） */
+    pathMode: 'direct',
   };
   let experimentTimer = 0;
 
@@ -210,7 +230,7 @@ export function createToolCallingKnowledge({
         <div class="section__label"><span>实验隔离</span></div>
         <div class="note note--info" data-act="isolation-note">
           <span class="note__key">只读示范</span>
-          <span>本页的实验使用一份**固定演示配置**在全站共享的本地语料上运行，<b>不会修改当前构建器配置、不会授予权限、不会写入运行记录</b>。它展示的是知识示范，不是你在装配台里的系统状态。</span>
+          <span>本页的实验使用一份<strong>固定演示配置</strong>在全站共享的本地语料上运行，<b>不会修改当前构建器配置、不会授予权限、不会写入运行记录</b>。它展示的是知识示范，不是你在装配台里的系统状态。</span>
         </div>`)
     );
 
@@ -240,7 +260,7 @@ export function createToolCallingKnowledge({
     const left = h('div', { class: 'kn-compare__col', 'data-side': 'no-tool' });
     left.append(
       h('div', { class: 'kn-compare__head' }, '<span class="kn-compare__tag">只有模型</span><span class="tag tag--attention">无外部资料</span>'),
-      h('p', { class: 'explain' }, '上下文里没有任何本地公告，模型只能生成一段**读起来通顺的内容**：它可能给出一个日期，但那个日期没有依据，也无法核对。'),
+      h('p', { class: 'explain' }, '上下文里没有任何本地公告，模型只能生成一段<strong>读起来通顺的内容</strong>：它可能给出一个日期，但那个日期没有依据，也无法核对。'),
       h('div', { class: 'kn-sample' }, `
         <div class="kn-sample__label">示意片段 · 不是真实模型输出</div>
         <div class="kn-sample__body">「报名一般会提前一周左右截止，建议你尽快联系主办方确认。」</div>
@@ -330,7 +350,7 @@ export function createToolCallingKnowledge({
         insp.append(
           h('div', { class: 'section__label' }, '<span>简化示意格式</span><span>不是逐字协议规范</span>'),
           h('pre', { class: 'code-block' }, `{\n  "tool": "announcement_search",\n  "arguments": {\n    "scope": "campus_events",\n    "maxResults": 3\n  }\n}`),
-          h('p', { class: 'explain' }, '不同模型的字段名与调用形式并不相同，这里使用的是**简化示意格式**，用来表达「工具名 + 参数」这一固定结构。'),
+          h('p', { class: 'explain' }, '不同模型的字段名与调用形式并不相同，这里使用的是<strong>简化示意格式</strong>，用来表达「工具名 + 参数」这一固定结构。'),
           h('div', { class: 'note note--info' }, `
             <span class="note__key">注意</span>
             <span>能输出这段 JSON 只说明请求格式正确；工具是否已提供、是否被允许，要由下一步的执行环境判断。</span>`)
@@ -392,7 +412,7 @@ export function createToolCallingKnowledge({
     frag.append(
       h('div', { class: 'section' }, `
         <div class="section__label"><span>不要这样说</span><span>避免误导</span></div>
-        <div class="note"><span class="note__key">禁止表述</span><span>不得宣称「每个模型都支持 Tool Calling」，也不得把模型的内部推理过程当成可观察的真实轨迹：本页展示的是**协作结构与事件记录**，不是模型的思考过程。</span></div>`)
+        <div class="note"><span class="note__key">禁止表述</span><span>不得宣称「每个模型都支持 Tool Calling」，也不得把模型的内部推理过程当成可观察的真实轨迹：本页展示的是<strong>协作结构与事件记录</strong>，不是模型的思考过程。</span></div>`)
     );
 
     const next = h('button', { class: 'btn btn--primary kn-next', type: 'button' }, '下一步：EXPERIMENT · 动手实验 →');
@@ -462,7 +482,7 @@ export function createToolCallingKnowledge({
   }
 
   function rebuildExperiment() {
-    experiment.run = runSimulation(buildDemoSnapshot(experiment), MISSION_001_MINI, {});
+    experiment.run = buildRun(experiment);
     experiment.stepIndex = 0;
     experiment.playing = false;
     clearInterval(experimentTimer);
@@ -496,16 +516,145 @@ export function createToolCallingKnowledge({
     return true;
   }
 
+  /* ==================================================================== *
+   * 步骤 03 的路径切换：直连 / MCP（M1.2 扩展，M0.3 引擎不变）
+   * ==================================================================== */
+  const PATH_MODES = [
+    { id: 'direct', label: '直连示意', note: '应用自己校验参数并调用本地工具：最少的环节。' },
+    { id: 'mcp', label: 'MCP 适配示意', note: '同一份能力经 Host / Client / Server 转发：多几个环节，数据不变。' },
+  ];
+
+  function pathModeControls() {
+    const wrap = h('div', { class: 'tc-pathbar', 'data-act': 'path-mode' });
+    wrap.append(h('div', { class: 'section__label' }, '<span>调用路径</span><span>同一份能力 · 两种接入方式</span>'));
+    const row = h('div', { class: 'kn-layers', role: 'group', 'aria-label': '调用路径模式' });
+    for (const mode of PATH_MODES) {
+      const b = h('button', { type: 'button', 'data-path-mode': mode.id, 'aria-pressed': experiment.pathMode === mode.id ? 'true' : 'false', title: mode.note }, mode.label);
+      b.addEventListener('click', () => {
+        if (experiment.pathMode === mode.id) return;
+        experiment.pathMode = mode.id;
+        onLog?.(
+          '知识',
+          `Tool Calling 实验切换调用路径 → ${mode.label}（同一份引擎轨迹，只改变角色归属的展示方式）`,
+          'info'
+        );
+        renderMain();
+      });
+      row.append(b);
+    }
+    wrap.append(row, h('div', { class: 'tk-field__hint' }, PATH_MODES.find((m) => m.id === experiment.pathMode).note));
+    return wrap;
+  }
+
+  function renderPathPanel(run) {
+    const trace = buildProtocolTrace({ run, mode: experiment.pathMode });
+    const stats = protocolStepStats(trace);
+    const compare = comparePaths(run, { mode: experiment.pathMode });
+    const wrap = h('div', { class: 'tc-path', 'data-act': 'protocol-path', 'data-mode': experiment.pathMode });
+
+    wrap.append(
+      h('div', { class: 'section__label' }, `
+        <span>${experiment.pathMode === 'mcp' ? 'MCP 协议路径' : '直连路径'}</span>
+        <span>${stats.total} 步 · 其中协议包装 ${stats.envelope} 步 · 事件 ${stats.events} 条</span>`)
+    );
+
+    /* ---- 能力发现：只有 MCP 路径有「协商」这一步 ---- */
+    const discovery = h('div', { class: 'tc-discover' });
+    discovery.append(h('div', { class: 'tc-discover__title mono' }, experiment.pathMode === 'mcp' ? '能力发现（本地声明，不代表真实协商）' : '能力清单（应用自己注册）'));
+    if (trace.discovery.steps.length) {
+      for (const step of trace.discovery.steps) {
+        discovery.append(h('div', { class: 'tc-envelope', 'data-role': step.role }, `
+          <span class="tc-role-chip" data-role="${esc(step.role)}">${esc(roleLabel(step.role))}</span>
+          <span class="tc-envelope__label">${esc(step.label)}</span>
+          <span class="tc-envelope__detail">${esc(step.detail)}</span>`));
+      }
+    }
+    discovery.append(h('div', { class: 'tk-field__hint' }, trace.discovery.note));
+
+    /* ---- 三类能力：Tools / Resources / Prompts 用途不同 ---- */
+    const caps = h('div', { class: 'tc-caps' });
+    for (const type of CAPABILITY_TYPES) {
+      const list = trace.discovery.capabilities.filter((c) => c.type === type.id);
+      const card = h('div', { class: 'tc-cap', 'data-type': type.id });
+      card.append(
+        h('div', { class: 'tc-cap__head' }, `<span class="tc-cap__name">${esc(type.cn)}</span><span class="tag tag--muted">${list.length} 项</span>`),
+        h('div', { class: 'tc-cap__note' }, esc(type.note))
+      );
+      for (const cap of list) {
+        card.append(h('div', { class: 'tc-cap__item' }, `<span class="mono">${esc(cap.id)}</span> · ${esc(cap.cn)}`));
+      }
+      caps.append(card);
+    }
+    wrap.append(discovery, caps);
+
+    /* ---- 角色时间轴：信封步骤可点回对应事件 ---- */
+    const lane = h('div', { class: 'tc-lane' });
+    lane.append(h('div', { class: 'tc-lane__title mono' }, '路径时间轴（点击任一步回到对应事件）'));
+    for (const step of trace.steps) {
+      const isEnvelope = step.kind === 'envelope';
+      const row = h('button', {
+        class: 'tc-step',
+        type: 'button',
+        'data-kind': step.kind,
+        'data-role': step.role,
+        'data-event': step.eventId,
+        'aria-label': `第 ${step.eventId} 事件 · ${isEnvelope ? step.label : step.type}`,
+      }, `
+        <span class="tc-role-chip" data-role="${esc(step.role)}">${esc(roleLabel(step.role))}</span>
+        <span class="tc-step__body">
+          <span class="tc-step__label">${esc(isEnvelope ? step.label : step.type)}</span>
+          <span class="tc-step__msg">${esc(step.message || (isEnvelope ? step.detail : ''))}</span>
+        </span>
+        <span class="tc-step__id mono">${esc(step.eventId)}</span>`);
+      row.addEventListener('click', () => {
+        const index = run.events.findIndex((event) => event.id === step.eventId);
+        if (index >= 0) {
+          experiment.stepIndex = index;
+          experiment.playing = false;
+          clearInterval(experimentTimer);
+          renderMain();
+        }
+      });
+      lane.append(row);
+    }
+    wrap.append(lane);
+
+    /* ---- 对照结论：协议不改变事实 ---- */
+    const table = h('div', { class: 'tk-table tk-table--path' });
+    table.append(h('div', { class: 'tk-table__head' }, '<span>对照项</span><span>直连</span><span>MCP 路径</span><span>是否一致</span>'));
+    for (const check of compare.checks) {
+      table.append(h('div', { class: 'tk-table__row', 'data-check': check.key, 'data-same': check.same ? 'true' : 'false' }, `
+        <span>${esc(check.label)}</span>
+        <span class="mono">${esc(String(check.direct))}</span>
+        <span class="mono">${esc(String(check.protocol))}</span>
+        <span>${check.same ? '一致' : '不一致（实现缺陷）'}</span>`));
+    }
+    wrap.append(
+      h('div', { class: 'note' + (compare.same ? ' note--info' : ' note--attention'), 'data-act': 'path-compare' }, `
+        <span class="note__key">${compare.same ? '同一事实' : '差异告警'}</span>
+        <span>${esc(compare.note)}</span>`),
+      table,
+      h('div', { class: 'note', style: 'margin-top:8px' }, `
+        <span class="note__key">边界</span>
+        <span>这里的 Host / Client / Server 是把角色叠在<b>同一份既有事件轨迹</b>上的教学可视化：不发起网络请求、不实现 JSON-RPC 握手、不声称已接入任何真实 MCP 服务端。</span>`)
+    );
+    return wrap;
+  }
+
+  function roleLabel(roleId) {
+    return (MCP_ROLES.find((r) => r.id === roleId) || { cn: roleId }).cn.split(' · ')[0];
+  }
+
   function renderExperiment() {
     const frag = document.createDocumentFragment();
-    if (!experiment.run) experiment.run = runSimulation(buildDemoSnapshot(experiment), MISSION_001_MINI, {});
+    if (!experiment.run) experiment.run = buildRun(experiment);
     const run = experiment.run;
 
     frag.append(
       h('div', { class: 'kn-hero' }, `
         <div class="kn-hero__idx">03 / EXPERIMENT</div>
         <h2 class="kn-hero__title">用本地示例运行一次 Tool Calling</h2>
-        <p class="kn-hero__lead">下面这份轨迹由与装配台**完全相同的**工具定义、参数 Schema 与模拟引擎生成，但它跑在一份固定演示配置上：改动这里的任何参数都不会影响你在装配台里的配置。</p>`)
+        <p class="kn-hero__lead">下面这份轨迹由与装配台<strong>完全相同的</strong>工具定义、参数 Schema 与模拟引擎生成，但它跑在一份固定演示配置上：改动这里的任何参数都不会影响你在装配台里的配置。</p>`)
     );
 
     frag.append(
@@ -514,6 +663,7 @@ export function createToolCallingKnowledge({
         <span>这是知识示范，不会修改当前构建器配置；它也不会写入「最近一次运行」记录。要运行你自己的系统，请到装配台确认配置后点击 RUN SIMULATION。</span>`)
     );
 
+    frag.append(pathModeControls());
     frag.append(experimentControls());
 
     const controls = h('div', { class: 'kn-exp__transport' });
@@ -547,6 +697,7 @@ export function createToolCallingKnowledge({
       h('span', { class: 'mono kn-exp__state', 'data-el': 'exp-state' }, `事件 ${experiment.stepIndex + 1} / ${run.events.length} · 当前结局 ${run.outcome}`)
     );
     frag.append(controls);
+    frag.append(renderPathPanel(run));
 
     const current = run.events[experiment.stepIndex];
     const cols = h('div', { class: 'kn-exp__cols' });
@@ -624,12 +775,12 @@ export function createToolCallingKnowledge({
     frag.append(rel);
 
     const others = h('div', { class: 'section' });
-    others.append(h('div', { class: 'section__label' }, '<span>跳到关联概念</span><span>在星图中定位</span>'));
+    others.append(h('div', { class: 'section__label' }, '<span>跳到关联概念</span><span>知识页 / 星图</span>'));
     const chips = h('div', { class: 'chips' });
-    for (const id of ['llm', 'tools', 'api', 'mcp', 'agent']) {
+    for (const id of ['llm', 'tools', 'api', 'mcp', 'mcp_server', 'function_calling']) {
       const c = CONCEPTS[id];
-      const b = h('button', { class: 'btn btn--sm', type: 'button' }, `${c.cn} · ${c.name}`);
-      b.addEventListener('click', () => onOpenAtlas?.(id));
+      const b = h('button', { class: 'btn btn--sm', type: 'button', 'data-concept': id }, `${c.cn} · ${c.name}`);
+      b.addEventListener('click', () => (onOpenConcept ? onOpenConcept(id) : onOpenAtlas?.(id)));
       chips.append(b);
     }
     others.append(chips);
@@ -643,7 +794,7 @@ export function createToolCallingKnowledge({
       view,
       h('div', { class: 'note', style: 'margin-top:8px' }, `
         <span class="note__key">只定位</span>
-        <span>「在系统中查看」只会定位到对应的工具模块或能力架：**不会**替你装配模块、开启权限或修改任何参数。尚未装配时会明确显示「尚未装配」。</span>`)
+        <span>「在系统中查看」只会定位到对应的工具模块或能力架：<strong>不会</strong>替你装配模块、开启权限或修改任何参数。尚未装配时会明确显示「尚未装配」。</span>`)
     );
     frag.append(live);
 
@@ -704,7 +855,7 @@ export function createToolCallingKnowledge({
     clearInterval(experimentTimer);
     experiment.playing = false;
     clearInterval(stageTimer);
-    if (step === 'experiment' && !experiment.run) experiment.run = runSimulation(buildDemoSnapshot(experiment), MISSION_001_MINI, {});
+    if (step === 'experiment' && !experiment.run) experiment.run = buildRun(experiment);
     renderMain();
     onLog?.('知识', `Tool Calling 学习路径：进入 ${steps.find((s) => s.id === step).en} · ${steps.find((s) => s.id === step).cn}`, 'info');
   }
@@ -726,19 +877,34 @@ export function createToolCallingKnowledge({
       readMode: experiment.readMode,
       includeMetadata: experiment.includeMetadata,
       stepIndex: experiment.stepIndex,
+      pathMode: experiment.pathMode,
       outcome: experiment.run?.outcome || null,
       branchId: experiment.run?.branchId || null,
       events: experiment.run ? experiment.run.events.map((e) => ({ id: e.id, type: e.type, status: e.status, message: e.message })) : [],
       payloads: experiment.run ? experiment.run.artifacts.payloads : {},
       evidence: experiment.run?.artifacts?.evidence || null,
+      /** 协议路径对照（直连 vs MCP）：用于断言「协议不改变事实」 */
+      protocol: experiment.run
+        ? (() => {
+            const compare = comparePaths(experiment.run, { mode: experiment.pathMode });
+            return { same: compare.same, checks: compare.checks.map((c) => ({ key: c.key, same: c.same })), note: compare.note };
+          })()
+        : null,
     }),
     rerunExperiment: (patch = {}) => {
       Object.assign(experiment, patch);
       rebuildExperiment();
     },
+    /** 自检脚本用：切换路径模式（走与点击相同的渲染路径） */
+    setPathMode(mode) {
+      experiment.pathMode = mode === 'mcp' ? 'mcp' : 'direct';
+      renderMain();
+      return experiment.pathMode;
+    },
+    currentPathMode: () => experiment.pathMode,
     /** 把事件指针推到末条，用于自检脚本标记实验完成 */
     completeExperiment() {
-      if (!experiment.run) experiment.run = runSimulation(buildDemoSnapshot(experiment), MISSION_001_MINI, {});
+      if (!experiment.run) experiment.run = buildRun(experiment);
       experiment.stepIndex = experiment.run.events.length - 1;
       learning?.markExperimentCompleted('tool_calling');
       renderAside();
@@ -758,3 +924,4 @@ export function createToolCallingKnowledge({
 }
 
 export { STAGES, CONDITIONS, DISTINCTIONS };
+

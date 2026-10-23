@@ -11,7 +11,11 @@
 
 const CONSTRUCTOR_KEY = 'agent-zero:constructor:v1';
 const EXECUTION_KEY = 'agent-zero:execution:v1';
-const LEARNING_KEY = 'agent-zero:learning:v1';
+/* M0.4 起运行记录写入新命名空间；M0.3 的验收断言按「当前命名空间」读取 */
+const RESEARCH_KEY = 'agent-zero:research:v2';
+const LEARNING_KEY = 'agent-zero:learning:v2';
+/* M1.1 起学习进度写入 v2；旧键 v1 只读迁移、原样保留（见 m11 验收 A19） */
+const LEARNING_LEGACY_KEY = 'agent-zero:learning:v1';
 
 export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
   const results = [];
@@ -27,6 +31,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
   await evaluate(`(() => {
     localStorage.removeItem(${JSON.stringify(CONSTRUCTOR_KEY)});
     localStorage.removeItem(${JSON.stringify(EXECUTION_KEY)});
+    localStorage.removeItem(${JSON.stringify(RESEARCH_KEY)});
     localStorage.removeItem(${JSON.stringify(LEARNING_KEY)});
     return true;
   })()`);
@@ -48,9 +53,9 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       const nodes = [...document.querySelectorAll('.atlas-node')];
       const list = [...document.querySelectorAll('.atlas-list__item')];
       const svg = document.querySelector('.atlas-svg');
-      rec('A01', 'Atlas 初始载入：精确 10 个首期节点，画布可观察、信息可读',
-        nodes.length === 10 && list.length === 10 && !!svg && !!svg.getAttribute('viewBox')
-          && document.querySelector('.atlas-search__note').textContent.includes('10'),
+      rec('A01', 'Atlas 初始载入：画布 10 个已开放节点 + 目录 36 个概念索引，画布可观察、信息可读',
+        nodes.length === 10 && list.length === 36 && !!svg && !!svg.getAttribute('viewBox')
+          && document.querySelector('.atlas-search__note').textContent.includes('36'),
         '节点=' + nodes.length + ' · 清单=' + list.length + ' · viewBox=' + (svg ? svg.getAttribute('viewBox') : '—'));
       return out;
     })()`)
@@ -71,9 +76,9 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       });
       const types = {};
       edges.forEach((e) => { const t = e.dataset.type; types[t] = (types[t] || 0) + 1; });
-      rec('A02', '语义关系：10 条边都有合法类型与文字含义，无悬空关系',
-        edges.length === 10 && invalid.length === 0 && ids.length === 10
-          && types.USES === 3 && types.RELATED === 6 && types.CONTRASTS === 1 && !types.PART_OF,
+      rec('A02', '语义关系：画布 13 条边都有合法类型与文字含义，无悬空关系（M1.1 新增 api–mcp、workflow–harness；M1.2 新增 tool_calling–mcp）',
+        edges.length === 13 && invalid.length === 0 && ids.length === 10
+          && types.USES === 3 && types.RELATED === 9 && types.CONTRASTS === 1 && !types.PART_OF,
         '边=' + edges.length + ' · 类型=' + JSON.stringify(types) + ' · 说明缺失=' + invalid.length + ' · 本轮不编造 PART_OF');
       return out;
     })()`)
@@ -431,14 +436,17 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       const nodes = document.querySelectorAll('.ex-node').length;
       const ticks = document.querySelectorAll('.ex-tick').length;
       const activeBranches = document.querySelectorAll('.ex-branch[data-active="true"]').length;
+      const execBranches = document.querySelectorAll('.ex-branches:not(.ex-branches--evidence) .ex-branch[data-active="true"]').length;
+      const evBranches = document.querySelectorAll('.ex-branches--evidence .ex-branch[data-active="true"]').length;
+      const searchResults = types.filter((t) => t === 'tool.result').length;
       rec('A14', '正常 Run：Search/Reader Ready 时确有检索、读取与样本获得事件',
-        run.outcome === 'sample_acquired' && run.branchId === 'B01_NORMAL'
-          && types.filter((t) => t === 'tool.result').length === 2
-          && types.includes('evidence.sample_collected') && types.includes('run.completed')
+        ['research_complete', 'research_partial'].includes(run.outcome) && run.branchId === 'B01_NORMAL'
+          && searchResults >= 2 && types.includes('evidence.sample_collected') && types.includes('report.generated')
+          && types.includes('run.completed')
           && run.artifacts.evidence.level === 'full_text' && nodes === run.events.length && ticks === run.events.length
-          && activeBranches === 1 && run.artifacts.report.status === 'not_generated',
+          && execBranches === 1 && evBranches >= 1 && !!run.artifacts.report.claims,
         '结局=' + run.outcome + ' · 分支=' + run.branchId + ' · 事件=' + run.events.length + ' · 执行图节点=' + nodes
-          + ' · 时间轴=' + ticks + ' · 报告=' + run.artifacts.report.status);
+          + ' · 时间轴=' + ticks + ' · 报告=' + run.artifacts.report.status + ' · 执行分支=' + execBranches + ' / 证据分支=' + evBranches);
       return out;
     })()`)
   );
@@ -476,10 +484,12 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       await sleep(900);
       const stillPaused = api.currentIndex();
       const pausedTag = document.querySelector('[data-el="play-state"]').textContent;
-      // 播放到末尾（回放由执行台自己的调度器推进，不依赖渲染帧）
+      // 播放到末尾（回放由执行台自己的调度器推进，不依赖渲染帧）；事件数量随 M0.4 增加，用 4× 加速
+      api.setSpeed(4);
       api.play();
-      for (let i = 0; i < 60; i++) { await sleep(300); if (!api.isPlaying()) break; }
+      for (let i = 0; i < 80; i++) { await sleep(250); if (!api.isPlaying()) break; }
       const ended = api.currentIndex() === api.eventCount() - 1;
+      api.setSpeed(1);
       rec('A25', '回放播放 / 暂停：能播放到结束，暂停后指针与执行动画都不再推进',
         during > before && paused === during && stillPaused === paused && ended && /PAUSED/.test(pausedTag) && /PLAYING/.test(playingTag)
           && api.isPlaying() === false,
@@ -631,8 +641,8 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       await sleep(320);
       const stillSame = api.currentRun().events.map((e) => e.id + e.status).join('|') === eventsBefore;
       const snapshotKept = api.currentRun().configSnapshot.modules.length === snapshotModules;
-      const stored = JSON.parse(localStorage.getItem(${JSON.stringify(EXECUTION_KEY)}));
-      const storedKept = stored.run.configSnapshot.modules.length === snapshotModules;
+      const stored = JSON.parse(localStorage.getItem(${JSON.stringify(RESEARCH_KEY)}));
+      const storedKept = stored.runs[0].run.configSnapshot.modules.length === snapshotModules;
       const repoNow = JSON.parse(localStorage.getItem(${JSON.stringify(CONSTRUCTOR_KEY)})).modules.map((m) => m.moduleId).join(',');
       // New Run 才使用新配置
       api.newRun();
@@ -863,12 +873,17 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       const b = searchResultOf(all5);
       const c = searchResultOf(campus);
       const payloadA = all3.artifacts.payloads['p:search-response'];
+      const payloadB = all5.artifacts.payloads['p:search-response'];
+      const payloadC = campus.artifacts.payloads['p:search-response'];
+      const totalAll = payloadB.total;
+      const totalCampus = payloadC.total;
       rec('A20', 'searchScope / maxResults：过滤与上限产生可检查的不同模拟结果',
-        /返回 3 条（已截断）/.test(a.message) && a.sourceIds.length === 3 && payloadA.total === 5 && payloadA.truncated === true
-          && /全部返回 5 条/.test(b.message) && b.sourceIds.length === 5
-          && c.sourceIds.length === 3 && c.sourceIds.every((id) => ['NTC-1001', 'NTC-1002', 'NTC-1003'].includes(id))
-          && /候选 3 条/.test(c.message),
-        'all/3 → ' + a.message.slice(0, 26) + '… · all/5 → ' + b.message.slice(0, 22) + '… · campus/5 → ' + c.message.slice(0, 22) + '…');
+        /返回 3 条（已截断）/.test(a.message) && a.sourceIds.length === 3 && payloadA.total === totalAll && payloadA.truncated === totalAll > 3
+          && /(全部)?返回 5 条/.test(b.message) && b.sourceIds.length === 5 && payloadB.truncated === totalAll > 5
+          && c.sourceIds.length === Math.min(5, totalCampus) && totalCampus < totalAll
+          && c.sourceIds.every((id) => az.mission001.getNotice(id).scope === 'campus_events')
+          && payloadC.items.every((i) => i.matchedScope === 'campus_events'),
+        'all/3 → ' + a.message.slice(0, 26) + '… · all/5 → ' + b.message.slice(0, 22) + '… · campus/5 → ' + c.message.slice(0, 22) + '… · 候选 ' + totalAll + ' / ' + totalCampus);
       return out;
     })()`, true)
   );
@@ -898,7 +913,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
           && /SEARCH_TIMEOUT/.test(fault.artifacts.payloads['p:search-error'].code)
           && /超时/.test(errorEvent.message) && fault.options.faultMode === 'search_timeout'
           && /faultMode search_timeout/.test(optionTag) === false
-          && normal.branchId === 'B01_NORMAL' && normal.outcome === 'sample_acquired',
+          && normal.branchId === 'B01_NORMAL' && ['research_complete', 'research_partial'].includes(normal.outcome),
         '故障分支=' + fault.branchId + ' · 结局=' + fault.outcome + ' · 错误码=' + fault.artifacts.payloads['p:search-error'].code
           + ' · 关闭后分支=' + normal.branchId + ' · 模块未被写成 Invalid=' + (normal.artifacts.payloads['p:availability'].tools[0].status === 'Ready'));
       return out;
@@ -938,8 +953,9 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
 
   /* A28：刷新恢复 + 损坏降级 */
   const savedBeforeReload = await evaluate(`(() => {
-    const raw = JSON.parse(localStorage.getItem(${JSON.stringify(EXECUTION_KEY)}));
-    return { runId: raw.run.runId, events: raw.run.events.length, outcome: raw.run.outcome, savedAt: raw.savedAt };
+    const raw = JSON.parse(localStorage.getItem(${JSON.stringify(RESEARCH_KEY)}));
+    const storedRun = raw.runs[0].run;
+    return { runId: storedRun.runId, events: storedRun.events.length, outcome: storedRun.outcome, savedAt: raw.savedAt };
   })()`);
   await cdp.send('Page.reload', { ignoreCache: false });
   if (!(await waitReady(cdp))) throw new Error('刷新后 __AZ 未就绪');
@@ -966,7 +982,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
     })()`, true)
   );
 
-  await evaluate(`localStorage.setItem(${JSON.stringify(EXECUTION_KEY)}, '{ broken json ')`);
+  await evaluate(`localStorage.removeItem(${JSON.stringify(EXECUTION_KEY)}); localStorage.setItem(${JSON.stringify(RESEARCH_KEY)}, '{ broken json ')`);
   await cdp.send('Page.reload', { ignoreCache: false });
   if (!(await waitReady(cdp))) throw new Error('损坏的执行记录下页面白屏（__AZ 未就绪）');
   await evaluate(`window.__AZ.skipIntro('A28-corrupt')`);
@@ -1010,7 +1026,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
     })();`,
   });
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await evaluate(`(() => { localStorage.removeItem(${JSON.stringify(EXECUTION_KEY)}); return true; })()`);
+  await evaluate(`(() => { localStorage.removeItem(${JSON.stringify(EXECUTION_KEY)}); localStorage.removeItem(${JSON.stringify(RESEARCH_KEY)}); return true; })()`);
   await cdp.send('Page.reload', { ignoreCache: false });
   if (!(await waitReady(cdp))) throw new Error('无 WebGL + 窄屏 + reduced-motion 下 __AZ 未就绪');
   await sleep(1000);
@@ -1026,7 +1042,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       az.openAtlas();
       await sleep(420);
       const atlasOK = document.querySelectorAll('.atlas-node').length === 10
-        && document.querySelectorAll('.atlas-list__item').length === 10
+        && document.querySelectorAll('.atlas-list__item').length === 36
         && document.documentElement.scrollWidth - window.innerWidth <= 1;
       // 知识页：窄屏仍可完成四步切换
       az.openKnowledge('tool_calling');
@@ -1049,7 +1065,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       api.seek(4);
       await sleep(200);
       const twoD = document.querySelector('.ex-core__svg').style.display !== 'none';
-      const execOK = !!run && run.outcome === 'sample_acquired' && api.currentIndex() === 4 && twoD
+      const execOK = !!run && ['research_complete', 'research_partial', 'sample_acquired'].includes(run.outcome) && api.currentIndex() === 4 && twoD
         && document.querySelectorAll('.ex-tick').length === run.events.length
         && document.documentElement.scrollWidth - window.innerWidth <= 1;
       // 键盘可达：关键控件都可聚焦
@@ -1085,3 +1101,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
 
   return results;
 }
+
+
+
+

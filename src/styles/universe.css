@@ -1,0 +1,694 @@
+/* ==========================================================================
+   AGENT / ZERO — universe.css
+   M1.1 知识宇宙界面层：Atlas 章节分组目录、STORY 六章目录、统一知识模板
+   （UNDERSTAND / INSPECT）、LAB 实验登记表。
+
+   约定：只使用 tokens.css 的语义变量；状态不只用颜色表达（始终附中文文字）。
+   ========================================================================== */
+
+/* ---------------- 工作区行布局：STORY / LAB 与知识页同构 ---------------- */
+.workspace--story,
+.workspace--lab,
+.workspace--kpage {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* ======================================================================
+   ATLAS：章节分组目录
+   ====================================================================== */
+.atlas-list {
+  display: block;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 10px;
+}
+.atlas-group {
+  margin-bottom: 10px;
+}
+.atlas-group__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 2px 5px;
+  border-bottom: 1px solid var(--border-faint);
+  margin-bottom: 5px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(12, 17, 23, 0.98), rgba(12, 17, 23, 0.92));
+}
+.atlas-group__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--signal);
+}
+.atlas-group__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-tag);
+  color: var(--text-1);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.atlas-group__title em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+  letter-spacing: var(--track-tight);
+}
+.atlas-group__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.atlas-group__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* 未撰写正文的节点：可选中、可读索引，但视觉上明确弱于已开放节点 */
+.atlas-list__item[data-status='outline'] {
+  border-style: dashed;
+  opacity: 0.82;
+}
+.atlas-list__item[data-status='outline'] .atlas-list__idx {
+  color: var(--text-3);
+}
+.atlas-list__item[data-oncanvas='true'] .atlas-list__idx {
+  color: var(--signal);
+}
+/* 侧栏底部进度块：目录是主区域，进度块不得把概念列表挤成一条缝 */
+.atlas-side__foot {
+  flex: 0 0 auto;
+  max-height: 30%;
+  overflow: auto;
+  padding: 8px 10px 10px;
+}
+.atlas-progress__note {
+  margin-top: 3px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  color: var(--text-3);
+}
+/* 画布底部提示：允许两行，避免长句被裁切成半句 */
+.atlas-hint {
+  white-space: normal;
+  max-width: calc(100% - 28px);
+  text-align: center;
+  line-height: 1.5;
+}
+.atlas-progress--chapters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 10px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.atlas-progress__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* ======================================================================
+   STORY：六章知识主线目录
+   ====================================================================== */
+.story-body {
+  display: grid;
+  grid-template-columns: 212px minmax(0, 1fr) 318px;
+  gap: 10px;
+  padding: 10px;
+  min-height: 0;
+}
+.story-side,
+.story-aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.story-side__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  overflow: auto;
+  min-height: 0;
+}
+.story-side__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  background: rgba(12, 17, 23, 0.6);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.story-side__item:hover {
+  border-color: rgba(119, 216, 236, 0.4);
+}
+.story-side__item:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+.story-side__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--signal);
+}
+.story-side__name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-tag);
+  color: var(--text-1);
+}
+.story-side__name em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+  letter-spacing: var(--track-tight);
+}
+.story-side__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.story-aside__scroll {
+  overflow: auto;
+  min-height: 0;
+  padding: 10px 12px 16px;
+}
+
+.story-main {
+  overflow: auto;
+  min-height: 0;
+  padding: 2px 4px 20px;
+}
+.story-intro {
+  padding: 4px 2px 14px;
+  border-bottom: 1px solid var(--border-faint);
+  margin-bottom: 12px;
+}
+.story-intro__tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--signal);
+}
+.story-intro__title {
+  margin: 6px 0 8px;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+.story-intro__lead {
+  margin: 0;
+  max-width: 76ch;
+  font-size: var(--fs-explain);
+  line-height: 1.75;
+  color: var(--text-2);
+}
+.story-intro__lead strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+.story-intro__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.story-intro__stats b {
+  color: var(--signal);
+  font-weight: 500;
+}
+
+.story-chapter {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  background: rgba(12, 17, 23, 0.55);
+  padding: 11px 13px 12px;
+  margin-bottom: 10px;
+}
+.story-chapter[data-status='partial'] {
+  border-color: rgba(240, 189, 120, 0.32);
+}
+.story-chapter[data-status='index-only'] {
+  border-style: dashed;
+}
+.story-chapter__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.story-chapter__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  letter-spacing: var(--track);
+  color: var(--signal);
+}
+.story-chapter__titles {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.story-chapter__zh {
+  font-size: var(--fs-title);
+  color: var(--text-1);
+}
+.story-chapter__en {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--text-3);
+}
+.story-chapter__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.story-chapter__question {
+  margin: 9px 0 0;
+  padding: 7px 10px;
+  border-left: 2px solid var(--signal-line);
+  background: rgba(119, 216, 236, 0.06);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  color: var(--text-1);
+}
+.story-chapter__intro {
+  margin: 9px 0 0;
+  font-size: var(--fs-tag);
+  line-height: 1.75;
+  color: var(--text-2);
+}
+.story-chapter__hook {
+  margin-top: 8px;
+  font-size: var(--fs-micro);
+  line-height: 1.7;
+  color: var(--text-3);
+}
+.story-chapter__hook .note__key {
+  margin-right: 6px;
+}
+.story-concepts {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.story-concept {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  background: rgba(9, 12, 17, 0.55);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.story-concept:hover {
+  border-color: rgba(119, 216, 236, 0.42);
+}
+.story-concept:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+.story-concept[data-status='outline'] {
+  border-style: dashed;
+}
+.story-concept__idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+  min-width: 20px;
+}
+.story-concept__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.story-concept__name {
+  font-size: var(--fs-body);
+  color: var(--text-1);
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.story-concept__name em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.story-concept__line {
+  font-size: var(--fs-micro);
+  line-height: 1.55;
+  color: var(--text-3);
+}
+.story-concept__tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.story-chapter__lab {
+  margin-top: 9px;
+  font-size: var(--fs-micro);
+  line-height: 1.65;
+  color: var(--text-3);
+}
+.story-chapter__lab .note__key {
+  margin-right: 6px;
+}
+
+/* ======================================================================
+   LAB：实验登记表
+   ====================================================================== */
+.lab-body {
+  grid-template-columns: minmax(0, 1fr) 316px;
+}
+.lab-main {
+  overflow: auto;
+  min-height: 0;
+  padding: 2px 6px 20px 10px;
+}
+.lab-intro {
+  padding: 4px 2px 14px;
+  border-bottom: 1px solid var(--border-faint);
+  margin-bottom: 12px;
+}
+.lab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 10px;
+}
+.lab-card {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  background: rgba(12, 17, 23, 0.55);
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lab-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-faint);
+}
+.lab-card__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--signal);
+  letter-spacing: var(--track);
+}
+.lab-card__title {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: var(--fs-body);
+  color: var(--text-1);
+}
+.lab-card__title em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-tight);
+  color: var(--text-3);
+}
+.lab-item {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+  background: rgba(9, 12, 17, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lab-item[data-status='available'] {
+  border-color: rgba(128, 217, 180, 0.32);
+}
+.lab-item[data-status='planned'] {
+  border-style: dashed;
+}
+.lab-item__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lab-item__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-body);
+  color: var(--text-1);
+}
+.lab-item__note,
+.lab-item__concepts {
+  font-size: var(--fs-micro);
+  line-height: 1.65;
+  color: var(--text-3);
+}
+.lab-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lab-item__locked {
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--attention);
+}
+.lab-aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.lab-aside__scroll {
+  overflow: auto;
+  min-height: 0;
+  padding: 10px 12px 16px;
+}
+
+/* ======================================================================
+   统一知识模板：章内目录 + 主区 + 来源侧栏
+   ====================================================================== */
+.kn-body--page {
+  grid-template-columns: 226px minmax(0, 1fr) 312px;
+}
+.kn-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+.kn-rail__head {
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-m);
+  background: rgba(12, 17, 23, 0.6);
+  padding: 9px 10px;
+}
+.kn-rail__chapter {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.kn-rail__no {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track);
+  color: var(--signal);
+}
+.kn-rail__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-tag);
+  color: var(--text-1);
+  display: flex;
+  flex-direction: column;
+}
+.kn-rail__title em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-rail__pos {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-rail__question {
+  margin: 7px 0 0;
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.kn-rail__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+  min-height: 0;
+}
+.kn-rail__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-s);
+  background: rgba(12, 17, 23, 0.6);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kn-rail__item:hover {
+  border-color: rgba(119, 216, 236, 0.4);
+}
+.kn-rail__item:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+.kn-rail__item[aria-current='true'] {
+  border-color: rgba(240, 189, 120, 0.5);
+  background: rgba(240, 189, 120, 0.08);
+}
+.kn-rail__item[data-status='outline'] {
+  border-style: dashed;
+  opacity: 0.82;
+}
+.kn-rail__idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-rail__name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-tag);
+  color: var(--text-1);
+}
+.kn-rail__name em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.kn-hero__en {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: var(--track-tight);
+  color: var(--text-3);
+  font-weight: 400;
+}
+.kn-inspect__list {
+  margin: 7px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: var(--fs-tag);
+  line-height: 1.75;
+  color: var(--text-2);
+}
+.kn-inspect__list li::marker {
+  color: var(--signal);
+}
+.kn-source {
+  margin-bottom: 6px;
+}
+.kn-source dd {
+  font-size: var(--fs-micro);
+  line-height: 1.65;
+  color: var(--text-2);
+}
+.kn-source dd a {
+  color: var(--signal);
+}
+.kn-body--page .kn-main {
+  padding: 2px 6px 20px;
+}
+
+/* ---------------- 响应式 ---------------- */
+@media (max-width: 1280px) {
+  .story-body {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+  .story-aside {
+    display: none;
+  }
+  .lab-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lab-aside {
+    display: none;
+  }
+  .kn-body--page {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .kn-body--page .kn-aside {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .story-body,
+  .kn-body--page {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+    grid-auto-rows: min-content;
+  }
+  .story-side,
+  .kn-rail {
+    display: none;
+  }
+  .story-main,
+  .kn-body--page .kn-main {
+    overflow: visible;
+  }
+}

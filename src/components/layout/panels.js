@@ -116,10 +116,10 @@ export function Dock({ onMode, onTerm, onToggleCollapse, bayEl }) {
 
   const termGroup = h('div', { class: 'dock__group' });
   termGroup.append(
-    h('div', { class: 'dock__group-label' }, '<span>术语索引</span><span>29 个</span>'),
+    h('div', { class: 'dock__group-label' }, `<span>术语索引</span><span>${TERM_INDEX.length} 个</span>`),
     h('div', { class: 'note note--info', style: 'margin:0 4px 8px' }, `
       <span class="note__key">索引</span>
-      <span>这里是全站术语速查（点击展开一行中文解释）。要看概念之间的**语义关系图**，请进入左侧「知识星图」（10 个首期节点，含 Tool Calling 完整知识页）。</span>`)
+      <span>这里是全站术语速查（点击展开一行中文解释）。要看概念之间的<b>语义关系图</b>，请进入左侧「知识星图」（画布绘制 10 个已开放节点，目录覆盖六章全部概念）。</span>`)
   );
   const terms = h('div');
   for (const [en, cn, ch, note] of TERM_INDEX) {

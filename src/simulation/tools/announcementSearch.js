@@ -14,7 +14,7 @@
  * ------------------------------------------------------------------
  */
 import { getModule } from '../../features/constructor/model/modules.js';
-import { SEARCH_SCOPES, sortNotices } from '../../research-packs/mission-001-mini/notices.js';
+import { SEARCH_SCOPES, sortNotices } from '../../research-packs/mission-001/notices.js';
 
 export const TOOL_ID = 'announcement_search';
 

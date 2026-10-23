@@ -11,19 +11,23 @@
  *   · 关系方向只在明确有向的边上画箭头，RELATED / CONTRASTS 不画。
  * ------------------------------------------------------------------
  */
-import {
-  CONCEPTS,
-  CONCEPT_ORDER,
-  GRAPH_VIEW,
-  NODE_LAYOUT,
-  RELATIONSHIPS,
-  relationMeta,
-} from '../data/index.js';
+import { GRAPH_VIEW, NODE_LAYOUT, getConcept, graphModel, relationMeta } from '../data/index.js';
 
 const ZOOM_MIN = 0.55;
 const ZOOM_MAX = 2.6;
 const FOCUS_SCALE = 1.5;
 const NODE_R = 34;
+
+/**
+ * 星图只绘制「已开放节点」：两端都必须有固定坐标。
+ * 36 个概念中尚未撰写正文的节点只出现在目录与搜索里，不会被画成已完成节点。
+ */
+const MODEL = graphModel();
+
+/** 关系无障碍标签里用到的中文名：概念缺失时退回 id，绝不抛错 */
+function conceptCn(id) {
+  return getConcept(id)?.cn || id;
+}
 
 function svgEl(tag, attrs = {}) {
   const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -43,7 +47,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     viewBox: `0 0 ${GRAPH_VIEW.width} ${GRAPH_VIEW.height}`,
     preserveAspectRatio: 'xMidYMid meet',
     role: 'group',
-    'aria-label': '知识星图画布：包含 10 个概念节点与它们的语义关系，可用鼠标或触控平移缩放',
+    'aria-label': `知识星图画布：包含 ${MODEL.nodes.length} 个已开放概念节点与它们的语义关系，可用鼠标或触控平移缩放；其余概念在左侧目录中标注为建设中`,
   });
 
   const defs = svgEl('defs');
@@ -71,7 +75,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
   const edgeRefs = new Map();
 
   /* ---------------- 边 ---------------- */
-  for (const edge of RELATIONSHIPS) {
+  for (const edge of MODEL.edges) {
     const from = NODE_LAYOUT[edge.sourceId];
     const to = NODE_LAYOUT[edge.targetId];
     if (!from || !to) continue;
@@ -83,7 +87,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
       'data-directed': edge.directed ? 'true' : 'false',
       tabindex: '0',
       role: 'button',
-      'aria-label': `${CONCEPTS[edge.sourceId].cn} 与 ${CONCEPTS[edge.targetId].cn} 的关系：${meta.cn}（${edge.type}）。${edge.description}`,
+      'aria-label': `${conceptCn(edge.sourceId)} 与 ${conceptCn(edge.targetId)} 的关系：${meta.cn}（${edge.type}）。${edge.description}`,
     });
     const line = svgEl('line', {
       x1: from.x,
@@ -116,8 +120,8 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
   }
 
   /* ---------------- 节点 ---------------- */
-  for (const id of CONCEPT_ORDER) {
-    const concept = CONCEPTS[id];
+  for (const concept of MODEL.nodes) {
+    const id = concept.id;
     const { x, y } = NODE_LAYOUT[id];
     const hasLanding = concept.systemTarget !== 'none';
     const g = svgEl('g', {
@@ -225,7 +229,13 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
   svg.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     dragging = { id: e.pointerId, startX: e.clientX, startY: e.clientY, x0: transform.x, y0: transform.y, moved: false };
-    svg.setPointerCapture?.(e.pointerId);
+    // 合成事件 / 无活动指针时 setPointerCapture 会抛 NotFoundError：
+    // 捕获失败只影响「拖出画布仍能收到事件」，不应让整个画布交互中断
+    try {
+      svg.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* 忽略：后续 pointermove 仍然可用 */
+    }
     root.dataset.grabbing = 'true';
   });
 
@@ -257,7 +267,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     const relatedIds = new Set();
     if (selectedId) {
       relatedIds.add(selectedId);
-      for (const edge of RELATIONSHIPS) {
+      for (const edge of MODEL.edges) {
         if (edge.sourceId === selectedId) relatedIds.add(edge.targetId);
         if (edge.targetId === selectedId) relatedIds.add(edge.sourceId);
       }
@@ -269,7 +279,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
       g.classList.toggle('is-related', isRelated);
       g.classList.toggle('is-dim', !!selectedId && !isSelected && !isRelated);
     }
-    for (const edge of RELATIONSHIPS) {
+    for (const edge of MODEL.edges) {
       const ref = edgeRefs.get(edge.id);
       if (!ref) continue;
       const touches = !!selectedId && (edge.sourceId === selectedId || edge.targetId === selectedId);
@@ -321,8 +331,8 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
 
   /** 适配视窗：按节点包围盒取一个可读的缩放，仍受上下限幅约束 */
   function fitView() {
-    const xs = CONCEPT_ORDER.map((id) => NODE_LAYOUT[id].x);
-    const ys = CONCEPT_ORDER.map((id) => NODE_LAYOUT[id].y);
+    const xs = MODEL.nodes.map((node) => NODE_LAYOUT[node.id].x);
+    const ys = MODEL.nodes.map((node) => NODE_LAYOUT[node.id].y);
     const pad = NODE_R + 66;
     const minX = Math.min(...xs) - pad;
     const maxX = Math.max(...xs) + pad;

@@ -12,17 +12,18 @@
  */
 import { h, esc } from '../../constructor/components/dom.js';
 import { PHASES, PHASE_META, EVENT_TYPE_META, STATUS_META } from '../../../simulation/events/schema.js';
-import { BRANCHES, BRANCH_ORDER } from '../../../simulation/rules/branches.js';
+import { BRANCHES, BRANCH_ORDER, EVIDENCE_BRANCHES, EVIDENCE_BRANCH_ORDER } from '../../../simulation/rules/branches.js';
 
 export function createExecutionGraph({ onSeek } = {}) {
   const el = h('section', { class: 'ex-graph surface', 'aria-label': '执行图：本次真正走过的事件路径' });
   const head = h('div', { class: 'panel-head' }, `
     <span class="panel-head__title">EXECUTION GRAPH</span>
     <span class="tag tag--muted" data-el="summary">—</span>`);
-  const branchBar = h('div', { class: 'ex-branches', 'aria-label': '候选分支：只有实际走过的分支会被标为已执行' });
+  const branchBar = h('div', { class: 'ex-branches', 'aria-label': '候选执行分支：只有实际走过的分支会被标为已执行' });
+  const evidenceBar = h('div', { class: 'ex-branches ex-branches--evidence', 'aria-label': '候选证据分支：本次证据检查真正得出的结论' });
   const lanes = h('ol', { class: 'ex-lanes' });
   const foot = h('div', { class: 'ex-graph__foot' });
-  el.append(head, branchBar, lanes, foot);
+  el.append(head, branchBar, evidenceBar, lanes, foot);
 
   let current = 0;
   let run = null;
@@ -56,6 +57,45 @@ export function createExecutionGraph({ onSeek } = {}) {
     }
   }
 
+  /**
+   * 证据分支：与执行分支并列的第二根轴。
+   * 一次运行里可能同时出现「一组更正成立」与「一组未决」，两条都要如实标出。
+   */
+  function renderEvidenceBranches() {
+    evidenceBar.replaceChildren();
+    if (!run) return;
+    const executed = Array.isArray(run.evidenceBranchIds) && run.evidenceBranchIds.length
+      ? run.evidenceBranchIds
+      : run.evidenceBranchId
+        ? [run.evidenceBranchId]
+        : [];
+    evidenceBar.append(h('span', { class: 'ex-branches__label' }, '证据分支'));
+    for (const id of EVIDENCE_BRANCH_ORDER) {
+      const branch = EVIDENCE_BRANCHES[id];
+      const isOn = executed.includes(id);
+      evidenceBar.append(
+        h(
+          'button',
+          {
+            class: 'ex-branch ex-branch--evidence',
+            type: 'button',
+            'data-evidence-branch': id,
+            'data-active': isOn ? 'true' : 'false',
+            'data-tone': branch.tone,
+            'aria-label': `${branch.cn}：${branch.condition}。${isOn ? '本次运行走过这条证据分支' : '本次运行未走这条证据分支'}`,
+            title: `${branch.cn} · ${branch.condition} → ${branch.expect}`,
+          },
+          `<span class="ex-branch__id">${esc(id.split('_')[0])}</span>
+           <span class="ex-branch__name">${esc(branch.title)}</span>
+           <span class="ex-branch__state">${isOn ? '已执行 · 本次结论' : '未执行'}</span>`
+        )
+      );
+    }
+    // 本次真正走过的证据分支可能被挤到右侧：滚进可视区，避免用户以为「没有证据分支」
+    const activeEvidence = evidenceBar.querySelector('.ex-branch[data-active="true"]');
+    if (activeEvidence) evidenceBar.scrollLeft = Math.max(0, activeEvidence.offsetLeft - 8);
+  }
+
   /** 事件 → 阶段分组；阶段本身来自 Schema，不是界面临时下标 */
   function eventsByPhase() {
     const map = new Map(PHASES.map((p) => [p, []]));
@@ -70,7 +110,7 @@ export function createExecutionGraph({ onSeek } = {}) {
     if (!run) return;
     const grouped = eventsByPhase();
     const currentEvent = run.events[current];
-    head.querySelector('[data-el="summary"]').textContent = `${run.events.length} 个事件 · 分支 ${run.branchId}`;
+    head.querySelector('[data-el="summary"]').textContent = `${run.events.length} 个事件 · 分支 ${run.branchId}${run.evidenceBranchId ? ` · 证据 ${run.evidenceBranchId}` : ''}`;
 
     lanes.replaceChildren();
     let order = 0;
@@ -132,6 +172,7 @@ export function createExecutionGraph({ onSeek } = {}) {
         <span>实线节点是本次**真正产生**的事件；标「未执行」的阶段只是候选路径。</span>
       </div>`;
     renderBranches();
+    renderEvidenceBranches();
   }
 
   return {
@@ -155,3 +196,5 @@ export function createExecutionGraph({ onSeek } = {}) {
     currentNodeCount: () => lanes.querySelectorAll('.ex-node').length,
   };
 }
+
+

@@ -422,7 +422,7 @@ test('A28 历史记录损坏：坏 JSON / 错版本 / 事件缺失都安全降�
   assert.equal(missingEvents.run, null);
   assert.equal(missingEvents.notice.code, 'EXECUTION_STORAGE_INVALID');
 
-  assert.deepEqual(parseHistory(null), { run: null, savedAt: null, notice: null });
+  assert.deepEqual(parseHistory(null), { run: null, savedAt: null, legacy: false, notice: null });
   assert.equal(parseHistory('[]').run, null);
 });
 

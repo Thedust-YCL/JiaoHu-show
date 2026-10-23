@@ -1,12 +1,15 @@
 /**
  * src/features/atlas/components/atlasWorkspace.js
  * ------------------------------------------------------------------
- * ATLAS / 知识星图工作区：左侧概念清单与搜索、中央星图、右侧节点详情。
+ * ATLAS / 知识星图工作区（M1.1 升级版）：
+ *   左栏 = 36 个概念的**章节分组目录**与搜索（含建设中概念）
+ *   中央 = 星图画布（只画 10 个已开放节点，避免把未审校节点画成已完成）
+ *   右栏 = 节点详情 / 关系说明 / 学习状态 / 知识页入口
  *
- * 职责边界（M0.3_TASK §4 / §8.3）：
+ * 职责边界：
  *   · 只读知识数据与学习进度，**不触发模拟运行**，也不清空运行轨迹；
- *   · 只有 tool_calling 提供完整分层知识页入口；其余 9 个概念明确显示
- *     「完整知识页与实验在后续阶段开放」，不制造点了没反应的假按钮；
+ *   · 所有概念都能打开统一知识页（索引页永远可访问），但未撰写正文的
+ *     概念明确显示「内容建设中 / 预计阶段」，不会被算作已学完；
  *   · 「在系统中查看」只做定位与说明，不私自装配模块或授予权限。
  * ------------------------------------------------------------------
  */
@@ -14,13 +17,20 @@ import { h, esc, md } from '../../constructor/components/dom.js';
 import {
   CONCEPTS,
   CONCEPT_ORDER,
-  RELATIONSHIPS,
+  conceptsByChapter,
+  conceptAvailability,
   edgesOf,
+  experimentOfConcept,
   getConcept,
+  getConceptsByChapter,
   graphStats,
+  knowledgeStats,
+  neighborConcepts,
+  positionInChapter,
   relationMeta,
   relatedOf,
   searchConcepts,
+  GRAPH_ORDER,
 } from '../data/index.js';
 import { createAtlasGraph } from '../graph/atlasGraph.js';
 import { learningLabelMeta } from '../state/learning.js';
@@ -31,47 +41,58 @@ const TARGET_NOTE = {
   none: '装配台暂未提供对应模块：这是解释性知识节点，不会伪装成已装配的工具。',
 };
 
+/** 概念状态标签（内容状态是知识层的唯一真相） */
+function statusTag(concept) {
+  const meta = conceptAvailability(concept.id).statusMeta;
+  return h('span', { class: `tag tag--${meta.tone}`, 'data-status': concept.contentStatus }, esc(meta.cn));
+}
+
 export function createAtlasWorkspace({
   learning,
   onBackToHub,
   onOpenKnowledge,
+  onOpenStory,
   onViewInConstructor,
   reducedMotion = false,
   onLog,
 } = {}) {
   const el = h('div', { class: 'workspace workspace--atlas', 'data-open': 'true' });
 
+  const stats = graphStats();
+  const knowledge = knowledgeStats();
+
   /* ----------------------------- 头部 ----------------------------- */
   const head = h('header', { class: 'ws-head' });
-  const stats = graphStats();
   head.append(
     h('div', { class: 'ws-head__id' }, `
       <span class="ws-head__tag">A/0</span>
       <span class="ws-head__title">ATLAS · 知识星图</span>
-      <span class="ws-head__meta">${stats.concepts} 个概念 · ${stats.edges} 条语义关系 · 固定坐标不随机重排</span>`),
-    h('div', { class: 'ws-head__actions' }, `
-      <span class="tag tag--attention">SIMULATED · 本地教学模拟</span>`)
+      <span class="ws-head__meta">画布 ${stats.concepts} 个已开放节点 · 目录 ${knowledge.concepts} 个概念 · ${knowledge.edges} 条语义关系 · 固定坐标不随机重排</span>`),
+    h('div', { class: 'ws-head__actions' }, '<span class="tag tag--attention">SIMULATED · 本地教学模拟</span>')
   );
+  const actions = head.querySelector('.ws-head__actions');
   const backBtn = h('button', { class: 'btn btn--primary', type: 'button', 'aria-label': '返回中央核心（Hub）视图' }, '← 返回 Hub');
   backBtn.addEventListener('click', () => onBackToHub?.('hub'));
-  head.querySelector('.ws-head__actions').append(backBtn);
+  const storyBtn = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'story', 'aria-label': '打开六章目录（Story）' }, 'STORY · 六章目录');
+  storyBtn.addEventListener('click', () => onOpenStory?.());
+  actions.append(backBtn, storyBtn);
 
-  /* ----------------------------- 左栏：搜索 + 清单 ----------------------------- */
-  const side = h('aside', { class: 'atlas-side surface', 'aria-label': '概念清单与搜索' });
+  /* ----------------------------- 左栏：搜索 + 章节分组清单 ----------------------------- */
+  const side = h('aside', { class: 'atlas-side surface', 'aria-label': '概念目录与搜索' });
   const searchInput = h('input', {
     class: 'atlas-search__input',
     type: 'search',
-    placeholder: '搜索概念（中英文别名均可，如 LLM / 工具调用）',
-    'aria-label': '搜索知识概念：支持中英文别名、大小写与部分匹配',
+    placeholder: '搜索概念（中英文别名均可，如 LLM / 工具调用 / 幻觉）',
+    'aria-label': '搜索知识概念：支持中英文名称、别名、大小写与部分匹配',
     autocomplete: 'off',
     spellcheck: 'false',
   });
   const searchClear = h('button', { class: 'btn btn--sm btn--ghost', type: 'button', 'aria-label': '清除搜索并恢复全图' }, '清除');
   const searchNote = h('div', { class: 'atlas-search__note', role: 'status', 'aria-live': 'polite' });
-  const listEl = h('ul', { class: 'atlas-list', 'aria-label': '概念清单：键盘与触屏用户可在这里直接选择节点' });
+  const listEl = h('div', { class: 'atlas-list', 'aria-label': '概念目录：按章节分组，键盘与触屏用户可在这里直接选择节点' });
   const footEl = h('div', { class: 'atlas-side__foot' });
   side.append(
-    h('div', { class: 'panel-head' }, '<span class="panel-head__title">搜索与概念清单</span>'),
+    h('div', { class: 'panel-head' }, '<span class="panel-head__title">搜索与概念目录</span>'),
     h('div', { class: 'atlas-search' }, searchInput, searchClear),
     searchNote,
     listEl,
@@ -103,10 +124,11 @@ export function createAtlasWorkspace({
   );
   const legend = h('div', { class: 'atlas-legend' }, `
     <span class="atlas-legend__item"><i class="sg-line" data-type="USES"></i>USES · 使用（有向）</span>
+    <span class="atlas-legend__item"><i class="sg-line" data-type="PART_OF"></i>PART_OF · 组成部分（有向）</span>
     <span class="atlas-legend__item"><i class="sg-line" data-type="RELATED"></i>RELATED · 相关（无向）</span>
-    <span class="atlas-legend__item"><i class="sg-line" data-type="CONTRASTS"></i>CONTRASTS · 对照（无向）</span>
-    <span class="atlas-legend__item"><i class="atlas-legend__mark"></i>带标记的节点可在装配台中查看</span>`);
-  const hint = h('div', { class: 'atlas-hint' }, '拖动平移 · 滚轮 / ＋－ 缩放 · 双击节点聚焦 · Tab 可依次聚焦节点与关系');
+    <span class="atlas-legend__item"><i class="sg-line" data-type="CONTRASTS"></i>CONTRASTS · 对照（无向）</span>`);
+  const hint = h('div', { class: 'atlas-hint' },
+    `画布只绘制 ${stats.concepts} 个已开放节点，其余 ${knowledge.concepts - stats.concepts} 个概念在左栏目录标注「内容建设中」· 拖动平移 · 滚轮缩放 · 双击聚焦`);
   center.append(graph.el, toolbar, legend, hint);
 
   /* ----------------------------- 右栏：详情 ----------------------------- */
@@ -120,49 +142,66 @@ export function createAtlasWorkspace({
   let selectedId = null;
   let query = '';
 
+  const graphNodeIds = new Set(GRAPH_ORDER);
+
   function renderList() {
     const result = query ? searchConcepts(query) : null;
     const matched = result && !result.cleared ? new Set(result.matches.map((m) => m.concept.id)) : null;
 
     listEl.replaceChildren();
-    for (const id of CONCEPT_ORDER) {
-      const concept = CONCEPTS[id];
-      const label = learningLabelMeta(learning.labelOf(id));
-      const li = h('li');
-      const btn = h(
-        'button',
-        {
-          class: 'atlas-list__item',
-          type: 'button',
-          'data-concept': id,
-          'data-match': matched ? (matched.has(id) ? 'true' : 'false') : 'auto',
-          'aria-current': selectedId === id ? 'true' : 'false',
-          'aria-label': `${concept.cn}（${concept.name}）· 学习状态 ${label.cn}`,
-        },
-        `<span class="atlas-list__idx">${concept.idx}</span>
-         <span class="atlas-list__body">
-           <span class="atlas-list__name">${esc(concept.cn)}<em>${esc(concept.name)}</em></span>
-           <span class="atlas-list__tag">${esc(concept.tagline)}</span>
-         </span>
-         <span class="tag tag--${label.tone} atlas-list__state">${esc(label.cn)}</span>`
+    for (const { chapter, concepts } of conceptsByChapter()) {
+      const readyCount = concepts.filter((c) => conceptAvailability(c.id).hasBody).length;
+      const group = h('section', { class: 'atlas-group', 'data-chapter': chapter.id });
+      group.append(
+        h('div', { class: 'atlas-group__head' },
+          `<span class="atlas-group__no">${chapter.no}</span>
+           <span class="atlas-group__title">${esc(chapter.title.zh)}<em>${esc(chapter.title.en)}</em></span>
+           <span class="atlas-group__count">${readyCount}/${concepts.length}</span>`)
       );
-      btn.addEventListener('click', () => selectConcept(id, { focus: true, source: 'list' }));
-      li.append(btn);
-      listEl.append(li);
+      const ul = h('ul', { class: 'atlas-group__list' });
+      for (const concept of concepts) {
+        const availability = conceptAvailability(concept.id);
+        const label = learningLabelMeta(learning.labelOf(concept.id));
+        const li = h('li');
+        const btn = h(
+          'button',
+          {
+            class: 'atlas-list__item',
+            type: 'button',
+            'data-concept': concept.id,
+            'data-status': concept.contentStatus,
+            'data-oncanvas': graphNodeIds.has(concept.id) ? 'true' : 'false',
+            'data-match': matched ? (matched.has(concept.id) ? 'true' : 'false') : 'auto',
+            'aria-current': selectedId === concept.id ? 'true' : 'false',
+            'aria-label': `${concept.cn}（${concept.name}）· ${availability.statusMeta.cn} · 学习状态 ${label.cn}`,
+          },
+          `<span class="atlas-list__idx">${concept.idx}</span>
+           <span class="atlas-list__body">
+             <span class="atlas-list__name">${esc(concept.cn)}<em>${esc(concept.name)}</em></span>
+             <span class="atlas-list__tag">${esc(concept.tagline)}</span>
+           </span>
+           <span class="tag tag--${availability.statusMeta.tone} atlas-list__state">${esc(availability.statusMeta.cn)}</span>`
+        );
+        btn.addEventListener('click', () => selectConcept(concept.id, { focus: true, source: 'list' }));
+        li.append(btn);
+        ul.append(li);
+      }
+      group.append(ul);
+      listEl.append(group);
     }
 
     if (!result) {
-      searchNote.textContent = `共 ${CONCEPT_ORDER.length} 个首期概念：点击任一节点查看定义、常见误解与相关概念。`;
+      searchNote.textContent = `共 ${CONCEPT_ORDER.length} 个概念（6 章）· 画布仅绘制 ${stats.concepts} 个已开放节点`;
       graph.clearMatches();
       return;
     }
     if (result.cleared) {
-      searchNote.textContent = '搜索已清除，画布恢复显示全部节点。';
+      searchNote.textContent = '搜索已清除，画布恢复显示全部已开放节点。';
       graph.clearMatches();
       return;
     }
     if (result.empty) {
-      searchNote.textContent = `没有找到相关概念「${query}」。可以试试 LLM、Agent、Tool Calling，或直接清空搜索恢复全图。`;
+      searchNote.textContent = `没有找到相关概念「${query}」。可以试试 LLM、工具调用、幻觉，或直接清空搜索恢复全图。`;
       graph.setMatches([]);
       return;
     }
@@ -171,26 +210,25 @@ export function createAtlasWorkspace({
       .slice(0, 3)
       .map((m) => m.concept.cn)
       .join('、')}${result.matches.length > 3 ? ' 等' : ''} · 已定位到 ${top.cn}`;
-    graph.setMatches(result.matches.map((m) => m.concept.id));
+    // 画布只高亮画得出来的节点：命中未开放概念时，详情面板仍然会打开
+    graph.setMatches(result.matches.map((m) => m.concept.id).filter((id) => graphNodeIds.has(id)));
   }
 
+  /** 底部进度块保持紧凑：左侧概念目录才是主区域，不能被进度说明挤成一条缝 */
   function renderFoot() {
     const summary = learning.summary();
     footEl.replaceChildren(
-      h('div', { class: 'section__label', style: 'margin:8px 0 6px' }, `<span>学习进度</span><span>不是测验成绩</span>`),
-      h('div', { class: 'atlas-progress' }, `
-        <div><b>${summary.explored}</b> / ${summary.total} 个概念已查看</div>
-        <div><b>${summary.experiments}</b> / ${summary.total} 个概念已完成内嵌实验</div>`),
-      h('div', { class: 'note note--info', style: 'margin-top:8px' }, `
-        <span class="note__key">说明</span>
-        <span>进度只保存在本机独立命名空间，不写入装配配置，也不影响模拟分支；它记录的是「看没看过」，不是分数。</span>`)
+      h('div', { class: 'atlas-progress', 'data-el': 'progress' }, `
+        <div><b>${summary.explored}</b>/${summary.total} 已查看 · <b>${summary.experiments}</b> 完成实验 · <b>${summary.related}</b> 发现关联</div>
+        <div class="atlas-progress__note">仅本机记录，不计分数；看索引页 ≠ 学完正文，章内可用数量见各章标题。</div>`)
     );
   }
 
   function relationSection(concept) {
     const wrap = h('div', { class: 'section' });
-    wrap.append(h('div', { class: 'section__label' }, `<span>语义关系</span><span>${edgesOf(concept.id).length} 条</span>`));
-    for (const edge of edgesOf(concept.id)) {
+    const edges = edgesOf(concept.id);
+    wrap.append(h('div', { class: 'section__label' }, `<span>语义关系</span><span>${edges.length} 条 · 全部人工配置</span>`));
+    for (const edge of edges) {
       const meta = relationMeta(edge.type);
       const otherId = edge.sourceId === concept.id ? edge.targetId : edge.sourceId;
       const other = getConcept(otherId);
@@ -216,54 +254,58 @@ export function createAtlasWorkspace({
         h('div', { class: 'atlas-detail__hero' }, `
           <div class="inspector__eyebrow"><span>ATLAS</span><span aria-hidden="true">/</span><span>未选中节点</span></div>
           <h2 class="inspector__title">选择一个概念开始</h2>
-          <div class="inspector__sub">共 ${CONCEPT_ORDER.length} 个首期节点，全部为人工审校的中文解释</div>`),
+          <div class="inspector__sub">目录 ${knowledge.concepts} 个概念 · 其中 ${knowledge.byStatus.outline} 个仍在建设中</div>`),
         h('div', { class: 'section' }, `
           <div class="section__label"><span>怎么读这张图</span></div>
-          <p class="explain">节点是概念，连线是**人工逐条配置**的语义关系。USES 表示「会用到」，方向明确所以画箭头；RELATED 与 CONTRASTS 只说明两者容易一起出现或容易混淆，**不表示必需依赖**，所以不画箭头。</p>`),
+          <p class="explain">节点是概念，连线是<b>人工逐条配置</b>的语义关系。USES 表示「会用到」、PART_OF 表示「是它的组成部分」，两者方向明确所以画箭头；RELATED 与 CONTRASTS 只说明容易一起出现或容易混淆，<b>不表示必需依赖</b>。</p>`),
         h('div', { class: 'section' }, `
-          <div class="section__label"><span>边界</span></div>
-          <div class="note"><span class="note__key">诚实声明</span><span>知识星图只表达概念关系：它不因为模拟运行失败而改变连线，也不代表任何真实模型、真实 MCP 连接或真实检索已经发生。</span></div>`)
+          <div class="section__label"><span>为什么画布只有 ${stats.concepts} 个节点</span></div>
+          <div class="note"><span class="note__key">诚实声明</span><span>其余 ${knowledge.concepts - stats.concepts} 个概念只有索引、没有正文，因此不画在星图上、也不高亮成「已完成」；它们仍可在左栏目录里选中并查看索引页。</span></div>`)
       );
       return;
     }
 
     const concept = getConcept(selectedId);
+    const availability = conceptAvailability(selectedId);
     const label = learningLabelMeta(learning.labelOf(selectedId));
-    const hasKnowledgePage = selectedId === 'tool_calling';
+    const pos = positionInChapter(selectedId);
+    const experiment = concept.experimentId ? experimentOfConcept(selectedId) : null;
 
     const hero = h('div', { class: 'atlas-detail__hero', 'data-concept': concept.id }, `
       <div class="inspector__eyebrow">
-        <span>${concept.idx}</span><span aria-hidden="true">/</span><span>第 ${concept.chapter} 章 · ${esc(concept.chapterCn)}</span>
+        <span>${concept.idx}</span><span aria-hidden="true">/</span><span>第 ${concept.chapterNo} 章 · ${esc(concept.chapterCn)}</span><span aria-hidden="true">/</span><span>第 ${pos.index}/${pos.total} 个</span>
       </div>
       <h2 class="inspector__title">${esc(concept.cn)}</h2>
       <div class="inspector__sub">${esc(concept.name)} · ${esc(concept.tagline)}</div>
       <div class="chips">
+        <span class="tag tag--${availability.statusMeta.tone}">${esc(availability.statusMeta.cn)}</span>
         <span class="tag tag--${label.tone}">${esc(label.cn)}</span>
         <span class="tag tag--muted">${esc(concept.id)}</span>
-        ${concept.systemTarget === 'none' ? '' : `<span class="tag tag--signal">可在装配台中查看</span>`}
+        ${concept.systemTarget === 'none' ? '' : '<span class="tag tag--signal">可在装配台中查看</span>'}
       </div>`);
     detailBody.append(hero);
 
-    const understand = h('div', { class: 'section' });
-    understand.append(h('div', { class: 'section__label' }, '<span>简明解释</span><span>已审校</span>'));
-    for (const para of concept.understand) understand.append(h('p', { class: 'explain' }, md(para)));
-    detailBody.append(understand);
-
-    const misc = h('div', { class: 'section' });
-    misc.append(h('div', { class: 'section__label' }, '<span>常见误解</span><span>先破除再往下看</span>'));
-    for (const item of concept.misconceptions) {
-      misc.append(
-        h('div', { class: 'misconception' }, `
-          <div class="misconception__claim"><span class="misconception__mark">误解</span>${esc(item.claim)}</div>
-          <div class="misconception__fix"><span class="misconception__mark misconception__mark--fix">纠正</span>${esc(item.correction)}</div>`)
+    if (!availability.hasBody) {
+      detailBody.append(
+        h('div', { class: 'section' }, `
+          <div class="section__label"><span>索引说明</span><span>草稿 · 未审校</span></div>
+          <p class="explain">${md(concept.oneLiner)}</p>
+          <div class="note" data-act="outline-note">
+            <span class="note__key">内容建设中</span>
+            <span>本概念目前只有索引级元数据：正文（UNDERSTAND / INSPECT）、常见误解与实验将在 <b>${esc(concept.plannedMilestone || '后续阶段')}</b> 开放。浏览它不会让学习进度变成「已学完」。</span>
+          </div>`)
       );
+    } else {
+      const understand = h('div', { class: 'section' });
+      understand.append(h('div', { class: 'section__label' }, '<span>简明解释</span><span>已审校 · 完整内容在知识页</span>'));
+      for (const para of concept.understand.slice(0, 2)) understand.append(h('p', { class: 'explain' }, md(para)));
+      detailBody.append(understand);
     }
-    detailBody.append(misc);
 
     detailBody.append(relationSection(concept));
 
     const related = h('div', { class: 'section' });
-    related.append(h('div', { class: 'section__label' }, '<span>相关概念入口</span><span>图上均有连线</span>'));
+    related.append(h('div', { class: 'section__label' }, '<span>相关概念入口</span><span>均有真实关系</span>'));
     const chips = h('div', { class: 'chips' });
     for (const item of relatedOf(concept.id)) {
       const b = h('button', { class: 'btn btn--sm', type: 'button', 'data-related': item.concept.id }, `${item.concept.cn} · ${item.concept.name}`);
@@ -273,28 +315,25 @@ export function createAtlasWorkspace({
     related.append(chips);
     detailBody.append(related);
 
-    detailBody.append(h('div', { class: 'section' }, `
-      <div class="section__label"><span>后续学习提示</span></div>
-      <p class="explain">${md(concept.nextSteps)}</p>`));
-
     /* ---------------- 操作区 ---------------- */
-    const actions = h('div', { class: 'section atlas-actions' });
-    actions.append(h('div', { class: 'section__label' }, '<span>下一步</span><span>不含假按钮</span>'));
+    const acts = h('div', { class: 'section atlas-actions' });
+    acts.append(h('div', { class: 'section__label' }, '<span>下一步</span><span>不含假按钮</span>'));
 
-    if (hasKnowledgePage) {
-      const learn = h('button', { class: 'btn btn--primary', type: 'button', 'data-act': 'learn' }, 'LEARN · 打开完整知识页');
-      learn.addEventListener('click', () => onOpenKnowledge?.(concept.id));
-      actions.append(learn);
-    } else {
-      actions.append(
-        h('div', { class: 'note', 'data-act': 'learn-locked' }, `
-          <span class="note__key">Coming in later phase</span>
-          <span>本节点当前只开放已审校的简介、常见误解与关系说明；完整分层知识页与可操作实验在后续阶段开放。本轮只有 <b>Tool Calling</b> 提供完整的分层知识页。</span>`)
+    const learn = h('button', { class: 'btn btn--primary', type: 'button', 'data-act': 'learn' },
+      availability.hasBody ? 'LEARN · 打开知识页' : 'LEARN · 打开索引页（建设中）');
+    learn.addEventListener('click', () => onOpenKnowledge?.(concept.id, { from: 'atlas' }));
+    acts.append(learn);
+
+    if (experiment) {
+      acts.append(
+        h('div', { class: `note ${experiment.status === 'available' ? 'note--info' : ''}`, 'data-act': 'experiment-entry' }, `
+          <span class="note__key">实验</span>
+          <span>${esc(experiment.title)} · ${esc(experiment.status === 'available' ? '可操作（知识页 EXPERIMENT 步骤）' : `后续阶段开放（${experiment.milestone}）`)}</span>`)
       );
     }
 
     if (concept.systemTarget === 'none') {
-      actions.append(
+      acts.append(
         h('div', { class: 'note', 'data-act': 'constructor-none' }, `
           <span class="note__key">能力架</span>
           <span>${esc(TARGET_NOTE.none)}</span>`)
@@ -302,13 +341,27 @@ export function createAtlasWorkspace({
     } else {
       const view = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'view-constructor' }, 'VIEW IN CONSTRUCTOR · 在系统中查看');
       view.addEventListener('click', () => onViewInConstructor?.(concept));
-      actions.append(view, h('div', { class: 'mono atlas-actions__note' }, esc(TARGET_NOTE[concept.systemTarget])));
+      acts.append(view, h('div', { class: 'mono atlas-actions__note' }, esc(TARGET_NOTE[concept.systemTarget])));
     }
+
+    const nav = neighborConcepts(concept.id);
+    const siblingRow = h('div', { class: 'chips', 'data-act': 'sibling-nav' });
+    if (nav.prev) {
+      const b = h('button', { class: 'btn btn--sm btn--ghost', type: 'button' }, `← ${nav.prev.cn}`);
+      b.addEventListener('click', () => selectConcept(nav.prev.id, { focus: true, source: 'sibling' }));
+      siblingRow.append(b);
+    }
+    if (nav.next) {
+      const b = h('button', { class: 'btn btn--sm btn--ghost', type: 'button' }, `${nav.next.cn} →`);
+      b.addEventListener('click', () => selectConcept(nav.next.id, { focus: true, source: 'sibling' }));
+      siblingRow.append(b);
+    }
+    if (siblingRow.childElementCount) acts.append(siblingRow);
 
     const back = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'back-hub' }, '← Back to Hub · 返回中央核心');
     back.addEventListener('click', () => onBackToHub?.('hub'));
-    actions.append(back);
-    detailBody.append(actions);
+    acts.append(back);
+    detailBody.append(acts);
   }
 
   /* ---------------- 选中逻辑：唯一选中状态驱动画布与详情 ---------------- */
@@ -317,13 +370,18 @@ export function createAtlasWorkspace({
     if (!concept) return;
     selectedId = conceptId;
     graph.setSelectedEdge(null);
-    graph.setSelection(conceptId);
-    if (focus) graph.focusConcept(conceptId);
+    graph.setSelection(graphNodeIds.has(conceptId) ? conceptId : null);
+    if (focus && graphNodeIds.has(conceptId)) graph.focusConcept(conceptId);
     if (source === 'relation' || source === 'related') learning.markRelatedDiscovered(conceptId);
     else learning.markExplored(conceptId);
     renderDetail();
     renderList();
-    onLog?.('星图', `选中概念 ${concept.cn}（${concept.name}）· 第 ${concept.chapter} 章 · 图中 ${edgesOf(conceptId).length} 条关系已突出`, 'signal');
+    const availability = conceptAvailability(conceptId);
+    onLog?.(
+      '星图',
+      `选中概念 ${concept.cn}（${concept.name}）· 第 ${concept.chapterNo} 章 · ${availability.statusMeta.cn} · 关系中 ${edgesOf(conceptId).length} 条已突出`,
+      'signal'
+    );
   }
 
   function selectEdge(edge) {
@@ -338,14 +396,14 @@ export function createAtlasWorkspace({
       h('div', { class: 'atlas-detail__hero', 'data-edge': edge.id }, `
         <div class="inspector__eyebrow"><span>关系</span><span aria-hidden="true">/</span><span>${esc(edge.id)}</span></div>
         <h2 class="inspector__title">${esc(CONCEPTS[edge.sourceId].cn)} ${edge.directed ? '→' : '—'} ${esc(CONCEPTS[edge.targetId].cn)}</h2>
-        <div class="inspector__sub">${esc(edge.type)} · ${esc(meta.cn)} · ${edge.directed ? '有向关系' : '无向关系'}</div>
+        <div class="inspector__sub">${esc(edge.type)} · ${esc(meta.cn)} · ${edge.directed ? '有向关系（source → target）' : '无向关系'}</div>
         <div class="chips">
           <span class="tag tag--muted">${esc(edge.sourceId)}</span>
           <span class="tag tag--signal">${esc(edge.type)}</span>
           <span class="tag tag--muted">${esc(edge.targetId)}</span>
         </div>`),
       h('div', { class: 'section' }, `
-        <div class="section__label"><span>这条关系在说什么</span><span>人工配置</span></div>
+        <div class="section__label"><span>这条关系在说什么</span><span>人工配置 · ${esc(edge.origin || 'M0.3')}</span></div>
         <p class="explain">${esc(edge.description)}</p>`),
       h('div', { class: 'section' }, `
         <div class="section__label"><span>关系类型含义</span></div>
@@ -367,9 +425,12 @@ export function createAtlasWorkspace({
     const result = searchConcepts(query);
     renderList();
     if (!result.cleared && !result.empty) {
-      // §3 短闭环：搜索命中后画布自动定位到该节点并打开摘要
       selectConcept(result.matches[0].concept.id, { focus: true, source: 'search' });
-      onLog?.('星图', `搜索「${query}」命中 ${result.matches.length} 个概念 · 已定位到 ${result.matches[0].concept.cn} 并突出其直接关联线`, 'signal');
+      onLog?.(
+        '星图',
+        `搜索「${query}」命中 ${result.matches.length} 个概念 · 已定位到 ${result.matches[0].concept.cn}（${result.matches[0].concept.chapterNo} 章）`,
+        'signal'
+      );
     } else {
       renderDetail();
     }
@@ -432,6 +493,8 @@ export function createAtlasWorkspace({
       searchInput.value = value;
       applySearch(value);
     },
+    /** 章节内概念列表（Story / 自检脚本共用同一份查询） */
+    conceptsOfChapter: (chapterId) => getConceptsByChapter(chapterId),
     graph,
     dispose() {
       clearTimeout(searchTimer);
@@ -440,5 +503,3 @@ export function createAtlasWorkspace({
     },
   };
 }
-
-export { RELATIONSHIPS };
