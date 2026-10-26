@@ -435,6 +435,15 @@ export const RELATIONSHIPS = Object.freeze([
     origin: 'M1.1',
     description: '固定流程同样需要运行环境来执行、约束与记录；两者一个是被执行的路径，一个是承载并控制它的环境。',
   }),
+  Object.freeze({
+    id: 'rel-agentloop-workflow',
+    sourceId: 'agent_loop',
+    targetId: 'workflow',
+    type: 'CONTRASTS',
+    directed: false,
+    origin: 'M1.3',
+    description: '对照两种推进方式：固定流程把步骤写死、可预期好审计；执行循环每轮按状态选择下一步，灵活但需要终止条件与重试上限。两者常组合使用，不构成优劣排序。',
+  }),
 
   /* ================================================================
    * 七、第 06 章新增：可靠性与边界

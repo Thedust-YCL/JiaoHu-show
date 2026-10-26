@@ -94,8 +94,8 @@ export const CHAPTER_03_STORY = Object.freeze({
     ]),
   }),
   transition: Object.freeze({
-    toChapterId: null,
-    text: '到这里，「模型 → 上下文 → 工具」这条线已经接通。接下来要问的是：拿回来的资料凭什么可信——这属于 M1.3 的 Chapter 04（信息与方法）与 Chapter 06（可靠性与边界）。',
+    toChapterId: 'knowledge',
+    text: '到这里，「模型 → 上下文 → 工具」这条线已经接通。接下来要问的是：工具把资料拿回来之后，系统怎样找到相关内容、切分文档、组织上下文——第 04 章接着讲。',
   }),
   concepts: Object.freeze(['api', 'tools', 'tool_calling', 'function_calling', 'mcp', 'mcp_server']),
 });

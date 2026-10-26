@@ -100,7 +100,10 @@ function createReaderHousing() {
 }
 
 function createHousing(moduleId) {
-  return moduleId === 'document_reader' ? createReaderHousing() : createSearchHousing();
+  if(moduleId==='document_reader')return createReaderHousing();
+  const housing=createSearchHousing();
+  if(moduleId!=='announcement_search')housing.group.scale.multiplyScalar(0.55);
+  return housing;
 }
 
 /* ==================================================================== *
@@ -218,6 +221,7 @@ export function createModuleBay({ core, reduced = false }) {
    */
   let execFocus = null;
   let execTone = 'signal';
+  let playbackPaused=false;
 
   function portIdForModule(moduleId) {
     for (const port of Object.values(PORTS)) {
@@ -486,7 +490,7 @@ export function createModuleBay({ core, reduced = false }) {
 
       // 锁定脉冲
       if (inst.pulse.visible) {
-        inst.pulseT = Math.min(1, inst.pulseT + dt / (reduced ? 0.18 : 0.42));
+        inst.pulseT = Math.min(1, inst.pulseT + (playbackPaused?0:dt) / (reduced ? 0.18 : 0.42));
         const k = inst.pulseT;
         inst.pulse.scale.setScalar(1 + k * 1.8);
         inst.pulseMat.opacity = (1 - k) * 0.85;
@@ -567,11 +571,13 @@ export function createModuleBay({ core, reduced = false }) {
     getAnchorWorld,
     getPreviewPortId,
     setExecutionFocus,
+    setPlaybackPaused:value=>{playbackPaused=!!value;},
     clearExecutionFocus,
     getExecutionFocus,
     setVisible,
     dispose,
     hasInstance: (moduleId) => instances.has(moduleId),
+    instanceStatus: (moduleId) => instances.get(moduleId)?.status || null,
     instanceCount: () => instances.size,
   };
 }

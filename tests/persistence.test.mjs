@@ -35,7 +35,7 @@ test('刷新后能复原两种模块的安装、参数、禁用与授权状态',
   const reopened = createConstructorStore({ storage });
   assert.equal(reopened.getState().modules.length, 2);
   const search = reopened.getInstalled('announcement_search');
-  assert.deepEqual(search.settings, { searchScope: 'campus_events', maxResults: 10 });
+  assert.deepEqual(search.settings, { searchScope: 'campus_events', maxResults: 10,connectionMode:'direct',resourceScope:'public' });
   assert.equal(search.permissions.read, true);
   assert.equal(reopened.statusOf('announcement_search'), 'Ready');
 
@@ -52,10 +52,11 @@ test('Preview 与 Drag 属于瞬态，绝不写入本地存储', async () => {
   store.actions.dragStart('document_reader');
 
   const raw = JSON.parse(storage.getItem(CONSTRUCTOR_STORAGE_KEY));
-  assert.deepEqual(Object.keys(raw).sort(), ['modules', 'schemaVersion']);
-  assert.equal(raw.schemaVersion, 1);
-  assert.equal(raw.modules.length, 1);
-  assert.equal(raw.modules[0].moduleId, 'announcement_search');
+  assert.deepEqual(Object.keys(raw).sort(), ['configurations','draft','quarantined','schemaVersion']);
+  assert.equal(raw.schemaVersion, 2);
+  assert.equal(raw.draft.modules.length, 1);
+  assert.equal(raw.draft.modules[0].moduleId, 'announcement_search');
+  assert.equal(raw.draft.ui,undefined);
   const reopened = createConstructorStore({ storage });
   assert.equal(reopened.getState().ui.preview, null);
   assert.equal(reopened.getState().ui.drag, null);
@@ -64,8 +65,8 @@ test('Preview 与 Drag 属于瞬态，绝不写入本地存储', async () => {
 test('落盘内容只包含权威字段，不夹带动画或渲染中间态', async () => {
   const { storage, store } = await seededStore();
   store.actions.commit('document_reader', 'READER_PORT');
-  const entry = JSON.parse(storage.getItem(CONSTRUCTOR_STORAGE_KEY)).modules[0];
-  assert.deepEqual(Object.keys(entry).sort(), ['enabled', 'moduleId', 'permissions', 'portId', 'settings']);
+  const entry = JSON.parse(storage.getItem(CONSTRUCTOR_STORAGE_KEY)).draft.modules[0];
+  assert.deepEqual(Object.keys(entry).sort(), ['enabled','instanceId','moduleId','moduleType','order','permissions','portId','settings']);
   assert.equal(entry.enabled, true);
   assert.equal(entry.portId, 'READER_PORT');
 });
@@ -161,7 +162,7 @@ test('重置构建器只清理构建器命名空间，不删除 M0.1 开场偏�
 
   store.actions.reset();
 
-  assert.equal(storage.getItem(CONSTRUCTOR_STORAGE_KEY), null, '构建器键必须被清理');
+  assert.deepEqual(JSON.parse(storage.getItem(CONSTRUCTOR_STORAGE_KEY)).draft.modules, [], '只重置当前草稿，具名快照存储保留');
   assert.equal(storage.getItem(INTRO_KEY), JSON.stringify(true), '开场首访标记必须保留');
   assert.equal(storage.getItem(PREFS_KEY), JSON.stringify({ dock: true, inspect: false, status: true, dockRail: false }), '界面偏好必须保留');
 });

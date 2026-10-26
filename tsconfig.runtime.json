@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target":"ES2022", "module":"NodeNext", "moduleResolution":"NodeNext",
+    "allowJs":true, "checkJs":false, "noEmit":true, "skipLibCheck":true,
+    "lib":["ES2022","DOM"], "strict":false
+  },
+  "include":["src/simulation/engine/runtime*.js","src/features/execution/state/runtimeHistory.js","src/features/execution/components/runtimeWorkspace.js","src/features/constructor/model/types.d.ts","src/features/comparison/**/*.js","src/features/comparison/**/*.d.ts"]
+}

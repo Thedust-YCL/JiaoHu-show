@@ -15,15 +15,15 @@ export function ModuleLibrary({ store, onDragIntent, onResetRequest }) {
   const el = h('div', { class: 'bay', 'aria-label': '能力架：可装配的工具模块' });
   const head = h('div', { class: 'dock__group-label' }, '<span>能力架 · MODULE BAY</span><span data-el="count">0 / 2</span>');
   const intro = h('div', { class: 'note note--info', style: 'margin:0 4px 8px' }, `
-    <span class="note__key">M0.2</span>
-    <span>两种示范工具可装配到 AZ-CORE 01 的兼容接口。这里只是<strong>能力的装配与配置</strong>，不执行真实工具调用，也不连接任何在线服务。</span>`);
+    <span class="note__key">M2.1</span>
+    <span>十类模块 · 点击添加并确认装配。所有配置仅用于本地模拟。</span>`);
   const list = h('div', { class: 'bay__list' });
   const foot = h('div', { class: 'bay__foot' });
 
   const resetBtn = h('button', { class: 'btn btn--sm btn--ghost', type: 'button', 'aria-label': '重置构建器：清空全部已装配模块与接口占用' }, '重置构建器');
   resetBtn.addEventListener('click', () => onResetRequest?.());
   foot.append(
-    h('div', { class: 'bay__hint' }, '字段即改即存 · 配置只保存在本机浏览器'),
+    h('div', { class: 'bay__hint' }, '草稿自动恢复 · 具名配置请点击保存'),
     resetBtn
   );
 

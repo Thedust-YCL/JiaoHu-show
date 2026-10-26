@@ -9,7 +9,7 @@
  * ------------------------------------------------------------------
  */
 
-const CONSTRUCTOR_KEY = 'agent-zero:constructor:v1';
+const CONSTRUCTOR_KEY = 'agent-zero:constructor:v2';
 const EXECUTION_KEY = 'agent-zero:execution:v1';
 /* M0.4 起运行记录写入新命名空间；M0.3 的验收断言按「当前命名空间」读取 */
 const RESEARCH_KEY = 'agent-zero:research:v2';
@@ -53,8 +53,8 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       const nodes = [...document.querySelectorAll('.atlas-node')];
       const list = [...document.querySelectorAll('.atlas-list__item')];
       const svg = document.querySelector('.atlas-svg');
-      rec('A01', 'Atlas 初始载入：画布 10 个已开放节点 + 目录 36 个概念索引，画布可观察、信息可读',
-        nodes.length === 10 && list.length === 36 && !!svg && !!svg.getAttribute('viewBox')
+      rec('A01', 'Atlas 初始载入：M1.4画布36个节点 + 目录 36 个概念索引，画布可观察、信息可读',
+        nodes.length === 36 && list.length === 36 && !!svg && !!svg.getAttribute('viewBox')
           && document.querySelector('.atlas-search__note').textContent.includes('36'),
         '节点=' + nodes.length + ' · 清单=' + list.length + ' · viewBox=' + (svg ? svg.getAttribute('viewBox') : '—'));
       return out;
@@ -72,14 +72,14 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       const edges = [...document.querySelectorAll('.atlas-edge')];
       const invalid = edges.filter((e) => {
         const label = e.getAttribute('aria-label') || '';
-        return !/的关系：/.test(label) || !/USES|RELATED|CONTRASTS/.test(label);
+        return !/的关系：/.test(label) || !/USES|RELATED|CONTRASTS|PART_OF/.test(label);
       });
       const types = {};
       edges.forEach((e) => { const t = e.dataset.type; types[t] = (types[t] || 0) + 1; });
-      rec('A02', '语义关系：画布 13 条边都有合法类型与文字含义，无悬空关系（M1.1 新增 api–mcp、workflow–harness；M1.2 新增 tool_calling–mcp）',
-        edges.length === 13 && invalid.length === 0 && ids.length === 10
-          && types.USES === 3 && types.RELATED === 9 && types.CONTRASTS === 1 && !types.PART_OF,
-        '边=' + edges.length + ' · 类型=' + JSON.stringify(types) + ' · 说明缺失=' + invalid.length + ' · 本轮不编造 PART_OF');
+      rec('A02', '语义关系：M1.4画布49条真实关系都有合法类型与文字含义，无悬空关系（M1.1 新增 api–mcp、workflow–harness；M1.2 新增 tool_calling–mcp）',
+        edges.length === 49 && invalid.length === 0 && ids.length === 36
+          && types.USES === 7 && types.RELATED === 34 && types.CONTRASTS === 5 && types.PART_OF === 3,
+        '边=' + edges.length + ' · 类型=' + JSON.stringify(types) + ' · 说明缺失=' + invalid.length + ' · M1.4完整统一关系数据');
       return out;
     })()`)
   );
@@ -137,7 +137,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       const panned = graph.getTransform();
       svg.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 21, clientX: from.x + 400, clientY: from.y + 300 }));
       graph.resetView();
-      const bounds = { w: 1000, h: 640 };
+      const bounds = { w: svg.viewBox.baseVal.width, h: svg.viewBox.baseVal.height };
       const inside = Math.abs(panned.x) <= bounds.w * 0.42 + 1 && Math.abs(panned.y) <= bounds.h * 0.42 + 1;
       rec('A04', '缩放 / 平移 / 复位：限幅生效，Reset 恢复标准视角',
         base.k === 1 && zoomedIn <= 2.6 + 1e-6 && zoomedOut >= 0.55 - 1e-6 && Math.abs(panned.x) > 1
@@ -643,7 +643,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       const snapshotKept = api.currentRun().configSnapshot.modules.length === snapshotModules;
       const stored = JSON.parse(localStorage.getItem(${JSON.stringify(RESEARCH_KEY)}));
       const storedKept = stored.runs[0].run.configSnapshot.modules.length === snapshotModules;
-      const repoNow = JSON.parse(localStorage.getItem(${JSON.stringify(CONSTRUCTOR_KEY)})).modules.map((m) => m.moduleId).join(',');
+      const repoNow = JSON.parse(localStorage.getItem(${JSON.stringify(CONSTRUCTOR_KEY)})).draft.modules.map((m) => m.moduleId).join(',');
       // New Run 才使用新配置
       api.newRun();
       await sleep(300);
@@ -747,7 +747,8 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
   /* Invalid 配置：直接写入不合法的持久化配置（模拟损坏 / 旧版本数据），刷新后运行 */
   await evaluate(`(() => {
     const raw = JSON.parse(localStorage.getItem(${JSON.stringify(CONSTRUCTOR_KEY)}) || '{"schemaVersion":1,"modules":[]}');
-    raw.modules = [{ moduleId: 'announcement_search', portId: 'SEARCH_PORT', enabled: true, permissions: { read: true }, settings: { searchScope: 'all_notices', maxResults: 999 } }];
+    const target=raw.draft||raw;
+    target.modules = [{ moduleId: 'announcement_search', portId: 'SEARCH_PORT', enabled: true, permissions: { read: true }, settings: { searchScope: 'all_notices', maxResults: 999 } }];
     localStorage.setItem(${JSON.stringify(CONSTRUCTOR_KEY)}, JSON.stringify(raw));
     return true;
   })()`);
@@ -1041,7 +1042,7 @@ export async function runM03Acceptance({ cdp, sleep, shot, waitReady }) {
       // 知识星图：键盘可达、无横向溢出
       az.openAtlas();
       await sleep(420);
-      const atlasOK = document.querySelectorAll('.atlas-node').length === 10
+      const atlasOK = document.querySelectorAll('.atlas-node').length === 36
         && document.querySelectorAll('.atlas-list__item').length === 36
         && document.documentElement.scrollWidth - window.innerWidth <= 1;
       // 知识页：窄屏仍可完成四步切换

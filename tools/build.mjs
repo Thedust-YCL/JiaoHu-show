@@ -38,7 +38,7 @@ function shellHtml({ cssHref, jsHref, inlineCss, inlineJs }) {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="dark" />
-<meta name="description" content="AGENT / ZERO — M0.1 视觉基础原型：AZ-CORE 01、AZ / INITIALIZATION SEQUENCE 与 Control Hub。纯前端本地模拟，无后端、无真实 AI API。" />
+<meta name="description" content="AGENT / ZERO — 从语言到行动的交互式 AI 知识实验室。探索六章、36 个概念与六个实验，在本机学习日志中续学。纯前端本地教学模拟。" />
 <title>AGENT / ZERO — FROM LANGUAGE TO ACTION.</title>
 ${css}
 </head>

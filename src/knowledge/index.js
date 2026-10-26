@@ -260,6 +260,14 @@ export function graphModel() {
   return { nodes, edges, layout: NODE_LAYOUT, view: GRAPH_VIEW };
 }
 
+/** Atlas 图与等价目录共用查询；关系类型只改变连线，保留没有该类关系的节点。 */
+export function queryAtlas({ query = '', chapterId = null, relationType = null } = {}) {
+  const result = searchConcepts(query, { chapterId });
+  const nodes = result.cleared ? CONCEPT_ORDER.map(getConcept).filter(c => !chapterId || c.chapterId === chapterId) : result.matches.map(m => m.concept);
+  const ids = new Set(nodes.map(c => c.id));
+  return { nodes, edges: RELATIONSHIPS.filter(e => ids.has(e.sourceId) && ids.has(e.targetId) && (!relationType || e.type === relationType)) };
+}
+
 /** 图谱统计：画布节点数、画布边数、全量边数与按类型计数 */
 export function graphStats() {
   const model = graphModel();
@@ -324,6 +332,8 @@ export function knowledgeStats() {
 const REQUIRED_CONCEPT_COUNT = { min: 30, max: 40 };
 /** M1.2 交付范围：这三章的正文与来源必须达到「已审校」标准 */
 const M12_CHAPTER_IDS = Object.freeze(['intelligence', 'context', 'connection']);
+/** M1.3 交付范围：这三章同样要求已核验的外部来源与审校日期（A06 / A07） */
+const M13_CHAPTER_IDS = Object.freeze(['knowledge', 'runtime', 'reliability']);
 const LEGACY_CONCEPT_IDS = Object.freeze([
   'llm',
   'agent',
@@ -413,12 +423,13 @@ export function validateKnowledge() {
       const reviewedSources = concept.sources.filter((ref) => getSource(ref)?.reviewed === true);
       if (reviewedSources.length === 0) push('SOURCES_UNREVIEWED', { id });
       /**
-       * 本阶段（第 01–03 章）额外要求的来源与审校证据：
+       * 各章额外要求的来源与审校证据：
        *   · 必须至少有一条**已核验的外部来源**（A07：真实可核验，不接受只有仓库内文档）；
        *   · 必须写明审校日期（reviewedAt），便于交付文档逐条核对。
-       * 第 04–06 章正文仍属 M1.3，不受这条约束影响。
+       * M1.2 覆盖第 01–03 章，M1.3 覆盖第 04–06 章；其余章节正文尚未交付，
+       * 由下方 OUTLINE_* 规则约束，不适用本条。
        */
-      if (M12_CHAPTER_IDS.includes(concept.chapterId)) {
+      if ([...M12_CHAPTER_IDS, ...M13_CHAPTER_IDS].includes(concept.chapterId)) {
         const externalReviewed = concept.sources.filter((ref) => {
           const source = getSource(ref);
           return source?.type === 'external' && source.reviewed === true;

@@ -84,7 +84,7 @@ export const CHAPTER_03_CONCEPTS = Object.freeze([
       '组成 · 名称、说明、参数 Schema 三部分决定模型「能不能正确请求」，缺参数说明就会产生大量非法调用。',
       '执行位置 · 工具函数运行在应用侧；模型只看到调用结果文本，看不到函数内部实现。',
       '参数必须校验 · 官方文档明确提示：模型生成的参数「可能臆造出函数模式中未定义的参数」，调用前必须在代码里验证（来源：src-deepseek-chat-api）。',
-      '工具不执行动作 · 文档同时说明「函数功能需由用户提供，模型本身不执行具体函数」（来源：src-deepseek-tool-calls）。',
+      '模型不执行工具 · 文档同时说明「函数功能需由用户提供，模型本身不执行具体函数」（来源：src-deepseek-tool-calls）。',
       '本原型的真实边界 · 装配台里只有 Announcement Search 与 Document Reader 两个本地模拟工具，运行期零网络请求。',
     ],
     misconceptions: [
@@ -220,7 +220,7 @@ export const CHAPTER_03_CONCEPTS = Object.freeze([
     ],
     inspect: [
       '三角色 · Host（AI 应用，如桌面客户端）→ 为每个 Server 创建一个 Client → Client 与 Server 建立连接并转发请求。这是官方架构文档的划分（来源：src-mcp-architecture）。',
-      '三类能力 · 规范写明 Server 可向 Client 提供 Tools（供模型执行的函数）、Resources（上下文与数据）、Prompts（模版化消息与工作流）（来源：src-mcp-spec，2025-06-18 版）。',
+      '三类能力 · 规范写明 Server 可向 Client 提供 Tools（可由模型请求、由运行环境执行的函数）、Resources（上下文与数据）、Prompts（模版化消息与工作流）（来源：src-mcp-spec，2025-06-18 版）。',
       '与工具的关系 · 工具 = 能力入口，MCP = 连接方式；同一份工具能力可以经 MCP 暴露，也可以由应用直接注册。',
       '边界 · 本原型**不建立任何真实 MCP 连接**：知识页只做概念解释与本地路径仿真，不发起网络握手，也不声称实现了 SDK。',
       '常见误区 · 接上 MCP 不代表能力变强或结果更准确；它改变的是接入成本与一致性。',
@@ -255,14 +255,14 @@ export const CHAPTER_03_CONCEPTS = Object.freeze([
     tagline: '按 MCP 规范对外提供工具、资源与提示模板的一方。',
     aliases: ['mcp server', 'mcpserver', 'mcp 服务端', '协议服务端', '服务端'],
     contentStatus: 'reviewed',
-    oneLiner: 'MCP Server 是按协议对外提供能力的一方：它可以暴露工具、资源与提示模板，本身不做推理。',
+    oneLiner: 'MCP Server 是按协议对外提供能力的一方：可以暴露工具、资源与提示模板；提供能力不等于它就是模型。',
     understand: [
       '在 MCP 的 client-server 架构里，服务端是被连接的一方：它声明自己有哪些能力，接收客户端转来的请求并返回结果。',
-      '它能暴露的不只是工具：规范列了三类能力——Tools（供模型执行的函数）、Resources（上下文与数据）、Prompts（模版化消息与工作流）（来源：src-mcp-spec）。',
+      '它能暴露的不只是工具：规范列了三类能力——Tools（可由模型请求、由运行环境执行的函数）、Resources（上下文与数据）、Prompts（模版化消息与工作流）（来源：src-mcp-spec）。',
       '服务端存在不等于能力可用：连接成功只说明协议对上了；具体能力是否被发现、是否被授予权限、结果是否可信，还要看客户端策略与数据本身。',
     ],
     inspect: [
-      '角色 · Host（AI 应用）为每个 Server 创建一个 Client 连接（来源：src-mcp-architecture）；Server 一侧不主动调用模型。',
+      '角色 · Host（AI 应用）为每个 Server 创建一个 Client 连接（来源：src-mcp-architecture）；Server 的协议角色不等于推理模型。2025-06-18 规范还允许服务端经客户端请求 Sampling，后续版本有所变化；本实验仅演示工具、资源与提示模板。',
       '能力类型 · Tools 会产生动作，Resources 是读取，Prompts 是模版：三者用途不同，不能互相替代。',
       '与平台内置工具的区别 · 内置工具由应用直接注册；MCP Server 提供的能力需要经过协议发现与授权。',
       '易混 · 「MCP Server 上线了」不代表「模型会自动用它」：还需要客户端连接、能力筛选与权限配置。',

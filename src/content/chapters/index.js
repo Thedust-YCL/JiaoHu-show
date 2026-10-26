@@ -1,34 +1,40 @@
 /**
  * src/content/chapters/index.js
  * ------------------------------------------------------------------
- * 三章 Story 叙事数据的统一入口（M1.2 D02）。
+ * 六章 Story 叙事数据的统一入口（M1.2 D02 → M1.3 扩展到第 04–06 章）。
  *
  * 为什么单独一层：
  *   · 章节叙事属于**内容**，与渲染组件解耦，测试可以直接在 Node 里断言
  *     「每章是否有开场目标 / 可观察局限 / 实验入口 / 结果解读 / 上下章导航」；
- *   · 第 04–06 章的叙事属于 M1.3，这里返回 null，界面据此显示「后续阶段」，
- *     不假装已经写完。
+ *   · 未交付章节返回 null，界面据此显示「后续阶段」，不假装已经写完；
+ *   · M1.3 起六章全部具备叙事，`STORY_ORDER` 覆盖 01–06。
  * ------------------------------------------------------------------
  */
 import { CHAPTER_01_STORY } from './01-intelligence.js';
 import { CHAPTER_02_STORY } from './02-context.js';
 import { CHAPTER_03_STORY } from './03-connection.js';
+import { CHAPTER_04_STORY } from './04-knowledge.js';
+import { CHAPTER_05_STORY } from './05-runtime.js';
+import { CHAPTER_06_STORY } from './06-reliability.js';
 
 export const CHAPTER_STORIES = Object.freeze({
   intelligence: CHAPTER_01_STORY,
   context: CHAPTER_02_STORY,
   connection: CHAPTER_03_STORY,
+  knowledge: CHAPTER_04_STORY,
+  runtime: CHAPTER_05_STORY,
+  reliability: CHAPTER_06_STORY,
 });
 
-/** 本阶段已交付叙事的章节顺序（用于上一章 / 下一章导航） */
-export const STORY_ORDER = Object.freeze(['intelligence', 'context', 'connection']);
+/** 已交付叙事的章节顺序（用于上一章 / 下一章导航）：M1.3 起为全六章 */
+export const STORY_ORDER = Object.freeze(['intelligence', 'context', 'connection', 'knowledge', 'runtime', 'reliability']);
 
 /** 取章节叙事：未交付章节返回 null（调用方必须显式处理） */
 export function getChapterStory(chapterId) {
   return Object.prototype.hasOwnProperty.call(CHAPTER_STORIES, chapterId) ? CHAPTER_STORIES[chapterId] : null;
 }
 
-/** 上一章 / 下一章（只在本阶段已交付的三章范围内） */
+/** 上一章 / 下一章（覆盖全部已交付章节） */
 export function neighborStories(chapterId) {
   const index = STORY_ORDER.indexOf(chapterId);
   if (index < 0) return { prev: null, next: null };

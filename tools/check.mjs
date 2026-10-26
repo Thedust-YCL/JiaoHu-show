@@ -19,6 +19,8 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { validateKnowledge, knowledgeStats } from '../src/knowledge/index.js';
 import { sourceStats } from '../src/knowledge/sources.js';
+import { createExample } from '../src/features/constructor/model/configuration.js';
+import { preflight } from '../src/features/constructor/model/preflight.js';
 
 const root = process.cwd();
 
@@ -77,7 +79,10 @@ async function main() {
   console.log('\n=== 3. 静态产物路径（dist/index.html） ===');
   console.log(distNote);
 
-  const ok = failed.length === 0 && issues.length === 0 && distOk !== false;
+  console.log('\n=== 4. Agent Configuration v2 契约 ===');
+  const configChecks=['starter','evidence-first'].map(kind=>({kind,result:preflight(createExample(kind))}));
+  for(const {kind,result} of configChecks)console.log(`${kind}: errors=${result.counts.error}, warnings=${result.counts.warning}, ready=${result.ready}`);
+  const ok = failed.length === 0 && issues.length === 0 && distOk !== false && configChecks.every(c=>c.result.ready);
   console.log(`\n结论：${ok ? '通过' : '未通过'}`);
   if (!ok) process.exit(1);
 }

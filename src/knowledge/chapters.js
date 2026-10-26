@@ -12,8 +12,8 @@
  * ------------------------------------------------------------------
  */
 
-/** 章节叙事完成度：story 级叙事与整章滚动体验属于 M1.4，因此当前统一为 outline */
-export const CHAPTER_NARRATIVE_STATUS = 'outline';
+/** M1.4六章连续叙事、共享模板与学习路径已核对。 */
+export const CHAPTER_NARRATIVE_STATUS = 'reviewed';
 
 /**
  * 六章注册表。

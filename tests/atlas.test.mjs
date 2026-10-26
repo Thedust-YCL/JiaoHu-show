@@ -42,10 +42,12 @@ import { memoryStorage } from './helpers.mjs';
 /* ==================================================================== *
  * 星图：只画已开放节点（M0.3 的 10 个节点原样保留）
  * ==================================================================== */
-test('A16 星图：画布恰好绘制 M0.3 的 10 个已开放节点，坐标固定且唯一', () => {
+test('A16 星图：M1.4画布完整绘制36节点，保留旧节点且坐标固定唯一', () => {
   const model = graphModel();
   assert.deepEqual(model.nodes.map((n) => n.id), [...GRAPH_ORDER]);
-  assert.equal(model.nodes.length, 10);
+  assert.equal(model.nodes.length, 36);
+  assert.deepEqual(NODE_LAYOUT.llm, {x:240,y:88});
+  assert.deepEqual(NODE_LAYOUT.mcp, {x:748,y:470});
   const points = new Set();
   for (const node of model.nodes) {
     const p = NODE_LAYOUT[node.id];
@@ -75,7 +77,7 @@ test('A16 星图：画布边只连接两个已开放节点，图是自洽的', (
     assert.ok(isEdgeResolvable(edge), edge.id);
   }
   const stats = graphStats();
-  assert.equal(stats.concepts, 10);
+  assert.equal(stats.concepts, 36);
   assert.equal(stats.edges, model.edges.length);
   assert.equal(stats.totalConcepts, 36);
   assert.equal(stats.totalEdges, RELATIONSHIPS.length);
@@ -258,13 +260,18 @@ test('A18 学习进度：只有真实存在的实验才能被记为「已完成�
   assert.equal(store.markExperimentCompleted('llm'), false);
   assert.equal(store.flagsOf('llm').experimentCompleted, false);
   assert.equal(logs.length, 1);
-  // 只有索引的概念（第 04–06 章）同样不能记录
-  assert.equal(store.markExperimentCompleted('chunking'), false);
+  // M1.3 起 36 个概念都有正文，但只有挂了可操作实验的 25 个能记录：
+  // 没有任何实验的 reviewed 概念（如 llm / transformer）必须一律拒绝
+  assert.equal(store.markExperimentCompleted('transformer'), false);
   // 有可用实验的 Tool Calling 可以记录
   assert.equal(store.markExperimentCompleted('tool_calling'), true);
   // M1.2 新增的 Lab 01 / Lab 02 入口概念也可以记录（它们登记了真实实验）
   assert.equal(store.markExperimentCompleted('token'), true);
   assert.equal(store.markExperimentCompleted('context_engineering'), true);
+  // M1.3 三个实验的入口概念同样可以记录
+  assert.equal(store.markExperimentCompleted('chunking'), true);
+  assert.equal(store.markExperimentCompleted('agent_loop'), true);
+  assert.equal(store.markExperimentCompleted('permissions'), true);
   assert.equal(logs.length, 2, '只有被拒绝的调用才写日志');
 });
 
@@ -300,7 +307,8 @@ test('A18 学习进度：重置只清除自己的命名空间', () => {
   const store = createLearningStore({ storage });
   store.markExplored('mcp');
   store.reset();
-  assert.equal(storage.getItem(LEARNING_STORAGE_KEY), null);
+  assert.deepEqual(JSON.parse(storage.getItem(LEARNING_STORAGE_KEY)).concepts, {});
+  assert.equal(createLearningStore({storage}).summary().explored,0);
   assert.equal(storage.getItem('agent-zero:constructor:v1'), 'keep-me');
 });
 

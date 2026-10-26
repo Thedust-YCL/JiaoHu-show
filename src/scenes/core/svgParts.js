@@ -85,7 +85,7 @@ const SHELL_FACETS = [
 ];
 
 /** 图形实际占用的区域：中心 (150,153)，最外层轨道到 y≈283，端口到 x≈107/193 */
-export const SVG_BOX = '30 12 240 284';
+export const SVG_BOX = '-45 0 390 380'; // Fit full orbit bounds in the 2D fallback; geometry is unchanged.
 
 /**
  * @param {object} options

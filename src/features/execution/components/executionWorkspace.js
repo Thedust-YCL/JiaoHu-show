@@ -37,6 +37,7 @@ export function createExecutionWorkspace({
   onBackToConstructor,
   onOpenKnowledge,
   onLocateModule,
+  onOpenRuntime,
   onMountCanvas,
   onReleaseCanvas,
   onFocusScene,
@@ -75,6 +76,7 @@ export function createExecutionWorkspace({
   const backCtor = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'back-constructor' }, '装配台');
   const backHub = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'back-hub' }, 'HUB');
   actions.append(viewSeg, coreSeg, backToReportBtn, newRunBtn, backCtor, backHub);
+  const runtimeButton=h('button',{type:'button',class:'btn btn--primary','data-open-runtime':'true'},'M2.2 Runtime');runtimeButton.onclick=()=>onOpenRuntime?.();actions.append(runtimeButton);
 
   /* ----------------------------- 主体 ----------------------------- */
   const graph = createExecutionGraph({ onSeek: (seq) => seek(seq, 'graph') });

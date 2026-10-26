@@ -34,9 +34,15 @@ import { ModuleLibrary } from './features/constructor/components/library.js';
 import { buildModulePanel } from './features/constructor/components/moduleInspector.js';
 import { DragLayer } from './features/constructor/components/dragLayer.js';
 import { SystemGraph } from './features/constructor/views/systemView.js';
+import { ConfigurationManager } from './features/constructor/components/configurationManager.js';
+import { PreflightPanel } from './features/constructor/components/preflightPanel.js';
+import { esc } from './features/constructor/components/dom.js';
+import { legacySimulationProjection, prepareSimulationInput } from './features/constructor/model/configuration.js';
 
 /* M0.3 知识与执行：Atlas 星图 / Tool Calling 知识页 / 执行台与回放 */
 import { createLearningStore } from './features/atlas/state/learning.js';
+import { createJournalStore } from './features/atlas/state/journal.js';
+import { createJournalWorkspace } from './features/knowledge/components/journalWorkspace.js';
 import { createAtlasWorkspace } from './features/atlas/components/atlasWorkspace.js';
 import { createToolCallingKnowledge } from './features/atlas/knowledge/toolCalling.js';
 import { getConcept } from './features/atlas/data/index.js';
@@ -48,6 +54,10 @@ import { createLabWorkspace } from './features/knowledge/components/labWorkspace
 import { createChapterNarrative } from './features/knowledge/components/chapterNarrative.js';
 import { createTokenLab } from './features/laboratory/token/tokenLab.js';
 import { createContextLab } from './features/laboratory/context/contextLab.js';
+/* M1.3 三个新实验：Knowledge / Runtime / Reliability（各自逻辑层与界面层分离） */
+import { createKnowledgeLab } from './features/laboratory/knowledge/knowledgeLab.js';
+import { createRuntimeLab } from './features/laboratory/runtime/runtimeLab.js';
+import { createReliabilityLab } from './features/laboratory/reliability/reliabilityLab.js';
 import { getChapterStory } from './content/chapters/index.js';
 import {
   CHAPTERS as KNOWLEDGE_CHAPTERS,
@@ -62,6 +72,8 @@ import {
   validateKnowledge,
 } from './knowledge/index.js';
 import { createExecutionWorkspace } from './features/execution/components/executionWorkspace.js';
+import { createRuntimeWorkspace } from './features/execution/components/runtimeWorkspace.js';
+import { createComparisonWorkspace } from './features/comparison/components/comparisonWorkspace.js';
 import { deriveToolAvailability } from './simulation/rules/availability.js';
 import { MISSION_001 } from './research-packs/mission-001/index.js';
 import { MISSION_001_MINI } from './research-packs/mission-001-mini/index.js';
@@ -106,7 +118,7 @@ export function createApp(root) {
   const introSeen = safeGet(STORE.intro, false) === true;
   const forceIntro = new URLSearchParams(location.search).get('intro') === 'always';
 
-  setState({ reducedMotion, inspectOpen: prefs.inspect, statusOpen: prefs.status });
+  setState({ reducedMotion, inspectOpen: window.innerWidth>1100&&prefs.inspect, statusOpen: window.innerWidth>=768&&prefs.status });
 
   /* ----------------------- 装配领域：唯一权威配置 ----------------------- */
   // 3D / 2D / Inspector / 能力架全部订阅这一个 store；页面里只有它写 localStorage。
@@ -119,9 +131,14 @@ export function createApp(root) {
     onResetRequest: requestReset,
   });
   const dragLayer = DragLayer();
+  let preflightOpen=false;
+  const configManager=ConfigurationManager({store:constructor,onConfirm:requestConfirmation,onPreflight:showPreflight});
+  library.el.prepend(configManager.el);
 
   /* ----------------------- M0.3 知识域：学习进度（独立命名空间） ----------------------- */
+  const journal = createJournalStore();
   const learning = createLearningStore({
+    journal,
     onLog: (kind, message, level) => log(kind, message, level),
   });
 
@@ -440,6 +457,7 @@ export function createApp(root) {
       openLab();
       return;
     }
+    if (nav.id === 'journal') { openJournal(); return; }
     if (nav.id === 'execution') {
       setState({ mode: 'execution' }, 'mode');
       dock.setMode('execution');
@@ -457,6 +475,7 @@ export function createApp(root) {
     setState({ mode: nav.id }, 'mode');
     // 「装配台」是 M0.2 的真实入口：直接落到三维装配视图，并把能力架展开
     if (nav.id === 'constructor') {
+      setLearningRoute('constructor');
       if (state.systemView) setView('assembly');
       if (shell.dataset.dock === 'rail' && window.innerWidth >= 768) {
         shell.dataset.dock = 'full';
@@ -613,10 +632,12 @@ export function createApp(root) {
     }
 
     library.render();
+    configManager.render();
     renderInspector();
     updateSvgPortStates();
     sg?.render();
     sg?.setSelection(s.ui.selectedModuleId);
+    if(comparisonDisplay)applyComparisonSnapshot(comparisonDisplay.configuration,comparisonDisplay.projection,comparisonDisplay.side);
   }
 
   /** 二维结构投影上的兼容接口状态：与三维热点、系统图节点共用同一份配置 */
@@ -647,17 +668,35 @@ export function createApp(root) {
 
   function renderInspector() {
     const moduleId = constructor.getState().ui.selectedModuleId;
+    if(preflightOpen&&!moduleId) {
+      inspector.renderCustom(PreflightPanel({store:constructor,onRun:()=>openRuntime(),onSave:()=>{
+        const r=constructor.actions.save();if(r.notice?.code==='OVERWRITE_CONFIRM')requestConfirmation('覆盖保存','用当前草稿覆盖已保存快照。',()=>constructor.actions.save(true));
+      },onFocusIssue:issue=>{
+        if(issue.moduleId) {
+          preflightOpen=false;constructor.actions.select(issue.moduleId);
+          requestAnimationFrame(()=>document.getElementById(`azf-${issue.moduleId}-${issue.field}`)?.focus());
+        } else if(issue.field==='name')document.getElementById('agent-config-name')?.focus();
+      }}));return;
+    }
     if (moduleId) {
       inspector.renderCustom(
         buildModulePanel(constructor, moduleId, {
           // 从已装配工具的 Inspector 直接进入知识节点，并把当前上下文带过去（A13）
-          onOpenKnowledge: () => openKnowledge('tool_calling', { from: 'constructor', selectedModuleId: moduleId }),
+          onOpenKnowledge: (conceptId) => openKnowledge(conceptId, { from: 'constructor', selectedModuleId: moduleId }),
+          onConfirm:requestConfirmation,
         })
       );
       return;
     }
     inspector.render(state);
     inspector.prependSummary(buildAssemblySummary());
+  }
+  function showPreflight() {
+    if(activeWorkspace)openConstructorContext();
+    if(window.innerWidth<768&&state.dockOpen){setState({dockOpen:false},'preflight');scrim.dataset.open='false';applyShellState();}
+    preflightOpen=true;constructor.actions.select(null);renderInspector();
+    if(!state.inspectOpen)toggleInspect();
+    const result=document.querySelector('[data-preflight-result]');if(result){result.tabIndex=-1;result.focus({preventScroll:true});}
   }
 
   /** 运行条件摘要：由同一份权威配置派生，供 RUN SIMULATION 与自检脚本共用 */
@@ -692,10 +731,10 @@ export function createApp(root) {
       const list = createEl('div', { class: 'summary-list' });
       for (const m of s.modules) {
         const meta = describeStatus(constructor.statusOf(m.moduleId));
-        const mod = getModule(m.moduleId);
+        const mod = getModule(m.moduleId)||{name:m.moduleId,cn:'未知模块'};
         const row = createEl('button', { class: 'summary-row', type: 'button', 'data-module': m.moduleId, 'data-status': meta.en }, `
-          <span class="summary-row__name">${mod.name}<em>${mod.cn}</em></span>
-          <span class="summary-row__port">${m.portId}</span>
+          <span class="summary-row__name">${esc(mod.name)}<em>${esc(mod.cn)}</em></span>
+          <span class="summary-row__port">${esc(m.portId)}</span>
           <span class="tag tag--${meta.tone}">${meta.en} · ${meta.cn}</span>`);
         row.addEventListener('click', () => constructor.actions.select(m.moduleId));
         list.append(row);
@@ -729,8 +768,11 @@ export function createApp(root) {
       { class: 'btn btn--primary', type: 'button', 'data-act': 'run-simulation', style: 'width:100%;justify-content:center;margin-top:9px' },
       'RUN SIMULATION · 运行本地模拟'
     );
-    runBtn.addEventListener('click', () => openExecution({ autorun: true }));
+    runBtn.textContent='CONFIGURATION PREFLIGHT · 检查配置';
+    runBtn.addEventListener('click', showPreflight);
     run.append(runBtn);
+    const compareBtn=createEl('button',{class:'btn btn--ghost',type:'button','data-open-comparison':true},'A/B COMPARISON · 对比实验');
+    compareBtn.addEventListener('click',openComparison);run.append(compareBtn);
     wrap.append(run);
     return wrap;
   }
@@ -760,6 +802,9 @@ export function createApp(root) {
     const rect = stage.canvasHost.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return;
     portOverlay.dataset.open = 'true';
+    const assemblyUi=constructor.getState().ui;
+    const labelModule=assemblyUi.drag?.moduleId||assemblyUi.preview?.moduleId||assemblyUi.selectedModuleId;
+    const labelPort=getModule(labelModule)?.portId;
     for (const [portId, chip] of portChips) {
       const v = scene.bay.getAnchorWorld(portId);
       if (!v) continue;
@@ -767,7 +812,8 @@ export function createApp(root) {
       const x = (v.x * 0.5 + 0.5) * rect.width;
       const y = (-v.y * 0.5 + 0.5) * rect.height;
       chip.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
-      const visible = v.z < 1 && x > -80 && x < rect.width + 80 && y > -50 && y < rect.height + 50;
+      const relevant=portId===labelPort||portId===assemblyUi.drag?.targetPortId||(!labelModule&&['SEARCH_PORT','READER_PORT'].includes(portId));
+      const visible = relevant && v.z < 1 && x > -80 && x < rect.width + 80 && y > -50 && y < rect.height + 50;
       chip.dataset.visible = visible ? 'true' : 'false';
     }
   }
@@ -899,21 +945,27 @@ export function createApp(root) {
   root.append(confirmLayer);
 
   let confirmAction = null;
+  let confirmReturnFocus=null;
   function closeConfirm() {
     confirmLayer.dataset.open = 'false';
     confirmAction = null;
+    if(confirmReturnFocus?.isConnected)confirmReturnFocus.focus({preventScroll:true});
   }
+  function requestConfirmation(title,message,action) {
+    confirmReturnFocus=document.activeElement;
+    confirmTitle.textContent=title;confirmText.textContent=message;confirmOk.textContent='确认';
+    confirmAction=action;confirmLayer.dataset.open='true';confirmCancel.focus({preventScroll:true});
+  }
+  confirmBox.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeConfirm();return;}
+    if(e.key==='Tab') {
+      const items=[confirmOk,confirmCancel],first=items[0],last=items[1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    }
+  });
   function requestReset() {
-    const count = constructor.getState().modules.length;
-    confirmText.textContent = count
-      ? `将清空 ${count} 个已装配模块及其接口占用。此操作只清理构建器数据，不会删除开场偏好等其它本地记录。`
-      : '当前没有已装配模块。此操作只清理构建器的本地记录，不会删除开场偏好等其它数据。';
-    confirmAction = () => {
-      constructor.actions.reset();
-      showToast('构建器已重置。');
-    };
-    confirmLayer.dataset.open = 'true';
-    confirmOk.focus({ preventScroll: true });
+    requestConfirmation('重置当前草稿','将清空当前草稿的所有模块。已保存的其他配置、开场偏好、学习进度、Journal 和历史研究均保留。',()=>{constructor.actions.reset();showToast('当前草稿已重置。');});
   }
   confirmOk.addEventListener('click', () => {
     const run = confirmAction;
@@ -927,6 +979,12 @@ export function createApp(root) {
 
   /* ---------------- 订阅：唯一数据流的下游 ---------------- */
   constructor.subscribe((s, { action, prev }) => {
+    if(s.ui.selectedModuleId) {
+      if(!state.inspectOpen){setState({inspectOpen:true},'module-inspector');inspector.setCollapsed(false);}
+      if(window.innerWidth<768&&state.dockOpen){setState({dockOpen:false},'module-inspector');scrim.dataset.open='false';}
+      applyShellState();
+    }
+    if(s.ui.selectedModuleId)preflightOpen=false;
     syncConstructor();
 
     if (s.ui.selectedModuleId && state.selection) setState({ selection: null }, 'select-module');
@@ -943,6 +1001,11 @@ export function createApp(root) {
       if (notice.level !== 'info') showToast(notice.message);
     }
   });
+  window.addEventListener('beforeunload',event=>{
+    const active=document.activeElement;
+    if(active?.classList?.contains('field__control'))active.dispatchEvent(new Event('change',{bubbles:true}));
+    if((constructor.isDirty()&&constructor.getState().modules.length)||constructor.getState().ui.notice?.code==='INVALID_CONFIG'){event.preventDefault();event.returnValue='';}
+  });
 
   /* ----------------------- 渲染循环 ----------------------- */
   let last = performance.now();
@@ -953,11 +1016,10 @@ export function createApp(root) {
 
   function applyShellState() {
     const narrow = window.innerWidth < 768;
-    const drawerMode = window.innerWidth <= 1100;
     shell.dataset.dock = narrow ? (state.dockOpen ? 'open' : 'closed') : prefs.dockRail ? 'rail' : 'full';
     // 窄视图下不让浮层默认遮挡主舞台：Inspector 与事件区默认收起，由用户主动打开
-    shell.dataset.inspect = !drawerMode && state.inspectOpen ? 'on' : 'off';
-    shell.dataset.status = !narrow && state.statusOpen ? 'on' : 'off';
+    shell.dataset.inspect = state.inspectOpen ? 'on' : 'off';
+    shell.dataset.status = state.statusOpen ? 'on' : 'off';
     // M0.3：工作区自己带导航与检视面板，打开时把左侧导航与右侧检视让给工作区
     if (activeWorkspace) shell.dataset.workspace = activeWorkspace.kind;
     else delete shell.dataset.workspace;
@@ -1113,10 +1175,38 @@ export function createApp(root) {
   let activeWorkspace = null;
   let execApi = null;
   let canvasParked = false;
+  const comparisonSession={};
+  let comparisonDisplay=null;
+  let applyingRoute = false;
+  function setLearningRoute(kind, id = '') {
+    if (applyingRoute) return;
+    const hash = `#/${kind}${id ? '/' + encodeURIComponent(id) : ''}`;
+    if (location.hash !== hash) history.pushState(null, '', hash);
+  }
+
+  function followLearningRoute() {
+    let parts;
+    try { parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent); }
+    catch { showToast('链接格式无法识别，已返回六章目录。'); openStory(); return; }
+    const [kind, id] = parts;
+    applyingRoute = true;
+    try {
+      if (kind === 'atlas') openAtlas(getConcept(id) ? id : null);
+      else if (kind === 'knowledge' && getConcept(id)) openKnowledge(id, {from:'atlas'});
+      else if (kind === 'chapters') id && getChapterStory(id) ? openChapterStory(id) : openStory();
+      else if (kind === 'labs') id && knowledgeGetExperiment(id) ? openLabExperiment(id) : openLab();
+      else if (kind === 'journal') openJournal();
+      else if (kind === 'constructor') openConstructorContext();
+      else if (kind === 'runtime') openRuntime();
+      else if (kind === 'compare') openComparison();
+      else if (kind === 'hub' || !kind) goHub();
+      else { showToast('未找到这个学习入口，已返回六章目录。'); openStory(); }
+    } finally { applyingRoute = false; }
+  }
 
   /** 运行输入快照：复用落盘用的序列化函数，保证与权威配置逐字段一致 */
   function constructorSnapshot() {
-    return serializeConfig(constructor.getState());
+    return legacySimulationProjection(constructor.getConfiguration());
   }
 
   function syncTopbar() {
@@ -1151,6 +1241,14 @@ export function createApp(root) {
   function openWorkspace(kind, build) {
     closeWorkspace();
     const api = build();
+    const nav = createEl('nav', {class:'learning-nav','aria-label':'学习工作区导航'});
+    for (const [label, action] of [['章节',()=>openStory()],['星图',()=>openAtlas()],['实验',()=>openLab()],['学习日志',()=>openJournal()],['A/B 对比',()=>openComparison()],['中央核心',()=>goHub()]]) {
+      const button = createEl('button',{class:'btn btn--sm btn--ghost',type:'button'},label);
+      const selected = (label === '章节' && ['story','chapter'].includes(kind)) || (label === '星图' && ['atlas','knowledge'].includes(kind)) || (label === '实验' && kind.startsWith('lab')) || (label === '学习日志' && kind === 'journal');
+      if (selected) button.setAttribute('aria-current','page');
+      button.addEventListener('click',action); nav.append(button);
+    }
+    api.el.querySelector('.ws-head')?.append(nav);
     workspaceHost.append(api.el);
     workspaceHost.dataset.open = 'true';
     workspaceHost.dataset.kind = kind;
@@ -1160,6 +1258,8 @@ export function createApp(root) {
     // 导航高亮跟随工作区：知识页属于 Atlas，避免出现「高亮执行台却在看知识页」
     setState({ workspace: kind, mode: kind === 'knowledge' ? 'atlas' : kind }, 'workspace');
     api.activate?.();
+    const title = api.el.querySelector('.ws-head__title');
+    if (title) { title.setAttribute('tabindex','-1'); title.focus({preventScroll:true}); }
     return api;
   }
 
@@ -1220,8 +1320,18 @@ export function createApp(root) {
     scene.bay.setExecutionFocus(focus.moduleId, focus.tone || 'signal');
   }
 
+  function applyComparisonSnapshot(configuration,projection,side){
+    comparisonDisplay=configuration?{configuration,projection,side}:null;
+    if(!configuration){if(scene?.ok){scene.bay.setPlaybackPaused(false);syncConstructor();}return;}
+    if(!scene?.ok)return;
+    const statuses=Object.fromEntries(configuration.modules.map(m=>[m.moduleId,projection.statusOf(m.moduleId)]));
+    scene.bay.sync(configuration.modules,statuses);scene.bay.clearPreview();
+    scene.bay.setPortStates(Object.fromEntries(Object.values(PORTS).map(p=>[p.id,configuration.modules.some(m=>m.portId===p.id)?'occupied':'free'])));
+  }
+
   /* ---------------- 导航：知识 ↔ 构建器 ↔ 执行 ---------------- */
   function goHub() {
+    setLearningRoute('hub');
     closeWorkspace();
     handleMode(NAV.find((n) => n.id === 'system'));
     log('导航', '已返回中央核心（Hub）· 装配配置、学习进度与运行记录都未被清空', 'info');
@@ -1229,6 +1339,7 @@ export function createApp(root) {
 
   /** 回到装配台上下文：可选恢复原来选中的模块，保证「返回」不丢上下文 */
   function openConstructorContext({ selectedModuleId = null, reason = '' } = {}) {
+    setLearningRoute('constructor');
     closeWorkspace();
     setState({ mode: 'constructor' }, 'mode');
     dock.setMode('constructor');
@@ -1281,14 +1392,16 @@ export function createApp(root) {
   }
 
   function openAtlas(conceptId = null) {
+    setLearningRoute('atlas', conceptId || '');
     const api = openWorkspace('atlas', () =>
       createAtlasWorkspace({
         learning,
         reducedMotion,
         onLog: (kind, message, level) => log(kind, message, level),
         onBackToHub: () => goHub(),
-        onOpenKnowledge: (id) => openKnowledge(id, { from: 'atlas', conceptId }),
+        onOpenKnowledge: (id) => openKnowledge(id, { from: 'atlas', conceptId: id }),
         onOpenStory: () => openStory(),
+        onOpenLab: (id, concept) => openLabExperiment(id, concept),
         onViewInConstructor: (concept) => locateInConstructor(concept, { from: 'atlas' }),
       })
     );
@@ -1301,8 +1414,22 @@ export function createApp(root) {
     return api;
   }
 
-  /** STORY：六章目录（M1.1）+ 前三章叙事入口（M1.2） */
+  function openJournal() {
+    setLearningRoute('journal');
+    return openWorkspace('journal', () => createJournalWorkspace({
+      learning, journal,
+      onOpenStory: () => openStory(), onOpenAtlas: () => openAtlas(),
+      onVisit: target => {
+        if (target.kind === 'lab') openLabExperiment(target.id);
+        else if (target.kind === 'chapter') openChapterStory(target.id);
+        else openKnowledge(target.id, {from:'journal'});
+      },
+    }));
+  }
+
+  /** STORY：六章目录与续学入口 */
   function openStory({ conceptId = null } = {}) {
+    setLearningRoute('chapters');
     const stats = knowledgeStats();
     const api = openWorkspace('story', () =>
       createStoryWorkspace({
@@ -1330,10 +1457,12 @@ export function createApp(root) {
    * 未知或未交付章节（04–06）会被叙事页自己拦下并给出「后续阶段」提示。
    */
   function openChapterStory(chapterId = 'intelligence') {
+    setLearningRoute('chapters',chapterId);
     const story = getChapterStory(chapterId);
     const api = openWorkspace('chapter', () =>
       createChapterNarrative({
         chapterId,
+        reducedMotion,
         learning,
         onLog: (kind, message, level) => log(kind, message, level),
         onOpenConcept: (id, ctx = {}) => openKnowledge(id, { from: 'chapter', chapterId: ctx.chapterId || chapterId }),
@@ -1358,6 +1487,7 @@ export function createApp(root) {
 
   /** LAB：实验登记表（M1.1）+ 三个真实实验的入口路由（M1.2） */
   function openLab() {
+    setLearningRoute('labs');
     const stats = knowledgeExperimentStats();
     const api = openWorkspace('lab', () =>
       createLabWorkspace({
@@ -1396,17 +1526,31 @@ export function createApp(root) {
       log('实验', `${experiment.title} 尚未开放（计划阶段 ${experiment.milestone}）：不提供运行入口`, 'attention');
       return null;
     }
-    const conceptId = entryConceptId || experiment.entryConceptId;
+    const conceptId = experiment.conceptIds.includes(entryConceptId) ? entryConceptId : experiment.entryConceptId;
+    learning.markLabStarted(experiment.id);
+    setLearningRoute('labs',experiment.id);
     if (experiment.openMode === 'lab-workspace') {
-      const factory = experiment.labKind === 'token' ? createTokenLab : experiment.labKind === 'context' ? createContextLab : null;
-      if (!factory) {
+      /**
+       * labKind → 工作区种类 / 工厂。M1.3 起六个实验共用同一条路由，
+       * 但每个实验仍是独立模块（不复制第二套引擎，也不共用一个巨型组件）。
+       */
+      const LAB_REGISTRY = {
+        token: { kind: 'lab-token', factory: createTokenLab },
+        context: { kind: 'lab-context', factory: createContextLab },
+        knowledge: { kind: 'lab-knowledge', factory: createKnowledgeLab },
+        runtime: { kind: 'lab-runtime', factory: createRuntimeLab },
+        reliability: { kind: 'lab-reliability', factory: createReliabilityLab },
+      };
+      const entry = LAB_REGISTRY[experiment.labKind];
+      if (!entry) {
         log('实验', `实验 ${experiment.id} 的实验室类型未知：${String(experiment.labKind)}`, 'error');
         return null;
       }
-      const api = openWorkspace(experiment.labKind === 'token' ? 'lab-token' : 'lab-context', () =>
-        factory({
+      const api = openWorkspace(entry.kind, () =>
+        entry.factory({
           learning,
           entryConceptId: conceptId,
+          reducedMotion,
           onLog: (kind, message, level) => log(kind, message, level),
           onBackToHub: () => goHub(),
           onOpenLab: () => openLab(),
@@ -1418,7 +1562,7 @@ export function createApp(root) {
       return api;
     }
     // knowledge-step：工具调用实验保留 M0.3 的四步路径，M1.2 增加 MCP 对照模式
-    return openKnowledge(conceptId, { from: 'lab', step: experiment.entryStep || 'experiment' });
+    return openKnowledge(experiment.entryConceptId, { from: 'lab', step: experiment.entryStep || 'experiment', experimentId: experiment.id });
   }
 
   /** 兼容旧入口：按 labKind 直接打开（Lab 03 走知识页，不在此列） */
@@ -1434,6 +1578,8 @@ export function createApp(root) {
    *     仅索引者显示「内容建设中」与计划阶段，绝不伪装完成。
    */
   function openKnowledge(conceptId = 'tool_calling', context = {}) {
+    if (context.from === 'lab' && context.step === 'experiment') setLearningRoute('labs',context.experimentId || 'exp-tool-calling-demo');
+    else setLearningRoute('knowledge',conceptId);
     const concept = getConcept(conceptId);
 
     /** 返回上一处：按来源回到原上下文，绝不重置 M0.4 研究 Run */
@@ -1445,6 +1591,10 @@ export function createApp(root) {
         });
       } else if (context.from === 'execution') {
         openExecution();
+      } else if (context.from === 'runtime') {
+        openRuntime();
+      } else if (context.from === 'comparison') {
+        openComparison();
       } else if (context.from === 'atlas') {
         openAtlas(context.conceptId || conceptId);
       } else if (context.from === 'story') {
@@ -1453,6 +1603,8 @@ export function createApp(root) {
         openChapterStory(context.chapterId || concept?.chapterId || 'intelligence');
       } else if (context.from === 'lab') {
         openLab();
+      } else if (context.from === 'journal') {
+        openJournal();
       } else {
         goHub();
       }
@@ -1462,6 +1614,7 @@ export function createApp(root) {
       const api = openWorkspace('knowledge', () =>
         createToolCallingKnowledge({
           learning,
+          onStepChange: step => step === 'experiment' ? setLearningRoute('labs','exp-tool-calling-demo') : setLearningRoute('knowledge','tool_calling'),
           reducedMotion,
           onLog: (kind, message, level) => log(kind, message, level),
           onBackToHub: () => goHub(),
@@ -1492,6 +1645,7 @@ export function createApp(root) {
         onOpenExperiment: (id, experiment) => openLabExperiment(experiment, id),
         // 统一模板内导航到有专属学习路径的概念时，交给应用层换页（不复制第二套页面）
         onSelectConcept: (id) => {
+          setLearningRoute('knowledge',id);
           if (id === 'tool_calling') openKnowledge(id, context);
         },
       })
@@ -1508,7 +1662,30 @@ export function createApp(root) {
     return api;
   }
 
+  function openComparison(){
+    setLearningRoute('compare');
+    return openWorkspace('comparison',()=>createComparisonWorkspace({store:constructor,session:comparisonSession,has3D:!!scene?.ok,reducedMotion,
+      onBack:()=>openConstructorContext(),onKnowledge:id=>openKnowledge(id,{from:'comparison'}),onConfirm:requestConfirmation,
+      onEdit:(configuration,confirmed)=>{
+        const edit=()=>{constructor.actions.editSnapshot(configuration,true);confirmed();openConstructorContext();showToast('正在编辑实验副本；完成后点击 A/B 对比自动带回该侧。');};
+        if(constructor.isDirty())requestConfirmation('编辑实验配置副本','当前装配草稿有未保存修改。请先保存，或确认用实验副本替换草稿；已保存配置和历史实验保留。',edit);else edit();
+      },
+      onMountCanvas:target=>parkCanvas(target),onReleaseCanvas:()=>unparkCanvas(),onSnapshot:applyComparisonSnapshot,
+      onFocus:focus=>{applyExecutionFocus(focus);scene?.bay?.setPlaybackPaused(!!focus?.paused);},
+    }));
+  }
+  function openRuntime() {
+    setLearningRoute('runtime');
+    return openWorkspace('runtime',()=>createRuntimeWorkspace({
+      getConfiguration:()=>constructor.getConfiguration(),has3D:!!scene?.ok,reducedMotion,
+      onBackToConstructor:()=>openConstructorContext(),onBackToHub:()=>goHub(),
+      onLegacyExecution:()=>openExecution(),onOpenKnowledge:(id,context)=>openKnowledge(id,context),onConfirm:requestConfirmation,
+      onMountCanvas:stage=>parkCanvas(stage),onReleaseCanvas:()=>unparkCanvas(),onFocusScene:focus=>applyExecutionFocus(focus),
+    }));
+  }
   function openExecution({ autorun = false, view = null } = {}) {
+    // 执行与构建器属于既有工作流，离开学习区后刷新回中央核心。
+    setLearningRoute('hub');
     const api = openWorkspace('execution', () => {
       execApi = createExecutionWorkspace({
         getConfigSnapshot: constructorSnapshot,
@@ -1519,6 +1696,7 @@ export function createApp(root) {
         onBackToConstructor: () => openConstructorContext({ selectedModuleId: constructor.getState().ui.selectedModuleId }),
         onOpenKnowledge: (id, ctx) => openKnowledge(id, ctx),
         onLocateModule: (moduleId) => locateModuleInConstructor(moduleId),
+        onOpenRuntime:()=>openRuntime(),
         onMountCanvas: () => parkCanvas(execApi?.coreStage?.() || null),
         onReleaseCanvas: () => unparkCanvas(),
         onFocusScene: (focus) => applyExecutionFocus(focus),
@@ -1533,6 +1711,7 @@ export function createApp(root) {
 
   /* ----------------------- 键盘与事件 ----------------------- */
   function onKey(e) {
+    if (document.querySelector('dialog[open]')) return;
     if (e.key === 'Escape') {
       if (confirmLayer.dataset.open === 'true') {
         closeConfirm();
@@ -1545,14 +1724,20 @@ export function createApp(root) {
       // M0.3：工作区内 Esc 先清除选中，再退出工作区；返回入口始终可见，不会困住用户
       if (activeWorkspace) {
         if (activeWorkspace.kind === 'atlas' && activeWorkspace.api.clearSelection?.()) return;
-        if (activeWorkspace.kind === 'execution') return; // 执行台不因误触 Esc 丢失当前事件定位
+        if (['execution','runtime'].includes(activeWorkspace.kind)) return; // 检查器不因误触 Esc 丢失轨迹
         if (activeWorkspace.kind === 'knowledge' && activeWorkspace.api.escape?.()) return; // 知识页先回上一处
         if (activeWorkspace.kind === 'story' || activeWorkspace.kind === 'lab') {
           goHub();
           return;
         }
-        // M1.2：实验工作区与章节叙事按 Esc 先回到各自的上级，而不是直接丢掉上下文
-        if (activeWorkspace.kind === 'lab-token' || activeWorkspace.kind === 'lab-context') {
+        // M1.2 / M1.3：实验工作区与章节叙事按 Esc 先回到各自的上级，而不是直接丢掉上下文
+        if (
+          activeWorkspace.kind === 'lab-token' ||
+          activeWorkspace.kind === 'lab-context' ||
+          activeWorkspace.kind === 'lab-knowledge' ||
+          activeWorkspace.kind === 'lab-runtime' ||
+          activeWorkspace.kind === 'lab-reliability'
+        ) {
           openLab();
           return;
         }
@@ -1570,6 +1755,7 @@ export function createApp(root) {
         scrim.dataset.open = 'false';
         return;
       }
+      if(window.innerWidth<=1100&&state.inspectOpen){toggleInspect();return;}
       if (state.selection) selectPart(null);
       return;
     }
@@ -1731,6 +1917,8 @@ export function createApp(root) {
     validateConnection,
     /* M0.3 知识与执行域：自检脚本使用与界面按钮完全相同的入口 */
     learning,
+    journal,
+    openJournal,
     openAtlas: (conceptId = null) => openAtlas(conceptId),
     openStory: (options = {}) => openStory(options),
     openLab: () => openLab(),
@@ -1749,6 +1937,12 @@ export function createApp(root) {
     chapterApi: () => (activeWorkspace?.kind === 'chapter' ? activeWorkspace.api : null),
     tokenLabApi: () => (activeWorkspace?.kind === 'lab-token' ? activeWorkspace.api : null),
     contextLabApi: () => (activeWorkspace?.kind === 'lab-context' ? activeWorkspace.api : null),
+    /** M1.3 三个实验工作区 */
+    knowledgeLabApi: () => (activeWorkspace?.kind === 'lab-knowledge' ? activeWorkspace.api : null),
+    runtimeLabApi: () => (activeWorkspace?.kind === 'lab-runtime' ? activeWorkspace.api : null),
+    reliabilityLabApi: () => (activeWorkspace?.kind === 'lab-reliability' ? activeWorkspace.api : null),
+    /** 记忆命名空间快照（只读）：确认它与学习进度 / 装配配置互不影响 */
+    labMemoryStorageKey: 'agent-zero:lab-knowledge:v1',
     executionApi: () => (activeWorkspace?.kind === 'execution' ? activeWorkspace.api : null),
     /* M1.1 知识层只读快照：供自检脚本核对章节 / 概念 / 实验 / 数据自洽 */
     knowledgeStats: () => knowledgeStats(),
@@ -1796,9 +1990,9 @@ export function createApp(root) {
         checkedAt: s.checkedAt,
         versionOrDate: s.versionOrDate,
       })),
-    /** 章节叙事（前三章）的只读快照：验收脚本据此核对结构完整性 */
+    /** 章节叙事（第 01–06 章）的只读快照：验收脚本据此核对结构完整性 */
     storyChapters: () =>
-      ['intelligence', 'context', 'connection'].map((id) => {
+      ['intelligence', 'context', 'connection', 'knowledge', 'runtime', 'reliability'].map((id) => {
         const story = getChapterStory(id);
         if (!story) return { id, available: false };
         return {
@@ -1844,7 +2038,7 @@ export function createApp(root) {
     mission001Mini: MISSION_001_MINI,
     validateMissionPack,
     prepareCorpus,
-    simulationToolIds: Object.keys(MODULES),
+    simulationToolIds: ['announcement_search','document_reader'],
     /** 直接从任意位置打开研究报告视图（当前 Run 的产物） */
     openReport: () => openExecution({ view: 'report' }),
     locateInConstructor: (conceptId) => {
@@ -1884,6 +2078,17 @@ export function createApp(root) {
     removeModule: (moduleId) => constructor.actions.remove(moduleId),
     selectModule: (moduleId) => constructor.actions.select(moduleId),
     resetConstructor: () => constructor.actions.reset(),
+    agentConfiguration:()=>constructor.getConfiguration(),
+    configurationPreflight:()=>constructor.preflight(),
+    prepareSimulationInput:()=>prepareSimulationInput(constructor.getConfiguration()),
+    openRuntime,
+    openComparison,
+    comparisonApi:()=>activeWorkspace?.kind==='comparison'?activeWorkspace.api:null,
+    comparisonDisplay:()=>comparisonDisplay?{side:comparisonDisplay.side,configuration:comparisonDisplay.configuration}:null,
+    runtimeApi:()=>activeWorkspace?.kind==='runtime'?activeWorkspace.api:null,
+    configurationActions:constructor.actions,
+    savedConfigurations:()=>constructor.listConfigurations(),
+    showPreflight,
     /** 当前已装配模块的状态快照（供验收矩阵断言） */
     constructorSnapshot() {
       const s = constructor.getState();
@@ -1926,6 +2131,7 @@ export function createApp(root) {
       return true;
     },
     dispose() {
+      window.removeEventListener('hashchange', followLearningRoute);
       cancelAnimationFrame(raf);
       endDragInteraction();
       window.removeEventListener('keydown', onKey);
@@ -1935,6 +2141,11 @@ export function createApp(root) {
     },
   };
   window.__AZ = api;
+  window.addEventListener('hashchange', followLearningRoute);
+  if (location.hash && location.hash !== '#/hub') {
+    skipIntro('DEEPLINK');
+    followLearningRoute();
+  }
   return api;
 }
 

@@ -125,6 +125,7 @@ export function createToolCallingKnowledge({
   onOpenConcept,
   onViewInConstructor,
   onReturn,
+  onStepChange,
   onLog,
   reducedMotion = false,
 } = {}) {
@@ -846,12 +847,15 @@ export function createToolCallingKnowledge({
 
   function setLayer(next) {
     layer = next === 'inspect' ? 'inspect' : 'understand';
+    if (layer === 'inspect') learning?.markInspected?.('tool_calling');
     onLog?.('知识', `Tool Calling 知识页深度层切换为 ${layer === 'inspect' ? 'INSPECT（深入）' : 'UNDERSTAND（入门）'}`, 'info');
     renderMain();
   }
 
   function setStep(next) {
     step = steps.some((s) => s.id === next) ? next : 'discover';
+    onStepChange?.(step);
+    if (step === 'experiment') learning?.markLabStarted?.('exp-tool-calling-demo');
     clearInterval(experimentTimer);
     experiment.playing = false;
     clearInterval(stageTimer);
@@ -863,6 +867,7 @@ export function createToolCallingKnowledge({
   renderAside();
   renderMain();
 
+  let activated = false;
   return {
     el,
     setStep,
@@ -911,6 +916,8 @@ export function createToolCallingKnowledge({
       renderMain();
     },
     activate() {
+      if (activated) return;
+      activated = true;
       learning?.markExplored('tool_calling');
       renderAside();
       renderMain();

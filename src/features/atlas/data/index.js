@@ -43,6 +43,7 @@ export {
   /* 检索 */
   normalizeQuery,
   searchConcepts,
+  queryAtlas,
   getConceptByAlias,
   /* 星图（只画已开放节点） */
   GRAPH_ORDER,

@@ -1,0 +1,50 @@
+/* M2.1 additions reuse the frozen AZ-DESIGN palette and native controls. */
+.config-manager { margin: 0 4px 16px; padding: 12px 8px; border-bottom: 1px solid var(--border); }
+.config-manager .section__label { margin-bottom: 8px; }
+.config-manager__status { color: var(--attention); font-size: 12px; line-height: 1.6; margin: 8px 0; }
+.config-manager__notes { color: var(--text-2); font-size: 12px; line-height: 1.6; margin-top: 8px; overflow-wrap: anywhere; }
+.config-manager details { margin-top: 12px; }
+.config-manager summary, .configuration-preflight summary, .sg-list-alternative summary { cursor: pointer; padding: 10px 0; color: var(--text-2); font-size: 13px; }
+.config-manager .field-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.config-manager .field__control { width: 100%; min-width: 0; }
+.config-manager select { text-overflow: ellipsis; }
+.field textarea { width:100%; min-height:88px; resize:vertical; line-height:1.6; }
+.field__choices { display: grid; gap: 8px; padding: 8px; max-height: 240px; overflow:auto; border: 1px solid var(--border); border-radius: 6px; }
+.field__choices .field__check { min-height: 32px; align-items:flex-start; overflow-wrap:anywhere; }
+.field .field__label { flex-wrap: wrap; }
+.field__control[aria-invalid='true'] { border-color:var(--error); }
+.configuration-preflight { font-size: 13px; line-height: 1.65; padding-bottom:16px; }
+.configuration-preflight h2 { font-size:20px; line-height:1.4; overflow-wrap:anywhere; margin:12px 0; }
+.configuration-preflight .kv { margin: 12px 0; }
+.configuration-preflight .kv dd { overflow-wrap: anywhere; }
+.configuration-preflight .note { display:block; }
+.preflight-issue { display:flex; flex-direction:column; gap:4px; text-align:left; width:100%; padding:10px; border:1px solid var(--border); border-left:3px solid var(--signal); border-radius:4px; background:var(--panel); color:var(--text-1); margin:8px 0; cursor:pointer; font:inherit; overflow-wrap:anywhere; }
+.preflight-issue b { font-weight:500; }
+.preflight-issue span { color:var(--text-2); }
+.preflight-issue--error { border-left-color:var(--error); }
+.preflight-issue--warning { border-left-color:var(--attention); }
+.preflight-module { border-bottom:1px solid var(--border); padding:10px 0; }
+.configuration-preflight pre,.inspector pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:280px; overflow:auto; font-size:12px; }
+.sg-complete { width:100%; display:block; min-height:200px; }
+.projection__core .svg-stage { min-height:0; overflow:hidden; }
+.projection__core .svg-stage svg { width:100%; height:100%; overflow:hidden; }
+.sg-complete .sg-title { font-size:16px; }
+.sg-complete .sg-cn { font-size:13px; }
+.sg-complete .sg-node[data-status='Disabled'] .sg-disc { stroke-dasharray:4 3; }
+.sg-list-alternative .sg-panel__slots { grid-template-columns:minmax(0,1fr); }
+.sg-list-alternative { border-top:1px solid var(--border); margin-top:12px; }
+.sg-key { line-height:1.6; }
+.config-recovery { color:var(--attention); font-size:12px; line-height:1.65; }
+.configuration-preflight .btn { margin-top:10px; }
+@media (max-width:767px) {
+  .config-manager { padding:12px 4px; }
+  .config-manager .btn,.slot-card__actions .btn { min-height:40px; }
+  .sg-panel__body { padding:10px; }
+  .sg-complete { min-width:0; }
+}
+@media (max-width:1100px) {
+  .shell[data-status='off'] .inspector { bottom:var(--gap-2); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .preflight-issue,.config-manager * { transition:none!important; animation:none!important; }
+}

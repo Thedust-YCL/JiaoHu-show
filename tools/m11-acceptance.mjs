@@ -134,10 +134,10 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
       items.forEach((i) => { byStatus[i.dataset.status] = (byStatus[i.dataset.status] || 0) + 1; });
       const svg = document.querySelector('.atlas-svg');
       rec('A05', '归属有效：36 个概念按六章分组，全部指向合法章节',
-        groups.length === 6 && items.length === 36 && byStatus.outline === 13 && byStatus.reviewed === 16 && byStatus.published === 7,
+        groups.length === 6 && items.length === 36 && (byStatus.outline || 0) === 0 && byStatus.reviewed === 11 && byStatus.published === 25,
         '分组=' + groups.length + ' · 条目=' + items.length + ' · 状态分布=' + JSON.stringify(byStatus));
       rec('A16', 'Atlas 衔接：已开放节点可选中 / 搜索 / 聚焦，详情可用；建设中概念弱化但可选',
-        nodes.length === 10 && !!svg && items.filter((i) => i.dataset.oncanvas === 'true').length === 10
+        nodes.length === 36 && !!svg && items.filter((i) => i.dataset.oncanvas === 'true').length === 36
           && !!document.querySelector('.atlas-detail__hero[data-concept]') === false
           && document.querySelector('.atlas-search__note').textContent.includes('36')
           && document.querySelectorAll('.atlas-group__list').length === 6,
@@ -198,9 +198,9 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
       const directedRows = relRows.filter((r) => r.dataset.type === 'USES' || r.dataset.type === 'PART_OF').length;
       const undirectedRows = relRows.filter((r) => r.dataset.type === 'RELATED' || r.dataset.type === 'CONTRASTS').length;
       rec('A11', '语义关系：每条边端点存在、类型合法、有文字解释（画布与详情同源）',
-        edges.length === 13 && relRows.length >= 4
+        edges.length === 49 && relRows.length >= 4
           && relRows.every((r) => (r.querySelector('.atlas-rel__desc')?.textContent || '').length >= 20),
-        '画布边=' + edges.length + ' · 选中 agent 的关系=' + relRows.length + ' · 说明全非空');
+        '画布边=' + edges.length + '（M1.4画布覆盖36个固定坐标节点）· 选中 agent 的关系=' + relRows.length + ' · 说明全非空');
       rec('A12', '关系方向：USES / PART_OF 有向并写明「→」，RELATED / CONTRASTS 标注无向而非强依赖',
         directedRows >= 2 && undirectedRows >= 2
           && dirTexts.filter((t) => /→/.test(t)).length === directedRows
@@ -260,9 +260,9 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
   await shot('F32-知识页INSPECT.png');
 
   /* ================================================================== *
-   * A07 / A09 / A10：仅有索引的概念（建设中）
+   * A07 / A09 / A10：无实验概念与模板降级（M1.3 起不再有索引态概念）
    * ================================================================== */
-  await evaluate(`window.__AZ.openKnowledge('chunking', { from: 'atlas' })`, false);
+  await evaluate(`window.__AZ.openKnowledge('llm', { from: 'atlas' })`, false);
   await sleep(600);
   push(
     await evaluate(`(() => {
@@ -272,31 +272,29 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
       const main = document.querySelector('.kn-main');
       const banner = document.querySelector('[data-act="outline-banner"]');
       const runBtn = document.querySelector('.kn-main [data-act="run-experiment"]');
-      const planned = document.querySelector('[data-act="experiment-planned"], [data-act="experiment-none"]');
-      const inspectList = document.querySelectorAll('.kn-inspect__list').length;
-      const availability = az.conceptAvailability('chunking');
+      const noExperiment = document.querySelector('[data-act="experiment-none"], [data-act="experiment-planned"]');
+      const availability = az.conceptAvailability('llm');
       const railItems = [...document.querySelectorAll('.kn-rail__item')];
       const detailText = main.textContent;
-      rec('A07', '内容状态：outline 概念不呈现正文，明确显示「内容建设中 + 计划阶段」',
-        availability.status === 'outline' && availability.hasBody === false
-          && !!banner && /内容建设中/.test(banner.textContent) && /M1\.[23]/.test(detailText)
-          && inspectList === 0
-          && document.querySelectorAll('.kn-layers').length === 0,
-        '状态=' + availability.status + ' · 建设横幅=' + !!banner + ' · 计划阶段提示=' + /M1\.[23]/.test(detailText) + ' · 深度层开关=' + document.querySelectorAll('.kn-layers').length);
-      rec('A09', '误区模板：无正文概念不渲染误区区块，页面仍有索引信息与关系导航（不白屏）',
-        document.querySelectorAll('.misconception').length === 0
+      rec('A07', '内容状态：M1.3 起 36 概念全部有正文；reviewed 概念不出现「内容建设中」横幅',
+        availability.status === 'reviewed' && availability.hasBody === true
+          && !banner && !/内容建设中/.test(detailText)
+          && document.querySelectorAll('.kn-layers').length === 1,
+        '状态=' + availability.status + ' · 有正文=' + availability.hasBody + ' · 建设横幅=' + !!banner + ' · 深度层开关=' + document.querySelectorAll('.kn-layers').length);
+      rec('A09', '误区模板：常见误解与纠正成对呈现，缺字段的空概念不白屏',
+        document.querySelectorAll('.misconception').length >= 1
           && main.textContent.length > 200
           && document.querySelectorAll('.kn-relation').length >= 1,
-        '正文长度=' + main.textContent.length + ' · 关系行=' + document.querySelectorAll('.kn-relation').length + ' · 误解区块=0');
-      rec('A10', '实验链接：未开放实验只显示「后续阶段开放」，没有可点击的假运行按钮',
-        !runBtn && !!planned && /后续阶段开放/.test(planned.textContent)
-          && railItems.some((i) => i.dataset.status === 'outline'),
-        '运行按钮=' + (runBtn ? '存在（错误）' : '无') + ' · 计划提示=' + (planned ? planned.textContent.replace(/\\s+/g, ' ').trim().slice(0, 30) : '缺失'));
+        '误解区块=' + document.querySelectorAll('.misconception').length + ' · 正文长度=' + main.textContent.length + ' · 关系行=' + document.querySelectorAll('.kn-relation').length);
+      rec('A10', '实验链接：没有登记实验的概念只说明「暂无实验」，没有可点击的假运行按钮',
+        !runBtn && !!noExperiment
+          && railItems.length === 6,
+        '运行按钮=' + (runBtn ? '存在（错误）' : '无') + ' · 无实验提示=' + (noExperiment ? noExperiment.textContent.replace(/\\s+/g, ' ').trim().slice(0, 30) : '缺失') + ' · 章内目录=' + railItems.length);
       return out;
     })()`)
   );
   await sleep(300);
-  await shot('F33-建设中索引页.png');
+  await shot('F33-知识页reviewed概念.png');
 
   /* ================================================================== *
    * A10 / A15：Lab 实验登记表
@@ -315,10 +313,10 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
       const runButtons = [...document.querySelectorAll('[data-act="run-experiment"]')];
       const lockedNotes = [...document.querySelectorAll('[data-act="experiment-planned"]')];
       const stats = window.__AZ.experimentStats();
-      rec('A10', '实验链接：Lab 只给真实可用实验运行入口，其余明确「后续阶段开放」',
-        readyCards.length === 3 && planned.length === 3 && runButtons.length === 3 && lockedNotes.length === 3
-          && stats.available === 3 && stats.planned === 3
-          && readyExperiments.join(',') === 'exp-token-lab,exp-context-lab,exp-tool-calling-demo',
+      rec('A10', '实验链接：Lab 只给真实可用实验运行入口（M1.3 起六个实验全部可操作）',
+        readyCards.length === 6 && planned.length === 0 && runButtons.length === 6 && lockedNotes.length === 0
+          && stats.available === 6 && stats.planned === 0
+          && readyExperiments.join(',') === 'exp-token-lab,exp-context-lab,exp-tool-calling-demo,exp-retrieval-lab,exp-agent-loop-lab,exp-boundary-lab',
         '可操作卡片=' + readyCards.length + '（' + readyExperiments.join('/') + '）· 计划实验=' + planned.length + ' · 运行按钮=' + runButtons.length + ' · 后续阶段提示=' + lockedNotes.length);
       return out;
     })()`)
@@ -366,20 +364,20 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const out = [];
       const rec = (id, name, pass, note) => out.push({ id, name, pass, note });
-      // 打开一个仅有索引的概念：只应记录「正在了解」
-      az.openKnowledge('memory', { from: 'lab' });
+      // 打开一个没有登记实验的已审校概念：只应记录「正在了解」
+      az.openKnowledge('transformer', { from: 'lab' });
       await sleep(400);
-      const memory = az.learningSnapshot().concepts.memory || {};
+      const memory = az.learningSnapshot().concepts.transformer || {};
       const lastViewed = az.learningSnapshot().lastViewed || {};
       const summary = az.learningSnapshot().summary;
-      const refused = az.learning.markExperimentCompleted('memory');
-      const afterRefuse = az.learningSnapshot().concepts.memory || {};
+      const refused = az.learning.markExperimentCompleted('transformer');
+      const afterRefuse = az.learningSnapshot().concepts.transformer || {};
       rec('A18', '学习状态独立：访问、实验完成、关联发现可以分别表示，且不能凭空记录实验',
         memory.explored === true && memory.experimentCompleted !== true
-          && lastViewed.conceptId === 'memory' && lastViewed.chapterId === 'knowledge'
+          && lastViewed.conceptId === 'transformer' && lastViewed.chapterId === 'intelligence'
           && summary.total === 36 && summary.explored >= 2 && summary.experiments === 1
           && refused === false && afterRefuse.experimentCompleted !== true,
-        'memory explored=' + memory.explored + ' · 实验=' + !!memory.experimentCompleted
+        'transformer explored=' + memory.explored + ' · 实验=' + !!memory.experimentCompleted
           + ' · lastViewed=' + lastViewed.conceptId + '/' + lastViewed.chapterId
           + ' · 汇总=' + JSON.stringify(summary) + ' · 拒绝无实验记录=' + (refused === false));
       return out;
@@ -516,7 +514,7 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
 
       // Atlas → 知识页 → 返回
       az.openAtlas(); await sleep(300);
-      const atlasOk = document.querySelectorAll('.atlas-node').length === 10;
+      const atlasOk = document.querySelectorAll('.atlas-node').length === 36;
       az.atlasApi().selectConcept('tool_calling', { focus: true }); await sleep(200);
       const atlasDetail = !!document.querySelector('.atlas-detail__hero[data-concept="tool_calling"]');
 
@@ -546,7 +544,7 @@ export async function runM11Acceptance({ cdp, sleep, shot, waitReady }) {
           && atlasOk && atlasDetail && tcSteps && connectOk
           && !!run && events > 0 && seekOk && reportOk,
         '场景=' + (scene ? '3D' : '2D fallback') + ' · 装配 Ready=' + searchReady
-          + ' · Atlas 节点=' + (atlasOk ? 10 : '≠10') + ' · 四步=' + tcSteps + ' · CONNECT=' + connectOk
+          + ' · Atlas 节点=' + (atlasOk ? 36 : '≠36') + ' · 四步=' + tcSteps + ' · CONNECT=' + connectOk
           + ' · 运行事件=' + events + ' · Seek=' + seekOk + ' · 报告=' + reportOk);
       return out;
     })()`, true)

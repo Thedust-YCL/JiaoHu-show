@@ -73,12 +73,15 @@ export function validateConnection(moduleId, portId) {
 export function validateModuleConfig(moduleId, settings = {}, permissions = {}) {
   const mod = getModule(moduleId);
   const errors = [];
+  if(!settings||typeof settings!=='object'||Array.isArray(settings))return {ok:false,errors:[{field:'settings',code:'INVALID_TYPE',message:'模块参数必须是对象',fix:'重置本模块参数'}]};
+  permissions=permissions&&typeof permissions==='object'?permissions:{};
   if (!mod) {
     errors.push({ field: 'moduleId', label: '模块', code: 'UNKNOWN_MODULE', message: `未知模块标识「${String(moduleId)}」`, fix: '移除该实例或重置构建器' });
     return { ok: false, errors };
   }
 
   for (const field of mod.fields) {
+    if(field.scope==='root'&&moduleId!=='runtime')continue;
     const raw = settings[field.key];
     if (raw === undefined || raw === null || raw === '') {
       if (field.required) {
@@ -104,7 +107,7 @@ export function validateModuleConfig(moduleId, settings = {}, permissions = {}) 
         });
         continue;
       }
-      const allowed = field.options.some((o) => (field.numeric ? Number(o.value) : String(o.value)) === wanted);
+      const allowed = (field.numeric ? typeof raw === 'number' : typeof raw === 'string') && field.options.some((o) => o.value === raw);
       if (!allowed) {
         errors.push({
           field: field.key,
@@ -114,6 +117,12 @@ export function validateModuleConfig(moduleId, settings = {}, permissions = {}) 
           fix: `改选 ${field.options.map((o) => o.label).join(' / ')}`,
         });
       }
+    } else if (field.type === 'number' && (typeof raw!=='number'||!Number.isInteger(raw)||raw<field.min||raw>field.max)) {
+      errors.push({field:field.key,label:field.label,code:'INVALID_VALUE',message:`${field.label}必须是 ${field.min}–${field.max} 的整数`,fix:'输入允许范围内的整数'});
+    } else if ((field.type==='text'||field.type==='textarea') && (typeof raw!=='string'||raw.length>field.maxLength||(field.required&&!raw.trim()))) {
+      errors.push({field:field.key,label:field.label,code:'INVALID_VALUE',message:`${field.label}须为${field.required?'非空、':''}${field.maxLength}字符以内文本`,fix:'修改文本内容'});
+    } else if (field.type==='multiselect' && (!Array.isArray(raw)||raw.length>field.maxItems||raw.some(v=>typeof v!=='string')||new Set(raw).size!==raw.length)) {
+      errors.push({field:field.key,label:field.label,code:'INVALID_VALUE',message:`${field.label}须为不重复的本地 ID 列表（最多 ${field.maxItems} 项）`,fix:'重新选择本地条目'});
     } else if (field.type === 'checkbox' && typeof raw !== 'boolean') {
       errors.push({
         field: field.key,
@@ -125,7 +134,7 @@ export function validateModuleConfig(moduleId, settings = {}, permissions = {}) 
     }
   }
 
-  if (permissions.read !== true) {
+  if (mod.moduleType === 'tools' && permissions.read !== true) {
     errors.push({
       field: PERMISSION_FIELD.key,
       label: PERMISSION_FIELD.label,
@@ -147,11 +156,11 @@ export function isStructuralError(error) {
  * 派生逻辑状态。
  * 优先级：结构非法 → Invalid；用户关闭 → Disabled；缺参数或缺授权 → Unconfigured；否则 Ready。
  */
-export function deriveStatus(installed) {
+export function deriveStatus(installed, configuration = null) {
   if (!installed || typeof installed !== 'object') return STATUS.INVALID;
   const mod = getModule(installed.moduleId);
   if (!mod || installed.portId !== mod.portId) return STATUS.INVALID;
-  const { errors } = validateModuleConfig(installed.moduleId, installed.settings, installed.permissions);
+  const { errors } = validateModuleConfig(installed.moduleId, installed.moduleId==='runtime' ? configuration?.settings || {} : installed.settings, installed.permissions);
   if (errors.some(isStructuralError)) return STATUS.INVALID;
   if (installed.enabled !== true) return STATUS.DISABLED;
   if (errors.length > 0) return STATUS.UNCONFIGURED;
@@ -177,6 +186,7 @@ export function applyPatch(moduleId, installed, patch = {}) {
   if (!mod) return { settings, permissions };
 
   for (const field of fieldsOf(moduleId)) {
+    if(field.scope==='root')continue;
     if (!Object.prototype.hasOwnProperty.call(patch, field.key)) continue;
     const raw = patch[field.key];
     if (field.key === PERMISSION_FIELD.key) {
@@ -190,7 +200,8 @@ export function applyPatch(moduleId, installed, patch = {}) {
 }
 
 /** 单个字段当前的显示值（用于表单与 2D 摘要） */
-export function fieldValue(installed, field) {
+export function fieldValue(installed, field, configuration=null) {
+  if(field.scope==='root')return configuration?.settings?.[field.key] ?? field.default;
   if (field.key === PERMISSION_FIELD.key) return installed?.permissions?.read === true;
   return installed?.settings?.[field.key];
 }
@@ -198,19 +209,20 @@ export function fieldValue(installed, field) {
 /** 字段显示文案：把内部取值翻译成中文选项标签 */
 export function fieldText(moduleId, field, value) {
   if (field.type === 'checkbox') return value ? '允许' : '拒绝';
+  if(Array.isArray(value))return value.map(v=>field.options?.find(o=>o.value===v)?.label||v).join('、')||'未选择';
   const opt = field.options?.find((o) => (field.numeric ? Number(o.value) : String(o.value)) === (field.numeric ? Number(value) : String(value)));
   return opt ? opt.label : String(value ?? '—');
 }
 
 /** 供 2D / Inspector 摘要使用的「人话」配置清单 */
-export function configSummary(installed) {
+export function configSummary(installed, configuration=null) {
   const mod = getModule(installed?.moduleId);
   if (!mod) return [];
   const rows = [];
   for (const field of mod.fields) {
-    rows.push([field.label, fieldText(mod.id, field, fieldValue(installed, field))]);
+    rows.push([field.label, fieldText(mod.id, field, fieldValue(installed, field, configuration))]);
   }
-  rows.push([PERMISSION_FIELD.label, installed?.permissions?.read === true ? '允许' : '拒绝']);
+  if(mod.moduleType==='tools') rows.push([PERMISSION_FIELD.label, installed?.permissions?.read === true ? '允许' : '拒绝']);
   return rows;
 }
 

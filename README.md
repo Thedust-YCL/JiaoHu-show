@@ -1,15 +1,58 @@
-# AGENT / ZERO — M1.2 AI 基础与工具交互
+# AGENT / ZERO — M2.3 A/B 架构对比与实验室整合
+
+入口：装配台的「A/B COMPARISON · 对比实验」、工作区导航的「A/B 对比」，或静态深链 `#/compare`。
+
+1. 在 Constructor 配置并保存研究 Agent，再进入 A/B 工作区；A/B 可选择具名配置或使用当前装配配置。
+2. 复制 A 为 B，点击「复制并到装配台编辑」，调整后通过 A/B 入口返回；编辑的是新配置副本。
+3. 选择共同任务资料版本、九种本地场景之一、seed、审批脚本与角色模式，运行两侧独立预检和同一 Runtime。
+4. 检查真实指标、双栏轨迹、Difference View、模块快照与来源引用；打开完整 Research Report，或进入知识详情后返回。
+5. 保存实验、重命名/复制/删除、按原快照重跑，或浏览器下载 Markdown。重跑生成新的实验和 Run ID，历史档案保留。
+
+实验档案使用独立 IndexedDB `agent-zero:experiments:v1`，最多 12 条、总计 20 MiB、单条 3 MiB；容量不足时提示清理，不自动淘汰。档案拥有 A/B Run 的独立副本，不依赖最近 5 条 Runtime 历史。清理实验不删除 Constructor、Journal 或学习进度。存储不可用时保留当前会话并允许 Markdown 导出；未保存草稿不承诺跨刷新恢复。
+
+新增验证：`npm run accept:m23`。`npm run typecheck` 覆盖 Runtime 与 M2.3 比较目录的 JSDoc/TypeScript 契约；旧 JS 仍由语法、领域测试和浏览器回归守护。新运行使用 `m22.2`，修复更正状态映射；`m22.1` 历史继续按原始语义恢复。全部为 **SIMULATION / 本地模拟**，没有真实 AI、搜索或业务后台。
+
+详细审计、逐项验收、修改清单与交接见 [M2.3 交付报告](docs/DELIVERY_M2.3.md) 和 [实施计划](docs/M2.3_PLAN.md)。
+
+## M2.2 Runtime（保留）
+
+在 M2.1 统一配置之上增加增量 Runtime。入口：装配台加载 Starter 或 Evidence First → 配置预检 →「进入 Runtime 检查器」；也可直接打开 `#/runtime`，或从旧执行台的「M2.2 Runtime」进入。所有结果均为 **SIMULATION / 本地模拟、虚构教学资料**。
+
+检查器提供九种确定性场景、单步/连续运行、暂停/继续/取消、审批/拒绝、相同快照重跑、步骤与事件、未执行分支、证据边界和三角色顺序交接。Workflow 按固定步骤及前置条件推进；单流程 Agent Loop 可在证据不足时追加一次研究。三角色模式按 Researcher → Verifier → Synthesizer 交接，Verifier 无工具权限，不冒充真实多个模型。
+
+`agent-zero:runtime:v1` 最多保存 5 条运行，与构建器、Journal、进度及旧研究历史隔离。刷新后运行中记录恢复为暂停，等待审批保留等待；不会自动继续。重新运行创建新 ID；删除配置不影响已保存的运行快照。损坏条目保留并显示恢复提示，可单独移除。旧 M0 研究与报告继续使用原入口和原始命名空间，不重算历史。
+
+验证命令：`npm test`、`npm run typecheck`、`npm run check`、`npm run build`、`npm run accept:m22`；M0–M2.1 浏览器关键回归：`npm run regress:m21`。`typecheck` 使用 TypeScript 5.9.3 对新增 Runtime、历史、检查器进行 `@ts-check` / JSDoc 类型检查，关联 M2.1 类型契约；旧版 JavaScript 由语法与数据契约测试守护，不宣称已完成全仓严格类型迁移。
+
+详细规则、配置消费点、A01–A40、实际测试及限制见 [M2.2 交付](docs/DELIVERY_M2.2.md) 与 [审计/实施计划](docs/M2.2_PLAN.md)。下文是保留的前序说明。
+
+## M2.1 构建器（保留）
+
+当前阶段增加十类本地模拟模块、版本化 Agent Configuration、具名配置管理与 Configuration Preflight。保留六章知识、36 个概念、六个 Lab、Journal 与原有研究回放。
+
+体验：打开根目录 `index.html` → 进入装配台 →「本地配置与示例」加载 Starter 或 Evidence First → 选择模块编辑 → 配置预检 → 保存。`#/constructor` 可直接进入构建器；草稿自动恢复，具名快照需点击保存。复制会生成新配置/实例 ID。覆盖、删除、重置和放弃草稿均需确认。
+
+M2.1 使用 `agent-zero:constructor:v2`；旧 v1 非破坏性迁移并原样保留。配置与学习、Journal、Memory Lab、Research Run 分开。损坏/未来版本锁定原始数据，可下载并备份恢复。
+
+验证命令：`npm test`、`npm run check`、`npm run build`、`npm run accept:m21`；完整浏览器回归：`npm run regress:m21`。`check` 验证原生 JavaScript 语法及知识/配置契约，与 M2.2 新增的 `typecheck` 分开。
+
+详见 [M2.1 交付与逐项验收](docs/DELIVERY_M2.1.md)、[审计与实施计划](docs/M2.1_PLAN.md)。M2.2 继续消费 `prepareSimulationInput(configuration)`；完整 A/B 系统留给 M2.3。
+
+---
 
 > 一句话定位：**一座运行在浏览器里的交互式 AI 实验室**。用户从一颗只能处理语言的模型核心出发，
 > 逐步看懂指令、上下文、工具、MCP、检索、Skills、记忆、Harness 等概念如何拼成一个能完成多步任务的系统。
 >
 > 品牌主张：**FROM LANGUAGE TO ACTION. / 从语言，到行动。**
 >
-> 本仓库当前交付的是 **M1.2 / AI 基础与工具交互**：在 M1.1 已经建立的六章注册表与 36 概念索引之上，
-> 完成 **Chapter 01–03 的 18 个概念正文（全部 reviewed / published）**、**三章连续叙事**（模型「会说话」→ 指令与上下文 → 外部工具），
-> 以及 **三个真正可操作的实验**：Lab 01 Token / Context Budget（真实分词 + 预算取舍）、
-> Lab 02 Instructions / Context（确定性上下文模拟）、Lab 03 Tool Calling & MCP（复用 M0.3 引擎 + 协议路径对照）。
-> **M1.2 通过验收 ≠ 六章正文已完成、≠ 全站星图与整章滚动叙事已完成（那属于 M1.3 / M1.4）。**
+> 当前六章、36 个概念与六个实验均已开放。Atlas 展示49条真实关系，支持章节/关系筛选、中文与英文别名搜索、缩放与聚焦；Story 提供按章学习、续学、跳过/重读与主动完成总结。
+> **学习日志 / Knowledge Journal** 在本机记录真实阅读、深入、关联和实验活动；清除活动与清除学习进度分别确认，不影响装配配置与研究记录。
+> 面向中国大陆用户：简体中文主界面、zh-CN日期、系统中文字体、静态资源本地打包；核心功能无需任何境外服务。外部参考仅供主动打开，不承诺所有网络线路均可达。
+> 当前验收与变更以 [M1.4交付报告](docs/DELIVERY_M1.4.md) 和 [内容审查](docs/M1_CONTENT_AUDIT.md) 为准。下文保留前序阶段的机制说明。
+
+M1.4 验证：`npm test`、`npm run check`、`npm run build`、`npm run audit:m14`、`npm run tokens:verify`、`npm run accept:m14`。完整重跑发现问题的M0.3：`node tools/m14-acceptance.mjs --regress-m03`。
+
+静态深链：`#/chapters`、`#/chapters/knowledge`、`#/atlas`、`#/knowledge/rag`、`#/labs/exp-tool-calling-demo`、`#/journal`。刷新与浏览器前进/后退可恢复工作区；所有路径适配项目子目录。
 
 ---
 
@@ -23,22 +66,22 @@
 > 首次访问播放约 11 秒的开场序列（可随时按 **跳过开场** 或 `ESC`）。看过一次后，再次访问直接进入控制台；
 > 顶栏 **重播开场** 可完整重看。想每次都看开场，可访问 `index.html?intro=always`。
 
-**六条推荐路径（都能走通）：**
+**推荐路径：**
 
 1. **先看叙事（M1.2 主线）**：`引导叙事 / STORY` → 六章目录 → 第 01 章卡片「进入第 01 章叙事」→
    读完开场、可观察局限与结果解读后，点 `RUN` 进 **Lab 01**；第 02 章 → **Lab 02**、第 03 章 → **Lab 03** 同理。
-   第 04–06 章仍标注「后续阶段（M1.3）」。
+   第 04–06 章对应 Knowledge / Runtime / Reliability Lab，同样可直接进入。
 2. **从知识到系统**：`知识星图` → 搜索 `Tool Calling`（画布自动定位）→ `LEARN` 进入完整知识页 →
-   `VIEW IN CONSTRUCTOR` → 装配 Search / Reader → `RUN SIMULATION`。
-3. **装配到运行**：`装配台` → 装配两种工具 → 授予只读模拟权限 → `RUN SIMULATION` →
+   `VIEW IN CONSTRUCTOR` → 装配 Search / Reader →「配置预检」，按提示补齐研究 Agent。
+3. **构建与旧研究实验**：`装配台` → 加载 Starter → 编辑模块 → 配置预检 → 保存；通过主导航进入原有执行台运行双工具研究实验 →
    执行台里播放/暂停/单步/Seek/调速，查看每个事件的输入输出、**参与判断的可见声明**与**核验必要条件**。
 4. **完整研究闭环（M0.4 主线）**：装配台把 Reader 设为 `全文` 且开启 `元数据` →
    执行台选择策略 `VERIFY_REVISIONS` → `RUN SIMULATION` → 证据阶段出现「发现冲突」→「更正关系核验成立」→
    「报告已装配」→ 切到 `REPORT · 研究报告` 读结论、点 `[S1]` 看来源、`VIEW IN EXECUTION` 回到事件。
 5. **对照看差异**：把策略改成 `COLLECT_ONLY`，或把读取方式改成 `摘要`，或关闭 `元数据`，再点 `RUN SIMULATION`：
    **报告、证据状态与轨迹都会按配置变化**；本地保留最近两次运行，可随时切回上一次对照。
-6. **看实验边界**：`实验空间 / LAB` → 3 个真实可操作实验（Lab 01 / 02 / 03）+ 3 个后续阶段登记；
-   只有真实可用的实验才渲染运行按钮，其余明确标注「后续阶段开放」，没有点了没反应的假按钮。
+6. **看实验边界**：`实验空间 / LAB` → 六个已开放实验（Token、Context、Tool Calling/MCP、Knowledge、Runtime、Reliability）；
+   实验是本地教学模拟，完成关键操作才记录学习进度。
 7. **降级与无障碍**：任何页面都可只用键盘完成操作；无 WebGL 时自动使用二维执行核心与结构投影，
    报告阅读、引用反查与 Markdown 导出仍然可用。
 
@@ -48,7 +91,7 @@
 npm install          # 安装依赖（three、esbuild）
 npm run dev          # 本地开发预览（静态服务）
 npm run build        # 产出 dist/ 与离线单文件 index.html
-npm test             # 239 项纯逻辑测试（装配 / 图谱 / 知识层 / 引擎 / 证据 / 报告 / 回放 / 持久化 / 分词 / 上下文模拟 / 协议路径 / 叙事）
+npm test             # 371 项纯逻辑测试，包含 M2.1 配置/迁移/预检与前序阶段回归
 npm run tokens:verify # 用真实分词器复算 Lab 01 的 token 表（24 组序列逐条比对）
 npm run accept:m12   # 构建 + 浏览器验收 A01–A30（含 M0.3/M0.4/M1.1 回归）
 npm run preview      # 预览 dist/ 产物
@@ -59,7 +102,7 @@ npm run shots        # 无头 Chrome 真实渲染自检：T01–T13 + M0.2 + M0.
   - `dist/index.html` + `dist/assets/app.js` + `dist/assets/app.css`（标准静态包，引用相对路径）
   - 根目录 `index.html`（**离线单文件版**，便于无服务器演示）
 - **GitHub Pages**：把 `dist/` 内容推到 Pages 分支即可。产物使用相对路径，放在仓库子路径下也能正常加载；
-  项目未使用前端路由，刷新不会 404。
+  页面使用 hash 路由，项目子路径和刷新可用，无需业务 API。
 - **零外部依赖**：three.js 与全部样式在构建时打包进产物，运行期不请求任何 CDN、字体或业务接口。
 
 ## 3. 这一轮实现了什么（M1.2 新增 · M1.1 基础保留）

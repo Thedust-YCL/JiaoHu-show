@@ -1,12 +1,12 @@
 /**
  * tests/story.test.mjs
  * ------------------------------------------------------------------
- * Chapter 01–03 叙事（A10–A13 / M1.2 §3）的结构与一致性测试。
+ * Chapter 01–06 叙事（A10–A13 / M1.2 §3 · M1.3 §4）的结构与一致性测试。
  *
  * 关注点：
  *   · 每章都有开场目标、可观察局限、实验入口、结果解读、章节过渡；
  *   · 叙事里引用的概念与实验都必须真实存在、且能对应到知识层；
- *   · 第 04–06 章不得被编造出叙事（返回 null，界面显示后续阶段）。
+ *   · M1.3 起六章叙事全部交付，且不得出现「引用了不存在的章节 / 概念 / 实验」。
  * ------------------------------------------------------------------
  */
 import test from 'node:test';
@@ -20,6 +20,7 @@ import {
   validateStories,
 } from '../src/content/chapters/index.js';
 import {
+  CHAPTERS,
   CONCEPTS,
   EXPERIMENTS,
   conceptAvailability,
@@ -28,10 +29,14 @@ import {
   getConceptsByChapter,
 } from '../src/knowledge/index.js';
 
-test('叙事数据：三章齐全、顺序固定、校验零问题', () => {
-  assert.deepEqual([...STORY_ORDER], ['intelligence', 'context', 'connection']);
-  assert.deepEqual(Object.keys(CHAPTER_STORIES), ['intelligence', 'context', 'connection']);
+const ALL_CHAPTERS = ['intelligence', 'context', 'connection', 'knowledge', 'runtime', 'reliability'];
+
+test('叙事数据：六章齐全、顺序固定、校验零问题', () => {
+  assert.deepEqual([...STORY_ORDER], ALL_CHAPTERS);
+  assert.deepEqual(Object.keys(CHAPTER_STORIES), ALL_CHAPTERS);
   assert.deepEqual(validateStories(), []);
+  // 与章节注册表一一对齐（不多不少）
+  assert.deepEqual(CHAPTERS.map((c) => c.id), ALL_CHAPTERS);
 });
 
 test('A10–A12 每章都必须有：开场目标、可观察局限、实验入口、结果解读、章节过渡', () => {
@@ -89,17 +94,22 @@ test('A12 第 03 章：工具与 MCP 路径都被讲到，局限落在「数据�
   assert.equal(story.lab.experimentId, 'exp-tool-calling-demo');
 });
 
-test('A13 章节过渡：01→02→03 连成一条线，第 03 章指向 M1.3', () => {
-  assert.equal(getChapterStory('intelligence').transition.toChapterId, 'context');
-  assert.equal(getChapterStory('context').transition.toChapterId, 'connection');
-  assert.equal(getChapterStory('connection').transition.toChapterId, null);
-  assert.match(getChapterStory('connection').transition.text, /M1\.3/);
+test('A13 章节过渡：01→02→03→04→05→06 连成一条线，第 06 章收束并指向 M1.4', () => {
+  for (let i = 0; i < ALL_CHAPTERS.length - 1; i += 1) {
+    assert.equal(
+      getChapterStory(ALL_CHAPTERS[i]).transition.toChapterId,
+      ALL_CHAPTERS[i + 1],
+      `${ALL_CHAPTERS[i]} → ${ALL_CHAPTERS[i + 1]}`
+    );
+  }
+  assert.equal(getChapterStory('reliability').transition.toChapterId, null);
+  assert.match(getChapterStory('reliability').transition.text, /M1\.4/);
   const first = neighborStories('intelligence');
   assert.equal(first.prev, null);
   assert.equal(first.next.chapterId, 'context');
-  const last = neighborStories('connection');
+  const last = neighborStories('reliability');
   assert.equal(last.next, null);
-  assert.equal(last.prev.chapterId, 'context');
+  assert.equal(last.prev.chapterId, 'runtime');
 });
 
 test('叙事引用：每章概念都属于该章，且在知识层有正文', () => {
@@ -129,16 +139,29 @@ test('叙事引用：每章实验都真实可用，且入口概念属于本章',
   }
 });
 
-test('未交付章节：第 04–06 章没有叙事，界面按「后续阶段」处理', () => {
-  for (const chapterId of ['knowledge', 'runtime', 'reliability']) {
-    assert.equal(getChapterStory(chapterId), null);
-    assert.equal(neighborStories(chapterId).prev, null);
-    assert.equal(neighborStories(chapterId).next, null);
+test('M1.3 交付：第 04–06 章叙事存在，且讲到本章必须讲清的技术边界', () => {
+  const expectations = {
+    knowledge: { experimentId: 'exp-retrieval-lab', entry: 'chunking', keywords: [/检索/, /切分/, /RAG/] },
+    runtime: { experimentId: 'exp-agent-loop-lab', entry: 'agent_loop', keywords: [/Workflow/, /Agent Loop/, /Harness/] },
+    reliability: { experimentId: 'exp-boundary-lab', entry: 'permissions', keywords: [/权限/, /沙箱/, /注入/] },
+  };
+  for (const [chapterId, expected] of Object.entries(expectations)) {
+    const story = getChapterStory(chapterId);
+    assert.ok(story, `${chapterId} 叙事缺失`);
+    assert.equal(story.lab.experimentId, expected.experimentId);
+    assert.equal(story.lab.entryConceptId, expected.entry);
+    assert.ok(story.beats.some((b) => b.kind === 'experiment'), `${chapterId} 必须有实验节拍`);
+    const text = `${story.beats.map((b) => `${b.title}\n${b.text}`).join('\n')}${story.limitation.text}`;
+    for (const keyword of expected.keywords) assert.match(text, keyword, `${chapterId} 叙事必须讲到 ${keyword}`);
+    assert.ok(neighborStories(chapterId).prev, `${chapterId} 必须有上一章`);
   }
+  // 第 06 章必须写明「演示不等于安全认证」
+  assert.match(getChapterStory('reliability').limitation.text, /不代表/);
 });
 
-test('叙事与知识层实验登记表一一对应：3 个可用实验各自被一章叙事引用', () => {
+test('叙事与知识层实验登记表一一对应：6 个可用实验各自被一章叙事引用', () => {
   const available = EXPERIMENTS.filter((e) => e.status === 'available').map((e) => e.id);
   const referenced = STORY_ORDER.map((id) => getChapterStory(id).lab.experimentId);
   assert.deepEqual([...referenced].sort(), [...available].sort());
+  assert.equal(available.length, 6);
 });

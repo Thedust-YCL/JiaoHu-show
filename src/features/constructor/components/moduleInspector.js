@@ -10,20 +10,25 @@
 import { PERMISSION_FIELD, defaultSettings, fieldsOf, getModule, getPort } from '../model/modules.js';
 import { configSummary, describeStatus, fieldValue, isStructuralError, validateModuleConfig } from '../model/validation.js';
 import { esc, h, md, statusTag } from './dom.js';
+import { previewRetrieval } from '../model/preflight.js';
+import { MCP_CAPABILITIES, MEMORY_ENTRIES, LOCAL_SKILLS } from '../model/catalog.js';
 
 const SIMULATED_NOTE = 'SIMULATED · 本地教学模拟：这里保存的只是配置，不触发真实检索、读取或联网。';
 
-export function buildModulePanel(store, moduleId, { onOpenKnowledge = null } = {}) {
+export function buildModulePanel(store, moduleId, { onOpenKnowledge = null, onConfirm = (title,message,fn)=>{if(window.confirm(message))fn();} } = {}) {
   const mod = getModule(moduleId);
   const frag = document.createDocumentFragment();
-  if (!mod) return frag;
+  if (!mod) {
+    frag.append(h('p',{},`未知模块 ${esc(moduleId)} 已保留。可下载配置，或主动移除该实例。`));
+    const remove=h('button',{type:'button',class:'btn'},'移除未知模块');remove.onclick=()=>store.actions.remove(moduleId);frag.append(remove);return frag;
+  }
 
   const info = store.describe(moduleId);
   const installed = info.installed;
   const port = getPort(mod.portId);
   const meta = describeStatus(info.status);
   const check = installed
-    ? validateModuleConfig(moduleId, installed.settings, installed.permissions)
+    ? validateModuleConfig(moduleId, moduleId==='runtime'?store.getState().settings:installed.settings, installed.permissions)
     : { ok: false, errors: [] };
 
   /* ---------------- 顶部：身份与状态 ---------------- */
@@ -80,13 +85,16 @@ export function buildModulePanel(store, moduleId, { onOpenKnowledge = null } = {
   if (installed) {
     const form = h('div', { class: 'section' });
     form.append(
-      h('div', { class: 'section__label' }, '<span>模块配置</span><span>字段即改即存</span>')
+      h('div', { class: 'section__label' }, '<span>模块配置</span><span>即时更新草稿</span>')
     );
 
     const errorsByField = new Map();
     for (const error of check.errors) {
       if (!errorsByField.has(error.field)) errorsByField.set(error.field, error);
     }
+    for(const issue of store.preflight().issues.filter(i=>i.moduleId===moduleId&&i.level==='error'))if(!errorsByField.has(issue.field))errorsByField.set(issue.field,{...issue,message:issue.description,fix:issue.suggestion});
+    const rejected=store.getState().ui.notice;
+    if(rejected?.code==='INVALID_CONFIG'&&rejected.moduleId===moduleId)for(const error of rejected.errors||[])errorsByField.set(error.field,{...error,message:`${error.message}；已保留原值`});
 
     const formId = `azf-${moduleId}`;
     for (const field of fieldsOf(moduleId)) {
@@ -97,7 +105,7 @@ export function buildModulePanel(store, moduleId, { onOpenKnowledge = null } = {
     const toggle = h('button', { class: 'btn btn--sm', type: 'button' }, installed.enabled ? '禁用模块' : '重新启用');
     toggle.addEventListener('click', () => store.actions.setEnabled(moduleId, installed.enabled !== true));
     const reset = h('button', { class: 'btn btn--sm btn--ghost', type: 'button' }, '重置本模块参数');
-    reset.addEventListener('click', () => store.actions.configure(moduleId, { ...defaultSettings(moduleId), readPermission: false }));
+    reset.addEventListener('click', () => onConfirm('重置模块参数','将恢复当前模块的默认参数；共享的审批设置也可能改变。',()=>store.actions.configure(moduleId, { ...Object.fromEntries(fieldsOf(moduleId).map(f=>[f.key,f.default])), readPermission: false })));
     const remove = h('button', { class: 'btn btn--sm btn--ghost', type: 'button' }, '移除模块');
     remove.addEventListener('click', () => store.actions.remove(moduleId));
     actions.append(toggle, reset, remove);
@@ -122,7 +130,7 @@ export function buildModulePanel(store, moduleId, { onOpenKnowledge = null } = {
     frag.append(
       h('div', { class: 'section' }, `
         <div class="section__label"><span>权威配置摘要</span><span>唯一数据源</span></div>
-        <dl class="kv">${configSummary(installed).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+        <dl class="kv">${configSummary(installed,store.getState()).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         <div class="note note--info" style="margin-top:9px">
           <span class="note__key">同步</span>
           <span>这份配置同时驱动三维装配视图与二维系统视图；切换视图不会复制数据。</span>
@@ -133,7 +141,7 @@ export function buildModulePanel(store, moduleId, { onOpenKnowledge = null } = {
   /* ---------------- 知识解释与边界 ---------------- */
   frag.append(
     h('div', { class: 'section' }, `
-      <div class="section__label"><span>这个工具是什么</span><span>概念</span></div>
+      <div class="section__label"><span>模块职责</span><span>概念</span></div>
       <p class="explain">${md(mod.knowledge)}</p>`)
   );
 
@@ -141,7 +149,7 @@ export function buildModulePanel(store, moduleId, { onOpenKnowledge = null } = {
   limits.append(h('div', { class: 'section__label' }, '<span>能力边界</span><span>诚实声明</span>'));
   const ul = h('div', { class: 'bullets' });
   for (const line of mod.limits) ul.append(h('li', {}, `<span>${esc(line)}</span>`));
-  ul.append(h('li', {}, '<span>未授予只读模拟权限前，模块只能是 Unconfigured，不会显示 Ready。</span>'));
+  if(mod.moduleType==='tools')ul.append(h('li', {}, '<span>输入：本地查询或 sourceId；输出：公告清单或摘要/正文。权限：只读；失败：缺权限、超时、未知资料。禁止远程 URL。</span>'));
   limits.append(ul);
   frag.append(limits);
 
@@ -151,10 +159,20 @@ export function buildModulePanel(store, moduleId, { onOpenKnowledge = null } = {
       <span class="note__key">Tool Calling</span>
       <span>${esc(mod.cn)}是 Tool Calling 的一个具体工具实例：模型只提出结构化调用请求，真正的执行由运行环境完成，再把结果交回上下文。知识页里有完整的三段职责解释与内嵌实验。</span>
     </div>`);
-  const learnBtn = h('button', { class: 'btn btn--sm btn--primary', type: 'button', 'data-act': 'open-knowledge', style: 'margin-top:8px' }, '查看 Tool Calling 知识节点');
-  learnBtn.addEventListener('click', () => onOpenKnowledge?.(moduleId));
-  nav.append(learnBtn);
+  nav.querySelector('[data-act="knowledge-note"]').remove();
+  for(const conceptId of mod.conceptIds||['tool_calling']) {
+    const learnBtn = h('button', { class: 'btn btn--sm btn--ghost', type: 'button', 'data-act': 'open-knowledge', 'data-concept':conceptId, style: 'margin:4px' }, esc(conceptId));
+    learnBtn.addEventListener('click', () => onOpenKnowledge?.(conceptId));nav.append(learnBtn);
+  }
   frag.append(nav);
+
+  if(installed&&moduleId==='retrieval') {
+    const result=previewRetrieval(store.getState());
+    if(result)frag.append(h('div',{class:'section'},`<h3>本地检索预览</h3><p class="explain">${result.chunking.chunks.length} 个片段 · ${esc(installed.settings.mode)} · 复用 Knowledge Lab。向量为人工坐标示意。</p><pre>${esc(JSON.stringify(result.retrieval.selected||result.retrieval.candidates?.slice(0,installed.settings.topK),null,2))}</pre>`));
+  }
+  if(moduleId==='mcp')frag.append(h('div',{class:'section'},`<h3>静态能力目录</h3>${MCP_CAPABILITIES.map(c=>`<p>${esc(c.type)} / ${esc(c.cn)} · ${esc(c.id)}</p>`).join('')}<p>离线模拟发现；未连接任何 Server。</p>`));
+  if(moduleId==='memory')frag.append(h('div',{class:'section'},`<h3>可复用条目</h3>${MEMORY_ENTRIES.map(e=>`<p>${esc(e.label)} · ${esc(e.origin)}</p>`).join('')}<p>仅显式选中的偏好可复用，Journal 和历史 Run 不属于 Memory。</p>`));
+  if(moduleId==='skills')frag.append(h('div',{class:'section'},`${LOCAL_SKILLS.map(s=>`<h3>${esc(s.cn)}</h3><p>${esc(s.summary)}</p>`).join('')}<p>方法卡不改变工具权限。</p>`));
 
   return frag;
 }
@@ -166,19 +184,20 @@ function buildField({ store, moduleId, field, installed, error, formId }) {
   const id = `${formId}-${field.key}`;
   const wrap = h('div', { class: 'field', 'data-field': field.key, 'data-error': error ? 'true' : 'false' });
   const isPermission = field.key === PERMISSION_FIELD.key;
-  const value = fieldValue(installed, field);
+  const value = fieldValue(installed, field, store.getState());
 
   const label = h('label', { class: 'field__label', for: id }, `
     <span>${esc(field.label)}</span>
     <span class="field__en">${esc(field.en || '')}</span>`);
   wrap.append(label);
+  if(field.required)label.append(h('span',{class:'field__hint'},'必填'));
 
   if (field.type === 'select') {
-    const select = h('select', { id, class: 'field__control', name: field.key });
+    const select = h('select', { id, class: 'field__control', name: field.key,'aria-invalid':error?'true':'false','aria-describedby':error?`${id}-error`:null });
     const known = field.options.some((o) => (field.numeric ? Number(o.value) : String(o.value)) === (field.numeric ? Number(value) : String(value)));
     if (!known) {
       // 损坏或旧版本数据：显示当前非法值，让用户看得见并主动修复，而不是被静默改写
-      select.append(h('option', { value: String(value ?? ''), selected: true }, `${String(value ?? '（空）')}（当前值 · 非法）`));
+      select.append(h('option', { value: String(value ?? ''), selected: true }, `${esc(value ?? '（空）')}（当前值 · 非法）`));
     }
     for (const option of field.options) {
       const opt = h('option', { value: String(option.value) }, option.label);
@@ -192,6 +211,20 @@ function buildField({ store, moduleId, field, installed, error, formId }) {
 
     const chosen = field.options.find((o) => (field.numeric ? Number(o.value) : String(o.value)) === (field.numeric ? Number(select.value) : String(select.value)));
     if (chosen?.note) wrap.append(h('div', { class: 'field__hint' }, esc(chosen.note)));
+  } else if(field.type==='textarea'||field.type==='text'||field.type==='number') {
+    const input=h(field.type==='textarea'?'textarea':'input',{id,class:'field__control',name:field.key,type:field.type==='number'?'number':'text',min:field.min,max:field.max,maxlength:field.maxLength,rows:field.type==='textarea'?3:null,'aria-invalid':error?'true':'false','aria-describedby':error?`${id}-error`:null});
+    input.value=value??'';
+    input.addEventListener('change',()=>store.actions.configure(moduleId,{[field.key]:field.numeric?Number(input.value):input.value}));
+    wrap.append(input,h('div',{class:'field__hint'},field.type==='number'?`${field.min}–${field.max} · 默认 ${field.default}`:`最多 ${field.maxLength} 字符`));
+  } else if(field.type==='multiselect') {
+    const group=h('div',{class:'field__choices',role:'group','aria-labelledby':`${id}-label`});label.id=`${id}-label`;
+    const values=Array.isArray(value)?value:[];
+    const choices=[...field.options,...values.filter(v=>!field.options.some(o=>o.value===v)).map(v=>({value:v,label:`未知引用：${v}`}))];
+    for(const [index,option] of choices.entries()) {
+      const item=h('label',{class:'field__check'});const input=h('input',{type:'checkbox',id:`${id}-${index}`,name:field.key,value:option.value});input.checked=values.includes(option.value);
+      input.addEventListener('change',()=>{const next=input.checked?[...values,option.value]:values.filter(v=>v!==option.value);store.actions.configure(moduleId,{[field.key]:next});});
+      item.append(input,h('span',{},esc(option.label)));group.append(item);
+    }wrap.append(group);
   } else {
     const box = h('label', { class: 'field__check', for: id });
     const input = h('input', { type: 'checkbox', id, name: field.key });
@@ -205,7 +238,7 @@ function buildField({ store, moduleId, field, installed, error, formId }) {
   }
 
   if (error) {
-    wrap.append(h('div', { class: 'field__error', role: 'alert' }, `
+    wrap.append(h('div', { class: 'field__error', role: 'alert',id:`${id}-error` }, `
       <b>${esc(error.message)}</b><span>修复：${esc(error.fix)}</span>`));
   }
   return wrap;

@@ -19,7 +19,7 @@
  *   · 仍不是测验成绩：没有分数、排名或对错判定。
  * ------------------------------------------------------------------
  */
-import { CONCEPT_ORDER, conceptAvailability, getConcept } from '../../../knowledge/index.js';
+import { CONCEPT_ORDER, EXPERIMENTS, getChapter, getConceptsByChapter, conceptAvailability, getConcept, getExperiment } from '../../../knowledge/index.js';
 
 export const LEARNING_STORAGE_KEY = 'agent-zero:learning:v2';
 export const LEARNING_SCHEMA_VERSION = 2;
@@ -31,7 +31,7 @@ export const LEARNING_LABELS = Object.freeze({
   unexplored: { id: 'unexplored', cn: '尚未查看', tone: 'muted' },
   exploring: { id: 'exploring', cn: '正在了解', tone: 'signal' },
   related_discovered: { id: 'related_discovered', cn: '已发现相关概念', tone: 'signal' },
-  experiment_completed: { id: 'experiment_completed', cn: '已完成内嵌实验', tone: 'success' },
+  experiment_completed: { id: 'experiment_completed', cn: '实验已完成', tone: 'success' },
 });
 
 function emptyRecord() {
@@ -45,6 +45,8 @@ function emptyRecord() {
     experimentCompletedAt: null,
     relatedDiscoveredIds: [],
     experimentIds: [],
+    inspectedAt: null,
+    experimentStarted: false,
   };
 }
 
@@ -94,8 +96,10 @@ function normalizeRecord(value) {
     visitedAt: visitedAt ?? lastViewedAt ?? null,
     lastViewedAt: lastViewedAt ?? visitedAt ?? null,
     experimentCompletedAt,
+    inspectedAt: normalizeTimestamp(value.inspectedAt),
+    experimentStarted: value.experimentStarted === true,
     relatedDiscoveredIds: normalizeIdList(value.relatedDiscoveredIds),
-    experimentIds: Array.isArray(value.experimentIds) ? value.experimentIds.filter((id) => typeof id === 'string') : [],
+    experimentIds: Array.isArray(value.experimentIds) ? [...new Set(value.experimentIds.filter((id) => getExperiment(id)))] : [],
   };
 }
 
@@ -140,6 +144,8 @@ export function serializeLearning(state) {
     schemaVersion: LEARNING_SCHEMA_VERSION,
     concepts: state.concepts || {},
     lastViewed: state.lastViewed || null,
+    chapters: state.chapters || {},
+    storyPosition: state.storyPosition || null,
   });
 }
 
@@ -173,6 +179,8 @@ export function parseLearning(raw) {
 
   const { concepts, dropped } = normalizeLearning(data);
   const lastViewed = normalizeLastViewed(data.lastViewed);
+  const chapters = Object.fromEntries(Object.entries(data.chapters || {}).filter(([id, value]) => getChapter(id) && value && normalizeTimestamp(value.completedAt)).map(([id, value]) => [id, { completedAt: normalizeTimestamp(value.completedAt) }]));
+  const storyPosition = getChapter(data.storyPosition?.chapterId) ? { chapterId: data.storyPosition.chapterId, section: data.storyPosition.section === 'summary' ? 'summary' : 'opening' } : null;
   const version = data.schemaVersion;
   let notice = null;
 
@@ -193,6 +201,8 @@ export function parseLearning(raw) {
     schemaVersion: LEARNING_SCHEMA_VERSION,
     concepts,
     lastViewed,
+    chapters,
+    storyPosition,
     dropped,
     notice,
     migratedFrom: version !== LEARNING_SCHEMA_VERSION ? `v${String(version ?? '1')}` : null,
@@ -234,6 +244,7 @@ export function createLearningStore({
   legacyKeys = LEGACY_LEARNING_KEYS,
   onLog = null,
   now = () => Date.now(),
+  journal = null,
 } = {}) {
   const store = safeStorage(storage);
 
@@ -260,15 +271,24 @@ export function createLearningStore({
     schemaVersion: LEARNING_SCHEMA_VERSION,
     concepts: loaded.concepts,
     lastViewed: loaded.lastViewed,
+    chapters: loaded.chapters || {},
+    storyPosition: loaded.storyPosition || null,
   };
   const listeners = new Set();
 
-  function persist() {
-    if (!store) return false;
+  let storageNotice = !store ? '浏览器未允许本地存储，学习进度仅在本次会话保留。' : null;
+  // 无法解析或更新版本的原始数据保留原样，本次会话仍可探索。
+  let protectedRaw = !!loaded.notice && ['LEARNING_STORAGE_CORRUPT', 'LEARNING_STORAGE_SHAPE', 'LEARNING_STORAGE_VERSION'].includes(loaded.notice.code);
+  function persist({ reset = false } = {}) {
+    if (!store || (protectedRaw && !reset)) {
+      storageNotice ||= '原有进度数据已保留，本次新增进度仅在本次会话保留。';
+      return false;
+    }
     try {
       store.setItem(key, serializeLearning(state));
       return true;
     } catch {
+      storageNotice = '无法保存到浏览器，新增进度仅在本次会话保留。请检查存储权限或空间。';
       return false;
     }
   }
@@ -296,6 +316,8 @@ export function createLearningStore({
       a.visitedAt === b.visitedAt &&
       a.lastViewedAt === b.lastViewedAt &&
       a.experimentCompletedAt === b.experimentCompletedAt &&
+      a.inspectedAt === b.inspectedAt &&
+      a.experimentStarted === b.experimentStarted &&
       a.relatedDiscoveredIds.length === b.relatedDiscoveredIds.length &&
       a.experimentIds.length === b.experimentIds.length
     );
@@ -331,12 +353,14 @@ export function createLearningStore({
   function markExplored(conceptId) {
     const current = record(conceptId);
     const at = now();
-    return update(
+    const changed = update(
       conceptId,
       { explored: true, visits: current.visits + 1, visitedAt: current.visitedAt ?? at, lastViewedAt: at },
       'explored',
       { touch: true, at }
     );
+    if (changed) journal?.record('concept_viewed', { conceptId });
+    return changed;
   }
 
   /** 从详情里点开相关概念：记录「已发现关联」以及发现了哪个概念 */
@@ -344,7 +368,9 @@ export function createLearningStore({
     const current = record(conceptId);
     const ids = [...current.relatedDiscoveredIds];
     if (discoveredId && getConcept(discoveredId) && discoveredId !== conceptId && !ids.includes(discoveredId)) ids.push(discoveredId);
-    return update(conceptId, { explored: true, relatedDiscovered: true, relatedDiscoveredIds: ids }, 'related');
+    const changed = update(conceptId, { explored: true, relatedDiscovered: true, relatedDiscoveredIds: ids }, 'related');
+    if (changed) journal?.record('relation_followed', { conceptId, targetConceptId: discoveredId });
+    return changed;
   }
 
   /**
@@ -369,10 +395,12 @@ export function createLearningStore({
       return false;
     }
     const id = experimentId || experiment.id;
+    if (id !== experiment.id) return false;
     const at = now();
     const current = record(conceptId);
+    if (current.experimentCompleted && current.experimentIds.includes(id)) return false;
     const experimentIds = current.experimentIds.includes(id) ? current.experimentIds : [...current.experimentIds, id];
-    return update(
+    const changed = update(
       conceptId,
       {
         explored: true,
@@ -384,6 +412,17 @@ export function createLearningStore({
       },
       'experiment'
     );
+    if (changed) journal?.record('lab_completed', { conceptId, experimentId: id });
+    return changed;
+  }
+
+  const completedLabIds = () => new Set(Object.entries(state.concepts).flatMap(([id, r]) => r.experimentCompleted ? (r.experimentIds.length ? r.experimentIds.filter(e => getExperiment(e)?.conceptIds.includes(id)) : [conceptAvailability(id)?.experiment?.id].filter(Boolean)) : []));
+
+  function statusOf(id) {
+    const r = record(id);
+    if (r.experimentCompleted) return 'completed';
+    if (r.inspectedAt || r.experimentStarted || r.relatedDiscovered) return 'in_progress';
+    return r.explored ? 'explored' : 'not_started';
   }
 
   return {
@@ -395,6 +434,39 @@ export function createLearningStore({
     markExplored,
     markRelatedDiscovered,
     markExperimentCompleted,
+    statusOf,
+    markInspected(conceptId) {
+      if (!getConcept(conceptId) || record(conceptId).inspectedAt) return false;
+      const changed = update(conceptId, { explored: true, inspectedAt: now() }, 'inspect');
+      if (changed) journal?.record('concept_inspected', { conceptId });
+      return changed;
+    },
+    markLabStarted(experimentId) {
+      const e = getExperiment(experimentId);
+      if (!e || e.status !== 'available') return false;
+      update(e.entryConceptId, { experimentStarted: true }, 'lab-started');
+      return journal?.record('lab_started', { experimentId, conceptId: e.entryConceptId }) ?? true;
+    },
+    isLabCompleted: (id) => completedLabIds().has(id),
+    storyPosition: () => state.storyPosition,
+    setStoryPosition(chapterId, section = 'opening') {
+      if (!getChapter(chapterId)) return false;
+      state = { ...state, storyPosition: { chapterId, section: section === 'summary' ? 'summary' : 'opening' } };
+      persist();
+      return true;
+    },
+    markChapterCompleted(chapterId) {
+      if (!getChapter(chapterId) || state.chapters[chapterId]?.completedAt) return false;
+      state = { ...state, chapters: { ...state.chapters, [chapterId]: { completedAt: now() } } };
+      persist();
+      journal?.record('chapter_completed', { chapterId });
+      emit('chapter-completed');
+      return true;
+    },
+    chapterSummary(chapterId) {
+      const concepts = getConceptsByChapter(chapterId);
+      return { total: concepts.length, explored: concepts.filter(c => record(c.id).explored).length, completed: !!state.chapters[chapterId]?.completedAt, labCompleted: EXPERIMENTS.filter(e => e.chapterId === chapterId && completedLabIds().has(e.id)).length };
+    },
     flagsOf: (conceptId) => record(conceptId),
     labelOf: (conceptId) => deriveLearningLabel(record(conceptId)),
     isExperimentCompleted: (conceptId) => record(conceptId).experimentCompleted === true,
@@ -417,23 +489,19 @@ export function createLearningStore({
         experiments,
         related,
         unexplored: CONCEPT_ORDER.length - explored,
+        completedLabs: completedLabIds().size,
       };
     },
     /** 清除学习进度：只影响本命名空间（旧键保持不动，可继续作为回退备份） */
     reset() {
-      state = { schemaVersion: LEARNING_SCHEMA_VERSION, concepts: {}, lastViewed: null };
-      if (store) {
-        try {
-          store.removeItem(key);
-        } catch {
-          /* 隐私模式：本次会话内仍然清空内存状态 */
-        }
-      }
+      state = { schemaVersion: LEARNING_SCHEMA_VERSION, concepts: {}, lastViewed: null, chapters: {}, storyPosition: null };
+      if (persist({ reset: true })) { protectedRaw = false; storageNotice = null; }
       emit('reset');
     },
     /** 迁移来源（旧键名）；没有迁移时为 null */
     migratedFrom: migrated,
     notice: loaded.notice,
+    storageNotice: () => storageNotice,
     readPersisted: () => {
       if (!store) return null;
       try {

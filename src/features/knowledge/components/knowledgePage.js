@@ -436,7 +436,7 @@ export function createKnowledgePage({
     }
     if (learning) {
       if (reason === '关联概念' || reason === '相关概念') learning.markRelatedDiscovered(currentId, id);
-      else learning.markExplored(currentId);
+      learning.markExplored(id);
     }
     currentId = id;
     layer = 'understand';
@@ -451,6 +451,7 @@ export function createKnowledgePage({
     const value = next === 'inspect' ? 'inspect' : 'understand';
     if (value === layer) return;
     layer = value;
+    if (layer === 'inspect') learning?.markInspected?.(currentId);
     renderMain();
     onLog?.('知识', `知识页深度层切换为 ${layer === 'inspect' ? 'INSPECT（深入）' : 'UNDERSTAND（入门）'}`, 'info');
   }
@@ -459,11 +460,14 @@ export function createKnowledgePage({
   renderMain();
 
   const unsubscribeLearning = learning?.subscribe?.(() => renderAside());
+  let activated = false;
 
   return {
     el,
     /** 打开时记录「正在了解」，并把层复位到入门层 */
     activate() {
+      if (activated) return;
+      activated = true;
       learning?.markExplored(currentId);
       renderRail();
       renderMain();

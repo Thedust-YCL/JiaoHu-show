@@ -415,9 +415,12 @@ export function Inspector({ onSelect, onToggle }) {
    * Inspector 本身不持有模块状态，内容全部由 constructor store 派生。
    */
   function renderCustom(fragment) {
+    const activeId=scroll.contains(document.activeElement)?document.activeElement?.id:null;
+    const oldScroll=scroll.scrollTop;
     scroll.innerHTML = '';
     scroll.append(fragment);
-    scroll.scrollTop = 0;
+    scroll.scrollTop = oldScroll;
+    if(activeId)scroll.querySelector(`#${CSS.escape(activeId)}`)?.focus({preventScroll:true});
     el.dataset.mode = 'module';
   }
 
@@ -565,6 +568,7 @@ export function Boot({ onSkip, onFirstFrame }) {
   }
 
   function focusSkip() {
+    if (el.dataset.phase !== 'run' || el.inert) return;
     try {
       skip.focus({ preventScroll: true });
     } catch {
@@ -579,9 +583,14 @@ export function Boot({ onSkip, onFirstFrame }) {
     focusSkip,
     setDone() {
       el.dataset.phase = 'done';
+      el.inert = true;
+      el.setAttribute('aria-hidden','true');
+      skip.removeAttribute('autofocus');
     },
     setRunning() {
       el.dataset.phase = 'run';
+      el.inert = false;
+      el.removeAttribute('aria-hidden');
       lastIdx = -1;
     },
   };

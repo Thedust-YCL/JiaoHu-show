@@ -43,8 +43,10 @@ test('端口兼容性：未知模块与未知接口都必须被拒绝', () => {
 
 test('端口注册表：两个端口各自锚定到稳定的 L3 接口序号', () => {
   const indexes = Object.values(PORTS).map((p) => p.anchorIndex);
-  assert.deepEqual(indexes, [1, 11]);
-  assert.notEqual(indexes[0], indexes[1]);
+  assert.equal(PORTS.SEARCH_PORT.anchorIndex,1);
+  assert.equal(PORTS.READER_PORT.anchorIndex,11);
+  assert.equal(new Set(indexes).size,indexes.length);
+  assert.ok(indexes.every(i=>i>=0&&i<12));
 });
 
 /* ==================================================================== *

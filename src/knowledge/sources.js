@@ -28,7 +28,16 @@ export const SOURCE_TYPES = Object.freeze({
 });
 
 /** 来源登记表：id 永久稳定，正文通过 id 引用 */
-export const SOURCES = Object.freeze({
+function withAuditMetadata(records) {
+  return Object.fromEntries(Object.entries(records).map(([id, source]) => [id, Object.freeze({
+    ...source,
+    org: source.org || 'AGENT / ZERO 项目',
+    reviewStatus: source.reviewed ? 'reviewed' : 'needs_review',
+    // 2026-10-25 实际通过浏览工具读取全部30条外部原始页面，详见内容审查报告。
+    ...(source.type === 'external' ? { checkedAt: '2026-10-25' } : {}),
+  })]));
+}
+export const SOURCES = Object.freeze(withAuditMetadata({
   /* ================================================================
    * 一、仓库内文档（可逐字核对）
    * ================================================================ */
@@ -61,9 +70,9 @@ export const SOURCES = Object.freeze({
     where: 'docs/M1.2_TASK.md',
     url: null,
     versionOrDate: '仓库内文件',
-    checkedAt: null,
+    checkedAt: '2026-10-25',
     reviewed: true,
-    claim: '第 01–03 章 18 个概念的内容边界、必须区分的技术事实与三个实验的功能要求来自该任务书。',
+    claim: 'M1.2_TASK.md 已于本轮补充并实际阅读核对。第01–03章分层内容、真实分词样例、确定性上下文实验与既有 Tool Calling/MCP 复用要求均在原任务书中明确。',
   }),
   'doc-prd': Object.freeze({
     id: 'doc-prd',
@@ -278,7 +287,223 @@ export const SOURCES = Object.freeze({
     reviewed: true,
     claim: '给出上下文工程的定义（在有限上下文预算内维护「最小的高信号 token 集合」），并列出压缩、结构化笔记、子代理三种取舍做法——支持「上下文工程 = 有限的预算内做取舍」。',
   }),
-});
+
+  /* ================================================================
+   * 五、M1.3 新增：检索 / 记忆 / 技能 / 执行 / 可靠性
+   *
+   * 核验方式（2026-10-23）：
+   *   · arXiv 条目通过 export.arxiv.org 的 Atom 接口逐条取回标题、作者、
+   *     版本与修订日期，再用摘要原文核对 claim；
+   *   · Anthropic 的三篇文章与 Simon Willison 的文章直接抓取正文核对，
+   *     注意实际响应地址是 /research/ 前缀（/engineering/ 会被重定向）；
+   *   · OpenTelemetry 文档页实测 200，正文取到导航与页头，claim 只写
+   *     「trace 由 span 组成、记录操作与时间关系」这一页面上成立的通用定义。
+   * ------------------------------------------------------------------
+   */
+  'src-arxiv-rag': Object.freeze({
+    id: 'src-arxiv-rag',
+    type: 'external',
+    title: 'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks',
+    org: 'arXiv（作者 Lewis、Perez、Karpukhin 等；NeurIPS 2020）',
+    where: 'arxiv.org/abs/2005.11401',
+    url: 'https://arxiv.org/abs/2005.11401',
+    versionOrDate: 'arXiv:2005.11401v4（2021-04-12 修订；v1 于 2020-05-22 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '提出 RAG：把参数化记忆（预训练 seq2seq 模型）与非参数化记忆（维基百科的稠密向量索引，经神经检索器访问）结合用于生成——支持「RAG = 检索到的外部片段参与生成」，也支持「检索命中不等于答案正确」。',
+  }),
+  'src-arxiv-dpr': Object.freeze({
+    id: 'src-arxiv-dpr',
+    type: 'external',
+    title: 'Dense Passage Retrieval for Open-Domain Question Answering',
+    org: 'arXiv（作者 Karpukhin、Oğuz、Min 等；EMNLP 2020）',
+    where: 'arxiv.org/abs/2004.04906',
+    url: 'https://arxiv.org/abs/2004.04906',
+    versionOrDate: 'arXiv:2004.04906v3（2020-09-30 修订；v1 于 2020-04-10 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '摘要明确对比两类方法：传统稀疏向量模型（TF-IDF、BM25）是当时的事实标准，而稠密表示（embedding）只用学习到的向量即可实现检索——直接支持「关键词检索与向量检索是不同方法，不能互相冒充」。',
+  }),
+  'src-arxiv-word2vec': Object.freeze({
+    id: 'src-arxiv-word2vec',
+    type: 'external',
+    title: 'Efficient Estimation of Word Representations in Vector Space',
+    org: 'arXiv（作者 Mikolov、Chen、Corrado、Dean）',
+    where: 'arxiv.org/abs/1301.3781',
+    url: 'https://arxiv.org/abs/1301.3781',
+    versionOrDate: 'arXiv:1301.3781v3（2013-09-07 修订；v1 于 2013-01-16 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '提出两种从大规模语料计算词向量（连续向量表示）的模型结构，并用词相似度任务衡量向量质量——支持「embedding 是把数据映射为向量表示，相近程度可用向量距离近似」。',
+  }),
+  'src-arxiv-lost-middle': Object.freeze({
+    id: 'src-arxiv-lost-middle',
+    type: 'external',
+    title: 'Lost in the Middle: How Language Models Use Long Contexts',
+    org: 'arXiv（作者 Liu、Lin、Hewitt 等；TACL 2023）',
+    where: 'arxiv.org/abs/2307.03172',
+    url: 'https://arxiv.org/abs/2307.03172',
+    versionOrDate: 'arXiv:2307.03172v3（2023-11-20 修订；v1 于 2023-07-06 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '实验显示：相关信息在长上下文中的位置会显著影响表现，信息在开头或结尾时往往最好、落在中间时明显下降——支持「切分粒度与片段在上下文中的位置都会影响检索/回答效果」。',
+  }),
+  'src-arxiv-memgpt': Object.freeze({
+    id: 'src-arxiv-memgpt',
+    type: 'external',
+    title: 'MemGPT: Towards LLMs as Operating Systems',
+    org: 'arXiv（作者 Packer、Wooders、Lin 等）',
+    where: 'arxiv.org/abs/2310.08560',
+    url: 'https://arxiv.org/abs/2310.08560',
+    versionOrDate: 'arXiv:2310.08560v2（2024-02-12 修订；v1 于 2023-10-12 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '提出「虚拟上下文管理」：借用操作系统分层内存思路，在不同记忆层间搬运数据，让模型在有限上下文窗口下获得更大的可用记忆——支持「记忆是外部存储与搬运机制，不是模型参数被改写」。',
+  }),
+  'src-anthropic-agent-skills': Object.freeze({
+    id: 'src-anthropic-agent-skills',
+    type: 'external',
+    title: 'Equipping agents for the real world with Agent Skills · Anthropic',
+    org: 'Anthropic（Anthropic PBC，Research 栏目）',
+    where: 'anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills',
+    url: 'https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills',
+    versionOrDate: '页面含 2025-12-18 更新说明（Agent Skills 开放标准）；页脚 © 2026 Anthropic PBC',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '把 Skill 定义为「组织好的指令、脚本与资源目录」，按需动态加载（progressive disclosure：先只放 name/description 元数据，需要时再读正文与附加文件）；并提示恶意 Skill 可引入漏洞或诱导数据外泄，需从可信来源安装——支持「Skill 是方法封装、按需加载，本身不自动等于安全或授权」。',
+  }),
+  'src-anthropic-effective-agents': Object.freeze({
+    id: 'src-anthropic-effective-agents',
+    type: 'external',
+    title: 'Building effective AI agents · Anthropic',
+    org: 'Anthropic（Anthropic PBC，Research 栏目）',
+    where: 'anthropic.com/research/building-effective-agents',
+    url: 'https://www.anthropic.com/research/building-effective-agents',
+    versionOrDate: '页面未标注发布日期（正文提到 2024 年 12 月起的观察）；页脚 © 2026 Anthropic PBC',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '原文区分：Workflow 是「用预定义代码路径编排 LLM 与工具」的系统，Agent 是「由 LLM 动态决定自身流程与工具使用」的系统；并列出 prompt chaining、routing、parallelization、orchestrator-workers、evaluator-optimizer 五种编排模式与「先用最简单方案」的建议——直接支持 Workflow ≠ Agent 且不存在优劣排序。',
+  }),
+  'src-arxiv-react': Object.freeze({
+    id: 'src-arxiv-react',
+    type: 'external',
+    title: 'ReAct: Synergizing Reasoning and Acting in Language Models',
+    org: 'arXiv（作者 Yao、Zhao、Yu 等；ICLR 2023）',
+    where: 'arxiv.org/abs/2210.03629',
+    url: 'https://arxiv.org/abs/2210.03629',
+    versionOrDate: 'arXiv:2210.03629v3（2023-03-10 修订；v1 于 2022-10-06 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '让模型交替产生推理轨迹与动作，动作用于与外部来源交互取回信息、推理用于更新计划——支持「执行循环 = 观察 → 决策 → 动作 → 再决策」，并说明动作带来的外部反馈可减少幻觉与错误传播。',
+  }),
+  'src-arxiv-swe-agent': Object.freeze({
+    id: 'src-arxiv-swe-agent',
+    type: 'external',
+    title: 'SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering',
+    org: 'arXiv（作者 Yang、Jimenez、Wettig 等）',
+    where: 'arxiv.org/abs/2405.15793',
+    url: 'https://arxiv.org/abs/2405.15793',
+    versionOrDate: 'arXiv:2405.15793v3（2024-11-11 修订；v1 于 2024-05-06 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '提出 Agent-Computer Interface（ACI）：围绕模型的那层接口设计（文件编辑、仓库导航、执行测试）会显著影响 Agent 表现——支持「Harness/接口层是独立的工程层，决定模型能做什么、看到什么，而不是另一个模型」。',
+  }),
+  'src-arxiv-autogen': Object.freeze({
+    id: 'src-arxiv-autogen',
+    type: 'external',
+    title: 'AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation',
+    org: 'arXiv（作者 Wu、Bansal、Zhang 等）',
+    where: 'arxiv.org/abs/2308.08155',
+    url: 'https://arxiv.org/abs/2308.08155',
+    versionOrDate: 'arXiv:2308.08155v2（2023-10-03 修订；v1 于 2023-08-16 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '用「多个可对话的 agent 通过对话协作」来搭建应用，并强调可定制各 agent 的交互行为——支持「Multi-Agent 是多个角色分工与交接，需要额外的编排与协调机制」。',
+  }),
+  'src-anthropic-sandboxing': Object.freeze({
+    id: 'src-anthropic-sandboxing',
+    type: 'external',
+    title: 'Making Claude Code safer with sandboxing · Anthropic',
+    org: 'Anthropic（Anthropic PBC，Research 栏目）',
+    where: 'anthropic.com/research/claude-code-sandboxing',
+    url: 'https://www.anthropic.com/research/claude-code-sandboxing',
+    versionOrDate: '页面未标注发布日期（正文提到研究预览版）；页脚 © 2026 Anthropic PBC',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '说明「基于权限的模型」默认只读、需要显式批准才能修改或执行，并用操作系统级原语实现文件系统隔离（只可访问指定目录）与网络隔离（只可连批准的主机），指出两者缺一不可——支持「权限是授权规则、沙箱是执行范围隔离，二者互补且都由执行侧强制」。',
+  }),
+  'src-arxiv-injection-design-patterns': Object.freeze({
+    id: 'src-arxiv-injection-design-patterns',
+    type: 'external',
+    title: 'Design Patterns for Securing LLM Agents against Prompt Injections',
+    org: 'arXiv（作者 Beurer-Kellner、Buesser、Creţu 等）',
+    where: 'arxiv.org/abs/2506.08837',
+    url: 'https://arxiv.org/abs/2506.08837',
+    versionOrDate: 'arXiv:2506.08837v3（2025-06-27 修订；v1 于 2025-06-10 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '提出一组面向提示注入的架构级设计模式，并分析其在实用性与安全性上的取舍——支持「面对不可信输入，单靠内容过滤不够，要在动作与权限层面做结构性约束」。',
+  }),
+  'src-willison-lethal-trifecta': Object.freeze({
+    id: 'src-willison-lethal-trifecta',
+    type: 'external',
+    title: 'The lethal trifecta for AI agents: private data, untrusted content, and external communication',
+    org: 'Simon Willison（个人技术博客；提示注入一词的提出者）',
+    where: 'simonwillison.net/2025/Jun/16/the-lethal-trifecta/',
+    url: 'https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/',
+    versionOrDate: '2025-06-16 发布',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '指出「私有数据 + 不可信内容 + 对外通信」三种能力同时存在时攻击者可窃取数据；并写明护栏产品无法 100% 拦住、模型不能可靠区分指令来源——支持「提示注入不可靠关键词过滤彻底防御」与「减少能力组合比叠加过滤器更有效」。',
+  }),
+  'src-arxiv-agentdojo': Object.freeze({
+    id: 'src-arxiv-agentdojo',
+    type: 'external',
+    title: 'AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents',
+    org: 'arXiv（作者 Debenedetti、Zhang、Balunović 等）',
+    where: 'arxiv.org/abs/2406.13352',
+    url: 'https://arxiv.org/abs/2406.13352',
+    versionOrDate: 'arXiv:2406.13352v3（2024-11-24 修订；v1 于 2024-06-19 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '提供 97 个真实任务与 629 个安全测试用例来度量 Agent 对提示注入的鲁棒性，并指出已有攻击只破坏部分安全属性——支持「评估要看具体属性与可复现用例，而且单个样例通过不代表系统安全」。',
+  }),
+  'src-arxiv-helm': Object.freeze({
+    id: 'src-arxiv-helm',
+    type: 'external',
+    title: 'Holistic Evaluation of Language Models',
+    org: 'arXiv（斯坦福 CRFM 团队，作者 Liang、Bommasani 等；TMLR 2023）',
+    where: 'arxiv.org/abs/2211.09110',
+    url: 'https://arxiv.org/abs/2211.09110',
+    versionOrDate: 'arXiv:2211.09110v2（2023-10-01 修订；v1 于 2022-11-16 提交）',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '把评估定义为「场景 × 指标」的矩阵：同一批模型在标准化的场景与 7 类指标（准确率、校准、鲁棒性、公平性、偏见、毒性、效率）下对比，并公开原始提示与输出——支持「评估需要固定任务、固定判定标准与可复现记录，单一指标不足以说明问题」。',
+  }),
+  'src-otel-traces': Object.freeze({
+    id: 'src-otel-traces',
+    type: 'external',
+    title: 'Traces · OpenTelemetry 文档（Concepts / Signals）',
+    org: 'OpenTelemetry（CNCF 项目，官方文档）',
+    where: 'opentelemetry.io/docs/concepts/signals/traces/',
+    url: 'https://opentelemetry.io/docs/concepts/signals/traces/',
+    versionOrDate: '文档页未标注版本；核验时间 2026-10-23',
+    checkedAt: '2026-10-23',
+    reviewed: true,
+    claim: '把 trace 定义为一次操作链路的记录，由带父子关系与时间信息的 span 组成——支持「Tracing 记录步骤、输入输出摘要与时间顺序，用来定位问题与追责」。',
+  }),
+  'doc-m1-3-task': Object.freeze({
+    id: 'doc-m1-3-task',
+    type: 'internal',
+    title: 'M1.3_TASK.md · Agent 进阶与运行机制任务书',
+    where: 'docs/M1.3_TASK.md',
+    url: null,
+    versionOrDate: '仓库内文件',
+    checkedAt: null,
+    reviewed: true,
+    claim: '第 04–06 章 18 个概念的技术准确性红线、三个实验的验收底线与「模拟不等于真实」的声明要求来自该任务书。',
+  }),
+}));
 
 /** 未知来源 ID → null，调用方显示「来源待登记」而不是假装有引用 */
 export function getSource(sourceId) {

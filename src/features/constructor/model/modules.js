@@ -12,10 +12,11 @@
  */
 
 /** 本阶段允许装配的模块标识（每种最多 1 个实例） */
-export const MODULE_IDS = Object.freeze(['announcement_search', 'document_reader']);
+import { EXTRA_MODULES, TOOL_EXTRA_FIELDS } from './catalog.js';
+export const MODULE_IDS = Object.freeze(['announcement_search', 'document_reader', ...Object.keys(EXTRA_MODULES)]);
 
 /** 本阶段定义的兼容端口标识 */
-export const PORT_IDS = Object.freeze(['SEARCH_PORT', 'READER_PORT']);
+export const PORT_IDS = Object.freeze(['SEARCH_PORT', 'READER_PORT', ...Object.values(EXTRA_MODULES).map(m=>m.portId)]);
 
 /**
  * 端口注册表。
@@ -24,6 +25,7 @@ export const PORT_IDS = Object.freeze(['SEARCH_PORT', 'READER_PORT']);
  * 该序号是稳定标识，不用网格位置或 DOM 下标判断身份（M0.2_TASK §3.2）。
  */
 export const PORTS = Object.freeze({
+  ...Object.fromEntries(Object.values(EXTRA_MODULES).map((m,i)=>[m.portId,{id:m.portId,name:m.portId,cn:`${m.cn}接口`,accepts:[m.id],anchorIndex:[0,2,3,4,5,6,7,8,9][i],note:m.tagline}])),
   SEARCH_PORT: {
     id: 'SEARCH_PORT',
     name: 'SEARCH_PORT',
@@ -55,7 +57,7 @@ export const PERMISSION_FIELD = Object.freeze({
  * 模块定义。settings 字段使用判别联合，而不是任由 Record<string, unknown> 蔓延。
  * numeric 为 true 时，值在写入前会被规范化为数字。
  */
-export const MODULES = Object.freeze({
+const TOOL_MODULES = {
   announcement_search: {
     id: 'announcement_search',
     name: 'Announcement Search',
@@ -142,6 +144,11 @@ export const MODULES = Object.freeze({
       },
     ]),
   },
+};
+
+export const MODULES = Object.freeze({
+  ...Object.fromEntries(Object.entries(TOOL_MODULES).map(([id,m])=>[id,{...m,moduleType:'tools',category:'工具',singleton:true,available:true,dependencies:[],systemRelation:'tool-access',conflicts:[],conceptIds:['tool_calling','tools','api'],fields:Object.freeze([...m.fields,...TOOL_EXTRA_FIELDS])}])),
+  ...EXTRA_MODULES,
 });
 
 /** 取模块定义；未知标识返回 null（调用方必须显式处理） */
@@ -166,7 +173,8 @@ export function defaultSettings(moduleId) {
   const mod = getModule(moduleId);
   if (!mod) return {};
   const out = {};
-  for (const field of mod.fields) out[field.key] = field.default;
+  if (moduleId === 'runtime') return out;
+  for (const field of mod.fields) if(field.scope !== 'root') out[field.key] = Array.isArray(field.default) ? [...field.default] : field.default;
   return out;
 }
 
@@ -181,7 +189,7 @@ export function defaultPermissions() {
 export function fieldsOf(moduleId) {
   const mod = getModule(moduleId);
   if (!mod) return [];
-  return [...mod.fields, PERMISSION_FIELD];
+  return mod.moduleType === 'tools' ? [...mod.fields, PERMISSION_FIELD] : mod.fields;
 }
 
 /** 左侧能力架 / 2D 节点使用的紧凑标签 */

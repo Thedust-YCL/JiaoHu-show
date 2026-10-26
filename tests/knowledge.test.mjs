@@ -30,6 +30,7 @@ import {
   conceptAvailability,
   conceptsByChapter,
   experimentOfConcept,
+  experimentByLabKind,
   experimentsByChapter,
   getChapter,
   getConcept,
@@ -44,6 +45,7 @@ import {
   validateKnowledge,
   validateSources,
 } from '../src/knowledge/index.js';
+import { defineConcept } from '../src/knowledge/concepts/helpers.js';
 
 /* ==================================================================== *
  * A01 数据自洽：统一校验器必须零问题
@@ -200,15 +202,18 @@ test('A06 搜索：部分匹配、空查询与零结果状态清晰', () => {
   assert.equal(none.cleared, false);
 });
 
-test('A06 搜索：可按章节限定范围，且 outline 概念可选择排除', () => {
+test('A06 搜索：可按章节限定范围，includeOutline 参数仍生效（M1.3 已无索引态概念）', () => {
   const onlyConnection = searchConcepts('工具', { chapterId: 'connection' });
   for (const match of onlyConnection.matches) assert.equal(match.concept.chapterId, 'connection');
 
-  // M1.2 之后第 01–03 章全部有正文，因此用 M1.3 章节里的 outline 概念验证「可排除」
-  const withOutline = searchConcepts('chunking');
-  const withoutOutline = searchConcepts('chunking', { includeOutline: false });
-  assert.ok(withOutline.matches.some((m) => m.concept.contentStatus === 'outline'));
-  assert.equal(withoutOutline.matches.length, 0);
+  // M1.3 起六章 36 个概念全部有正文，因此「排除索引态」不会再筛掉任何结果；
+  // 这里同时验证参数本身没有退化为「关掉搜索」。
+  const outlineIds = CONCEPT_ORDER.filter((id) => CONCEPTS[id].contentStatus === 'outline');
+  assert.deepEqual(outlineIds, [], 'M1.3 交付后不应再有只有索引的概念');
+  const withOutline = searchConcepts('检索');
+  const withoutOutline = searchConcepts('检索', { includeOutline: false });
+  assert.ok(withOutline.matches.length > 0);
+  assert.equal(withoutOutline.matches.length, withOutline.matches.length);
   assert.ok(withoutOutline.matches.every((m) => m.concept.contentStatus !== 'outline'));
 });
 
@@ -234,33 +239,35 @@ test('A07 内容状态：四种状态齐全，且决定可用性', () => {
 
   const stats = knowledgeStats();
   assert.equal(stats.byStatus.draft, 0, '本轮没有未审校的草稿正文');
-  // M1.2：第 01–03 章 18 个概念全部有正文，其中 7 个挂了可操作实验（published）
-  assert.equal(stats.byStatus.published, 7, 'M1.2 三个实验对应的概念均为已发布');
-  assert.equal(stats.byStatus.outline, 13, '第 04–06 章仍有 13 个概念只有索引');
-  assert.equal(stats.byStatus.reviewed, 16);
+  // M1.3：六章 36 个概念全部有正文；其中 25 个挂了可操作实验（published），11 个仅正文（reviewed）
+  assert.equal(stats.byStatus.published, 25, '六个实验覆盖的 25 个概念均为已发布');
+  assert.equal(stats.byStatus.outline, 0, 'M1.3 交付后不再有只有索引的概念');
+  assert.equal(stats.byStatus.reviewed, 11);
   assert.equal(stats.byStatus.published + stats.byStatus.reviewed + stats.byStatus.outline, 36);
 });
 
-test('A07 内容状态：outline 概念没有正文，也不提供实验入口', () => {
-  const outlineConcepts = CONCEPT_ORDER.map((id) => CONCEPTS[id]).filter((c) => c.contentStatus === 'outline');
-  assert.equal(outlineConcepts.length, 13, '仅第 04–06 章仍为索引态');
-  for (const concept of outlineConcepts) {
-    assert.equal(concept.understand.length, 0, concept.id);
-    assert.equal(concept.inspect.length, 0, concept.id);
-    assert.equal(concept.misconceptions.length, 0, concept.id);
-    assert.ok(concept.plannedMilestone, `${concept.id} 必须写明计划阶段`);
-    assert.equal(concept.experimentId, null, concept.id);
+test('A07 内容状态：reviewed 概念有正文但没有实验入口（不出现假按钮）', () => {
+  const reviewed = CONCEPT_ORDER.map((id) => CONCEPTS[id]).filter((c) => c.contentStatus === 'reviewed');
+  assert.equal(reviewed.length, 11);
+  for (const concept of reviewed) {
+    assert.ok(concept.understand.length > 0, concept.id);
+    assert.ok(concept.inspect.length > 0, concept.id);
+    assert.equal(concept.experimentId, null, `${concept.id} 不应声明实验入口`);
     const availability = conceptAvailability(concept.id);
-    assert.equal(availability.hasBody, false);
-    assert.equal(availability.canRunExperiment, false);
-    assert.equal(availability.indexed, true, '索引页仍然可访问');
-    assert.equal(availability.statusMeta.id, 'outline');
+    assert.equal(availability.hasBody, true, concept.id);
+    assert.equal(availability.canRunExperiment, false, `${concept.id} 未发布就不能运行实验`);
+    assert.equal(availability.indexed, true, '知识页仍然可访问');
+    assert.equal(availability.statusMeta.id, 'reviewed');
+  }
+  // 反过来：published 概念必须能打开真实实验
+  for (const concept of CONCEPT_ORDER.map((id) => CONCEPTS[id]).filter((c) => c.contentStatus === 'published')) {
+    assert.equal(conceptAvailability(concept.id).canRunExperiment, true, concept.id);
   }
 });
 
-test('A08 分层模板：已审校 / 已发布概念都有 UNDERSTAND 与 INSPECT 数据', () => {
+test('A08 分层模板：全部 36 个概念都有 UNDERSTAND 与 INSPECT 数据', () => {
   const bodyConcepts = CONCEPT_ORDER.map((id) => CONCEPTS[id]).filter((c) => hasBody(c.contentStatus));
-  assert.equal(bodyConcepts.length, 23, 'M1.2 之后 23 个概念有正文（10 + 13 新增）');
+  assert.equal(bodyConcepts.length, 36, 'M1.3 之后 36 个概念全部有正文');
   for (const concept of bodyConcepts) {
     assert.ok(concept.oneLiner.length >= 8, `${concept.id} 一句话解释`);
     assert.ok(concept.understand.length >= 1, `${concept.id} UNDERSTAND`);
@@ -283,17 +290,17 @@ test('A09 误区模板：正文概念都有「误解 + 纠正」配对，缺字�
   }
   const toolCalling = CONCEPTS.tool_calling;
   assert.ok(toolCalling.misconceptions.length >= 2);
-  // 缺字段的情况：outline 概念没有误解，模板按「无误解」分支渲染而不是报错
-  assert.deepEqual([...CONCEPTS.chunking.misconceptions], []);
-  // 没有示例的概念：模板必须能处理 example === null（第 04–06 章索引态概念）
-  assert.equal(CONCEPTS.chunking.example, null);
-  assert.ok(CONCEPTS.llm.example && CONCEPTS.llm.example.isSimulated === true);
-  // M1.2：所有有正文的概念，示例一律标注为本地示意，不得冒充真实输出
+  // 每个有正文的概念都必须至少一条「误解 + 纠正」
   for (const id of CONCEPT_ORDER) {
     const concept = CONCEPTS[id];
-    if (concept.example) assert.equal(concept.example.isSimulated, true, id);
     if (hasBody(concept.contentStatus)) assert.ok(concept.misconceptions.length >= 1, `${id} 必须有常见误解`);
+    if (concept.example) assert.equal(concept.example.isSimulated, true, `${id} 示例必须标注为本地示意`);
   }
+  // 模板对「没有误解/示例」的条目仍然安全：用最小合法定义验证默认值
+  const minimal = defineConcept({ id: 'unit-test-placeholder', chapterId: 'knowledge', order: 99, name: 'X', cn: '占位', contentStatus: 'reviewed' });
+  assert.deepEqual([...minimal.misconceptions], []);
+  assert.equal(minimal.example, null);
+  assert.ok(CONCEPTS.llm.example && CONCEPTS.llm.example.isSimulated === true);
 });
 
 /* ==================================================================== *
@@ -302,27 +309,34 @@ test('A09 误区模板：正文概念都有「误解 + 纠正」配对，缺字�
 test('A10 实验：只有登记且状态为 available 的实验才算真实入口', () => {
   const stats = knowledgeStats().experiments;
   assert.equal(stats.total, 6);
-  assert.equal(stats.available, 3, 'M1.2 之后三个实验真实可操作');
-  assert.equal(stats.planned, 3);
+  assert.equal(stats.available, 6, 'M1.3 起六个实验全部可操作');
+  assert.equal(stats.planned, 0, '不再有「登记了但不能点」的实验');
 
   const available = EXPERIMENTS.filter((e) => e.status === 'available');
-  assert.equal(available.length, 3);
-  assert.deepEqual(available.map((e) => e.id), ['exp-token-lab', 'exp-context-lab', 'exp-tool-calling-demo']);
+  assert.deepEqual(available.map((e) => e.id), [
+    'exp-token-lab',
+    'exp-context-lab',
+    'exp-tool-calling-demo',
+    'exp-retrieval-lab',
+    'exp-agent-loop-lab',
+    'exp-boundary-lab',
+  ]);
   for (const experiment of available) {
     assert.ok(EXPERIMENT_OPEN_MODES[experiment.openMode], `${experiment.id} 必须声明真实打开方式`);
     assert.ok(experiment.entryConceptId, `${experiment.id} 必须有入口概念`);
     assert.ok(experiment.conceptIds.includes(experiment.entryConceptId), `${experiment.id} 入口概念必须在关联列表里`);
     assert.ok(experiment.dataNote, `${experiment.id} 必须写明数据来源`);
-  }
-
-  for (const experiment of EXPERIMENTS.filter((e) => e.status !== 'available')) {
-    assert.equal(EXPERIMENT_STATUS[experiment.status].id, 'planned');
-    assert.equal(experiment.openMode, null, `${experiment.id} 不应声明打开方式`);
     assert.ok(experiment.milestone, `${experiment.id} 必须写明阶段`);
+  }
+  // 独立工作区实验必须声明 labKind（路由据此选择工厂），且一一对应
+  const workspaceLabs = available.filter((e) => e.openMode === 'lab-workspace');
+  assert.deepEqual(workspaceLabs.map((e) => e.labKind).sort(), ['context', 'knowledge', 'reliability', 'runtime', 'token']);
+  for (const experiment of workspaceLabs) {
+    assert.equal(experimentByLabKind(experiment.labKind)?.id, experiment.id, `${experiment.labKind} 必须唯一对应一个实验`);
   }
 });
 
-test('A10 实验：概念只能挂在真实可用的实验上，未开放概念不产生运行入口', () => {
+test('A10 实验：概念只能挂在真实可用的实验上，且入口与章节一致', () => {
   for (const id of CONCEPT_ORDER) {
     const concept = CONCEPTS[id];
     if (concept.experimentId) {
@@ -330,26 +344,32 @@ test('A10 实验：概念只能挂在真实可用的实验上，未开放概念�
       assert.ok(experiment, `${id} 指向未知实验`);
       assert.equal(experiment.status, 'available', `${id} 的实验室必须可用`);
       assert.equal(concept.contentStatus, 'published', `${id} 只有已发布概念才能挂实验`);
+      assert.ok(experiment.conceptIds.includes(id), `${id} 必须在该实验的关联概念里`);
     }
   }
   assert.equal(experimentOfConcept('tool_calling')?.id, 'exp-tool-calling-demo');
-  assert.equal(experimentOfConcept('llm'), null);
+  assert.equal(experimentOfConcept('llm'), null, '没有实验的概念必须返回 null');
   assert.equal(experimentOfConcept('token')?.id, 'exp-token-lab');
   assert.equal(experimentOfConcept('mcp')?.id, 'exp-tool-calling-demo');
-  // 计划中的实验可以登记给概念，但绝不产生可运行入口
-  const plannedForRetrieval = experimentOfConcept('retrieval');
-  assert.equal(plannedForRetrieval?.status, 'planned');
-  assert.equal(conceptAvailability('retrieval').canRunExperiment, false);
-  assert.equal(conceptAvailability('retrieval').plannedExperiment?.id, 'exp-retrieval-lab');
-  // 已发布概念必须能打开真实实验，且入口一致
-  for (const id of CONCEPT_ORDER) {
-    if (CONCEPTS[id].contentStatus !== 'published') continue;
-    const availability = conceptAvailability(id);
-    assert.equal(availability.canRunExperiment, true, `${id} 已发布但没有可运行实验`);
-    assert.ok(availability.experiment, `${id} 缺少实验登记`);
-  }
+  // M1.3：第 04–06 章的概念各自挂到对应实验
+  assert.equal(experimentOfConcept('chunking')?.id, 'exp-retrieval-lab');
+  assert.equal(experimentOfConcept('agent_loop')?.id, 'exp-agent-loop-lab');
+  assert.equal(experimentOfConcept('permissions')?.id, 'exp-boundary-lab');
+  assert.equal(conceptAvailability('retrieval').canRunExperiment, true);
+  assert.equal(conceptAvailability('retrieval').experiment?.id, 'exp-retrieval-lab');
   // 每章各有实验登记，Lab 目录不会出现空章节
   for (const chapter of CHAPTERS) assert.ok(experimentsByChapter(chapter.id).length >= 1, chapter.id);
+  // 每个实验的关联概念都必须真实存在；M1.3 三个新实验还要求同章归属
+  const sameChapterRequired = new Set(['exp-retrieval-lab', 'exp-agent-loop-lab', 'exp-boundary-lab']);
+  for (const experiment of EXPERIMENTS) {
+    for (const conceptId of experiment.conceptIds) {
+      const concept = getConcept(conceptId);
+      assert.ok(concept, `${experiment.id} 关联了不存在的概念 ${conceptId}`);
+      if (sameChapterRequired.has(experiment.id)) {
+        assert.equal(concept.chapterId, experiment.chapterId, `${experiment.id} 跨章关联了 ${conceptId}`);
+      }
+    }
+  }
 });
 
 /* ==================================================================== *
@@ -412,8 +432,9 @@ test('A13 关系：M0.3 的 10 条关系与语义标记完整迁移到统一数�
     assert.ok(edge.description.includes('；') || edge.description.includes('，'), `${id} 说明被改写`);
   }
   assert.equal(RELATIONSHIPS.filter((e) => e.origin === 'M0.3').length, 10);
-  // M1.1 新增 37 条 + M1.2 新增 1 条（tool_calling ↔ mcp）
-  assert.equal(RELATIONSHIPS.length, 48);
+  // M1.1 新增 37 条 + M1.2 新增 1 条（tool_calling ↔ mcp）+ M1.3 新增 1 条（agent_loop ↔ workflow 对照）
+  assert.equal(RELATIONSHIPS.length, 49);
+  assert.equal(RELATIONSHIPS.filter((e) => e.origin === 'M1.3').length, 1);
 });
 
 /* ==================================================================== *
@@ -452,7 +473,7 @@ test('A14 来源：没有伪造的外部链接，未审校来源被明确标记'
  * 星图节点集合的稳定性
  * ==================================================================== */
 test('星图：GRAPH_ORDER 与知识层一致，且未把 outline 概念画进画布', () => {
-  assert.equal(GRAPH_ORDER.length, 10);
+  assert.equal(GRAPH_ORDER.length, 36);
   for (const id of GRAPH_ORDER) {
     const concept = getConcept(id);
     assert.ok(concept, id);

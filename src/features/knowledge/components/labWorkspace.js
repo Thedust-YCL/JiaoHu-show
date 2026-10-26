@@ -57,10 +57,10 @@ export function createLabWorkspace({
   const main = h('section', { class: 'lab-main', 'aria-label': '实验登记表' });
   main.append(
     h('div', { class: 'lab-intro' }, `
-      <div class="story-intro__tag">M1.2 · 前三章实验</div>
-      <h2 class="story-intro__title">三个实验，一条研究叙事</h2>
-      <p class="story-intro__lead">Lab 01 拆开「模型读到的是什么」，Lab 02 拆开「指令与上下文怎么改变产出」，Lab 03 拆开「资料是怎么被真的拿回来的」。
-      三个实验都跑在同一条虚构研究任务上：<b>整合分散的校园活动公告是否可行</b>。全部在本地运行，不联网、不调用任何模型；实验完成状态只在真实操作并看到结果后才记录。</p>`)
+      <div class="story-intro__tag">M1.3 · 六个实验，一条研究叙事</div>
+      <h2 class="story-intro__title">六个实验，一条研究叙事</h2>
+      <p class="story-intro__lead">Lab 01–03（M1.2）拆开「模型读到什么、指令怎么改变产出、资料怎么被拿回来」；Lab 04–06（M1.3）拆开「拿回来之后怎么找、谁决定下一步、怎么限制与验证」。
+      六个实验都跑在同一条虚构研究任务上：<b>整合分散的校园活动公告是否可行</b>。全部在本地运行，不联网、不调用任何模型；实验完成状态只在真实操作并看到结果后才记录。</p>`)
   );
 
   const available = EXPERIMENTS.filter((e) => e.status === 'available');
@@ -97,15 +97,16 @@ export function createLabWorkspace({
     }
     card.append(rowActions);
 
-    const done = learning?.isExperimentCompleted?.(experiment.entryConceptId);
+    const done = learning?.isLabCompleted?.(experiment.id);
     if (done) card.append(h('div', { class: 'lab-item__done' }, '<span class="tag tag--success">已完成（本地记录）</span>'));
     featured.append(card);
   }
   main.append(featured);
 
   /* 计划中的实验：只写状态，不渲染按钮 */
-  const planned = h('div', { class: 'lab-grid' });
-  for (const experiment of EXPERIMENTS.filter((e) => e.status !== 'available')) {
+  const plannedList = EXPERIMENTS.filter((e) => e.status !== 'available');
+  const planned = h('div', { class: 'lab-grid', 'data-act': 'planned-grid' });
+  for (const experiment of plannedList) {
     const chapter = getChapter(experiment.chapterId);
     const meta = EXPERIMENT_STATUS[experiment.status] || EXPERIMENT_STATUS.planned;
     const card = h('section', { class: 'lab-card', 'data-chapter': experiment.chapterId, 'data-experiment': experiment.id });
@@ -123,7 +124,7 @@ export function createLabWorkspace({
     );
     planned.append(card);
   }
-  main.append(planned);
+  if (plannedList.length) main.append(planned);
 
   /* ----------------------------- 侧栏 ----------------------------- */
   const aside = h('aside', { class: 'lab-aside surface', 'aria-label': '实验边界说明' });
@@ -131,25 +132,30 @@ export function createLabWorkspace({
   aside.append(h('div', { class: 'panel-head' }, '<span class="panel-head__title">实验边界</span>'), asideBody);
   asideBody.append(
     h('div', { class: 'section' }, `
-      <div class="section__label"><span>本轮三个实验</span></div>
+      <div class="section__label"><span>本轮六个实验</span></div>
       <div class="note note--info"><span class="note__key">Lab 01</span><span>真实分词 · 离线预计算：token 数来自 gpt-tokenizer 在构建期切分并逐条回译校验的结果，运行期不含分词器本体。</span></div>
       <div class="note note--info" style="margin-top:6px"><span class="note__key">Lab 02</span><span>确定性规则：同一配置永远得到同一份报告；没有资料时写「未验证」，不编造引文。</span></div>
-      <div class="note note--info" style="margin-top:6px"><span class="note__key">Lab 03</span><span>复用 M0.3 引擎：直连与 MCP 路径共用同一份事件轨迹，协议不改变事实。</span></div>`),
+      <div class="note note--info" style="margin-top:6px"><span class="note__key">Lab 03</span><span>复用 M0.3 引擎：直连与 MCP 路径共用同一份事件轨迹，协议不改变事实。</span></div>
+      <div class="note note--info" style="margin-top:6px"><span class="note__key">Lab 04</span><span>切分 / 检索 / RAG 全是本地规则；二维向量是人工设定的示意坐标，浏览器里没有 Embedding 模型。</span></div>
+      <div class="note note--info" style="margin-top:6px"><span class="note__key">Lab 05</span><span>Workflow 与 Agent Loop 共用同一份语料、工具与权限；事件由确定性状态机生成，播放只揭示事件。</span></div>
+      <div class="note note--info" style="margin-top:6px"><span class="note__key">Lab 06</span><span>权限与沙箱是前端判定规则（非真实隔离）；注入样本为明确标记的教学模拟文本。</span></div>`),
     h('div', { class: 'section' }, `
       <div class="section__label"><span>不会做的事</span><span>红线</span></div>
       <div class="kv">
         <dt>联网</dt><dd>不发起任何网络请求，语料随页面打包</dd>
         <dt>真实模型</dt><dd>不调用任何在线模型或推理服务</dd>
+        <dt>真实向量</dt><dd>不声称浏览器在做语义向量检索或调用 Embedding 服务</dd>
         <dt>假按钮</dt><dd>未开放实验只显示文字说明，不渲染运行按钮</dd>
         <dt>假进度</dt><dd>没有虚构的完成度或评分</dd>
         <dt>假协议</dt><dd>MCP 只做路径可视化，不声称实现真实握手或 SDK</dd>
+        <dt>假安全</dt><dd>权限 / 沙箱 / 护栏均为前端模拟，不构成真实隔离或安全认证</dd>
       </div>`),
     h('div', { class: 'section' }, `
       <div class="section__label"><span>阶段归属</span></div>
       <div class="mono kn-progress">
         <div>第 01–03 章实验 → M1.2（已开放）</div>
-        <div>第 04–06 章实验 → M1.3</div>
-        <div>六章实验联动与星图体验 → M1.4</div>
+        <div>第 04–06 章实验 → M1.3（已开放）</div>
+        <div>Agent Constructor 扩展与高级编排 → M2</div>
       </div>`)
   );
 

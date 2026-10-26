@@ -11,6 +11,8 @@
  * ------------------------------------------------------------------
  */
 
+import { NODE_LAYOUT } from '../layout.js';
+
 /** 内容状态：唯一决定「能不能当正文读」的字段 */
 export const CONTENT_STATUS = Object.freeze({
   outline: Object.freeze({
@@ -39,7 +41,7 @@ export const CONTENT_STATUS = Object.freeze({
     cn: '已发布 · 含实验',
     tone: 'success',
     hasBody: true,
-    note: '正文与可操作实验同时可用：当前仅 Tool Calling 具备完整四步学习路径。',
+    note: '正文与可操作实验同时可用：第 01–03 章配合 M1.2 的三个实验，第 04–06 章配合 M1.3 的三个实验。',
   }),
 });
 
@@ -97,7 +99,7 @@ export function defineConcept(record) {
     /** 装配台落点：core / tools / none（沿用 M0.3 语义） */
     systemTarget: record.systemTarget || 'none',
     /** 星图坐标：只有拥有固定布局的节点才画在画布上 */
-    graph: record.graph ? Object.freeze({ x: record.graph.x, y: record.graph.y }) : null,
+    graph: record.graph ? Object.freeze({ x: record.graph.x, y: record.graph.y }) : NODE_LAYOUT[record.id] || null,
     /** 本轮审校范围说明：让读者知道哪些段落是何时核对的 */
     reviewNote: record.reviewNote || null,
     /** 审校日期（YYYY-MM-DD）：与来源的 checkedAt 对应，便于交付文档逐条核对 */

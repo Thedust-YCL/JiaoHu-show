@@ -148,22 +148,21 @@ export async function runM12Acceptance({ cdp, shot, waitReady: ready = waitReady
     data.validation.length === 0 &&
       data.stats.chapters === 6 &&
       data.concepts.length === 36 &&
-      data.experiments.filter((e) => e.status === 'available').length === 3,
+      data.experiments.filter((e) => e.status === 'available').length === 6,
     `validateKnowledge 问题=${data.validation.length} · 章节=${data.stats.chapters} · 概念=${data.concepts.length} · 可用实验=${data.experiments.filter((e) => e.status === 'available').length}`
   );
 
   const ch456 = data.concepts.filter((c) => ['knowledge', 'runtime', 'reliability'].includes(c.chapterId));
   rec(
     'A02',
-    '章节目录：Chapter 01/02/03 完整导航，Chapter 04–06 保持原状态',
+    '章节目录：六章全部可导航；第 04–06 章由 M1.3 交付后为已发布状态',
     data.chapters.length === 6 &&
-      data.story.filter((s) => s.available).map((s) => s.id).join(',') === 'intelligence,context,connection' &&
-      // 第 04–06 章维持 M1.1 原状：13 个索引态 + 5 个已审校，本轮不得新增已发布
+      data.story.filter((s) => s.available).map((s) => s.id).join(',') ===
+        'intelligence,context,connection,knowledge,runtime,reliability' &&
+      // M1.3 交付后第 04–06 章 18 个概念全部为已发布，并各自挂到对应实验
       ch456.length === 18 &&
-      ch456.filter((c) => c.status === 'outline').length === 13 &&
-      ch456.filter((c) => c.status === 'reviewed').length === 5 &&
-      ch456.every((c) => c.status !== 'published' && c.canRunExperiment === false),
-    `叙事章节=${data.story.filter((s) => s.available).length} · 第 04–06 章 outline=${ch456.filter((c) => c.status === 'outline').length}/13 · reviewed=${ch456.filter((c) => c.status === 'reviewed').length}/5 · 新增已发布=${ch456.filter((c) => c.status === 'published').length}`
+      ch456.every((c) => c.status === 'published' && c.canRunExperiment === true),
+    `叙事章节=${data.story.filter((s) => s.available).length} · 第 04–06 章已发布=${ch456.filter((c) => c.status === 'published').length}/18 · 可运行实验=${ch456.filter((c) => c.canRunExperiment).length}/18`
   );
 
   rec(
@@ -215,7 +214,7 @@ export async function runM12Acceptance({ cdp, shot, waitReady: ready = waitReady
     'A09',
     '关系图谱：相关边语义明确，无杜撰的必要依赖',
     data.validation.filter((v) => String(v.code).startsWith('EDGE') || String(v.code).startsWith('CONCEPT_RELATED')).length === 0 &&
-      data.stats.edges === 48 &&
+      data.stats.edges === 49 &&
       ch123.every((c) => c.related.length >= 1),
     `关系总数=${data.stats.edges} · 关系类问题=${data.validation.filter((v) => String(v.code).startsWith('EDGE')).length} · 每概念有 related=${ch123.every((c) => c.related.length >= 1)}`
   );
@@ -282,6 +281,7 @@ export async function runM12Acceptance({ cdp, shot, waitReady: ready = waitReady
       limit: main ? (main.querySelector('.ch-limit__text')?.textContent || '') : '',
       labExperiment: document.querySelector('.ch-lab')?.getAttribute('data-experiment') || null,
       nextPlanned: !!document.querySelector('[data-act="next-planned"]'),
+      nextBtn: document.querySelector('[data-act="next-chapter"]')?.textContent || '',
     };
   })()`);
   rec(
@@ -298,10 +298,16 @@ export async function runM12Acceptance({ cdp, shot, waitReady: ready = waitReady
 
   rec(
     'A13',
-    '叙事衔接：模型→上下文→工具→后续知识章节自然连贯',
-    data.story[0].next === 'context' && data.story[1].next === 'connection' && data.story[2].next === null &&
-      ch1.nextBtn.includes('第 02 章') && ch3.nextPlanned && !!ch1.atlasBtn,
-    `过渡链=${data.story.map((s) => `${s.id}→${s.next || 'M1.3'}`).join(' ')} · 第 01 章下一章按钮=「${ch1.nextBtn}」· 第 03 章后续阶段说明=${ch3.nextPlanned}`
+    '叙事衔接：模型→上下文→工具→知识检索自然连贯（六章成链）',
+    data.story[0].next === 'context' &&
+      data.story[1].next === 'connection' &&
+      data.story[2].next === 'knowledge' &&
+      data.story[5].next === null &&
+      ch1.nextBtn.includes('第 02 章') &&
+      /第 04 章/.test(ch3.nextBtn) &&
+      !ch3.nextPlanned &&
+      !!ch1.atlasBtn,
+    `过渡链=${data.story.map((s) => `${s.id}→${s.next || 'M1.4'}`).join(' ')} · 第 01 章下一章按钮=「${ch1.nextBtn}」· 第 03 章下一章按钮=「${ch3.nextBtn}」`
   );
 
   /* ================================================================== *
@@ -574,7 +580,7 @@ export async function runM12Acceptance({ cdp, shot, waitReady: ready = waitReady
     kToken.hasRun &&
       /Lab 01/.test(kToken.runText) &&
       navAfterRun.kind === 'lab-token' &&
-      storyHasChapter === 3 &&
+      storyHasChapter === 6 &&
       chapterFromStory.kind === 'chapter' &&
       labFromChapter.kind === 'lab-token' &&
       kToken.layerButtons === 2 &&

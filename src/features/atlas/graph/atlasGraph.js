@@ -38,7 +38,7 @@ function svgEl(tag, attrs = {}) {
   return el;
 }
 
-export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion = false } = {}) {
+export function createAtlasGraph({ onSelectConcept, onOpenConcept, onSelectEdge, reducedMotion = false } = {}) {
   const root = document.createElement('div');
   root.className = 'atlas-graph';
 
@@ -47,7 +47,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     viewBox: `0 0 ${GRAPH_VIEW.width} ${GRAPH_VIEW.height}`,
     preserveAspectRatio: 'xMidYMid meet',
     role: 'group',
-    'aria-label': `知识星图画布：包含 ${MODEL.nodes.length} 个已开放概念节点与它们的语义关系，可用鼠标或触控平移缩放；其余概念在左侧目录中标注为建设中`,
+    'aria-label': `知识星图画布：${MODEL.nodes.length} 个概念，可平移缩放；也可用概念目录探索`,
   });
 
   const defs = svgEl('defs');
@@ -127,6 +127,8 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     const g = svgEl('g', {
       class: 'atlas-node',
       'data-concept': id,
+      'data-chapter': concept.chapterId,
+      'data-status': concept.contentStatus,
       'data-target': concept.systemTarget,
       transform: `translate(${x},${y})`,
       tabindex: '0',
@@ -141,8 +143,9 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     const name = svgEl('text', { class: 'atlas-node__name', y: 2, 'text-anchor': 'middle' });
     name.textContent = concept.name;
     const cn = svgEl('text', { class: 'atlas-node__cn', y: 19, 'text-anchor': 'middle' });
-    cn.textContent = concept.cn;
+    cn.textContent = concept.cn.split(/[（(]/)[0];
     g.append(idx, name, cn);
+    const title = svgEl('title'); title.textContent = `第${concept.chapterNo}章 · ${concept.cn} / ${concept.name}`; g.append(title);
     if (hasLanding) {
       g.append(svgEl('rect', { class: 'atlas-node__mark', x: -4, y: -NODE_R - 6, width: 8, height: 8, rx: 1 }));
     }
@@ -154,6 +157,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     g.addEventListener('dblclick', (e) => {
       e.stopPropagation();
       focusConcept(id);
+      onOpenConcept?.(id);
     });
     g.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -174,6 +178,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
 
   function applyTransform() {
     viewport.setAttribute('transform', `translate(${transform.x.toFixed(2)},${transform.y.toFixed(2)}) scale(${transform.k.toFixed(4)})`);
+    root.dataset.density = transform.k < 1.3 ? 'overview' : 'detail';
   }
 
   function clampTransform() {
@@ -208,6 +213,12 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
 
   /** 客户端坐标 → viewBox 坐标（缩放锚点与平移换算共用） */
   function toLocal(clientX, clientY) {
+    const matrix = svg.getScreenCTM();
+    if (matrix) {
+      const point = svg.createSVGPoint();
+      point.x = clientX; point.y = clientY;
+      return point.matrixTransform(matrix.inverse());
+    }
     const rect = svg.getBoundingClientRect();
     if (!rect.width || !rect.height) return { x: GRAPH_VIEW.width / 2, y: GRAPH_VIEW.height / 2 };
     return {
@@ -228,6 +239,7 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
 
   svg.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e.target.closest('.atlas-node, .atlas-edge')) return;
     dragging = { id: e.pointerId, startX: e.clientX, startY: e.clientY, x0: transform.x, y0: transform.y, moved: false };
     // 合成事件 / 无活动指针时 setPointerCapture 会抛 NotFoundError：
     // 捕获失败只影响「拖出画布仍能收到事件」，不应让整个画布交互中断
@@ -241,10 +253,10 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
 
   svg.addEventListener('pointermove', (e) => {
     if (!dragging || dragging.id !== e.pointerId) return;
-    const rect = svg.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const dx = ((e.clientX - dragging.startX) / rect.width) * GRAPH_VIEW.width;
-    const dy = ((e.clientY - dragging.startY) / rect.height) * GRAPH_VIEW.height;
+    const current = toLocal(e.clientX, e.clientY);
+    const start = toLocal(dragging.startX, dragging.startY);
+    const dx = current.x - start.x;
+    const dy = current.y - start.y;
     if (Math.abs(dx) + Math.abs(dy) > 4) dragging.moved = true;
     setTransform({ x: dragging.x0 + dx, y: dragging.y0 + dy });
   });
@@ -261,6 +273,8 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
   /* ---------------- 状态表现 ---------------- */
   let selectedId = null;
   let selectedEdgeId = null;
+  let visibleNodes = new Set(MODEL.nodes.map(n => n.id));
+  let visibleEdges = new Set(MODEL.edges.map(e => e.id));
 
   /** 选中与匹配的视觉：其余节点降亮，让「现在该看哪个」一眼可读 */
   function refresh() {
@@ -268,11 +282,14 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     if (selectedId) {
       relatedIds.add(selectedId);
       for (const edge of MODEL.edges) {
+        if (!visibleEdges.has(edge.id)) continue;
         if (edge.sourceId === selectedId) relatedIds.add(edge.targetId);
         if (edge.targetId === selectedId) relatedIds.add(edge.sourceId);
       }
     }
     for (const [id, g] of nodeRefs) {
+      g.style.display = visibleNodes.has(id) ? '' : 'none';
+      g.setAttribute('tabindex', visibleNodes.has(id) ? '0' : '-1');
       const isSelected = id === selectedId;
       const isRelated = !!selectedId && relatedIds.has(id) && !isSelected;
       g.classList.toggle('is-selected', isSelected);
@@ -282,6 +299,8 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     for (const edge of MODEL.edges) {
       const ref = edgeRefs.get(edge.id);
       if (!ref) continue;
+      ref.g.style.display = visibleEdges.has(edge.id) ? '' : 'none';
+      ref.g.setAttribute('tabindex', visibleEdges.has(edge.id) ? '0' : '-1');
       const touches = !!selectedId && (edge.sourceId === selectedId || edge.targetId === selectedId);
       ref.g.classList.toggle('is-active', touches || edge.id === selectedEdgeId);
       ref.g.classList.toggle('is-dim', !!selectedId && !touches);
@@ -331,8 +350,9 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
 
   /** 适配视窗：按节点包围盒取一个可读的缩放，仍受上下限幅约束 */
   function fitView() {
-    const xs = MODEL.nodes.map((node) => NODE_LAYOUT[node.id].x);
-    const ys = MODEL.nodes.map((node) => NODE_LAYOUT[node.id].y);
+    if (!visibleNodes.size) { resetView(); return; }
+    const xs = [...visibleNodes].map(id => NODE_LAYOUT[id].x);
+    const ys = [...visibleNodes].map(id => NODE_LAYOUT[id].y);
     const pad = NODE_R + 66;
     const minX = Math.min(...xs) - pad;
     const maxX = Math.max(...xs) + pad;
@@ -355,6 +375,13 @@ export function createAtlasGraph({ onSelectConcept, onSelectEdge, reducedMotion 
     resetView,
     fitView,
     zoomBy,
+    setFilter(nodes, edges) {
+      visibleNodes = new Set(nodes.map(n => n.id));
+      visibleEdges = new Set(edges.map(e => e.id));
+      if (!visibleNodes.has(selectedId)) selectedId = null;
+      if (!visibleEdges.has(selectedEdgeId)) selectedEdgeId = null;
+      refresh();
+    },
     getTransform: () => ({ ...transform }),
     nodeElement: (id) => nodeRefs.get(id) || null,
     edgeElement: (id) => edgeRefs.get(id)?.g || null,

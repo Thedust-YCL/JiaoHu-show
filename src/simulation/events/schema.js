@@ -57,6 +57,19 @@ export const ACTOR_META = Object.freeze({
 
 /** 事件类型：字符串常量集中定义，UI 只按类型分派，不看中文文案 */
 export const EVENT_TYPES = Object.freeze({
+  RUNTIME_CONTROL:'runtime.control',
+  STEP_STARTED:'step.started',
+  STEP_FINISHED:'step.finished',
+  RUNTIME_DECISION:'runtime.decision',
+  RETRY:'tool.retry',
+  PERMISSION_CHECK:'permission.check',
+  APPROVAL_REQUEST:'permission.requested',
+  APPROVAL_GRANTED:'permission.approved',
+  APPROVAL_DENIED:'permission.denied',
+  GUARDRAIL_DECISION:'guardrail.decision',
+  ROLE_HANDOFF:'role.handoff',
+  RUN_FAILED:'run.failed',
+  RUN_CANCELLED:'run.cancelled',
   RUN_STARTED: 'run.started',
   CONFIG_VALIDATED: 'config.validated',
   TASK_PLAN: 'task.plan_created',
@@ -184,6 +197,7 @@ export function createEvent({
   evidenceIds = [],
   branchId = null,
   ruleId = null,
+  runtime = null,
 }) {
   if (!PHASES.includes(phase)) throw new Error(`未知事件阶段：${String(phase)}`);
   if (!STATUSES.includes(status)) throw new Error(`未知事件状态：${String(status)}`);
@@ -206,6 +220,7 @@ export function createEvent({
     evidenceIds: Object.freeze([...evidenceIds]),
     branchId,
     ruleId,
+    ...(runtime || {}),
   });
 }
 

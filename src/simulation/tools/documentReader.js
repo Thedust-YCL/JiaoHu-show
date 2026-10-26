@@ -35,6 +35,7 @@ export function validateReadSettings(settings = {}) {
   const errors = [];
   for (const field of mod.fields) {
     const raw = settings[field.key];
+    if(!field.required && raw===undefined)continue;
     if (raw === undefined || raw === null || raw === '') {
       errors.push({ field: field.key, code: 'MISSING', message: `缺少必填参数「${field.label}」` });
       continue;

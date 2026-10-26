@@ -3,7 +3,7 @@
  * ------------------------------------------------------------------
  * ATLAS / 知识星图工作区（M1.1 升级版）：
  *   左栏 = 36 个概念的**章节分组目录**与搜索（含建设中概念）
- *   中央 = 星图画布（只画 10 个已开放节点，避免把未审校节点画成已完成）
+ *   中央 = 全量36节点星图；固定布局、章节/关系筛选与邻居高亮
  *   右栏 = 节点详情 / 关系说明 / 学习状态 / 知识页入口
  *
  * 职责边界：
@@ -31,6 +31,7 @@ import {
   relatedOf,
   searchConcepts,
   GRAPH_ORDER,
+  CHAPTERS, EXPERIMENTS, RELATION_TYPE_ORDER, queryAtlas,
 } from '../data/index.js';
 import { createAtlasGraph } from '../graph/atlasGraph.js';
 import { learningLabelMeta } from '../state/learning.js';
@@ -52,6 +53,7 @@ export function createAtlasWorkspace({
   onBackToHub,
   onOpenKnowledge,
   onOpenStory,
+  onOpenLab,
   onViewInConstructor,
   reducedMotion = false,
   onLog,
@@ -91,10 +93,17 @@ export function createAtlasWorkspace({
   const searchNote = h('div', { class: 'atlas-search__note', role: 'status', 'aria-live': 'polite' });
   const listEl = h('div', { class: 'atlas-list', 'aria-label': '概念目录：按章节分组，键盘与触屏用户可在这里直接选择节点' });
   const footEl = h('div', { class: 'atlas-side__foot' });
+  const filters = h('div', { class: 'learning-filters' });
+  const chapterFilter = h('select', { 'aria-label': '按章节筛选', 'data-filter': 'chapter' }, '<option value="">全部章节</option>');
+  for (const c of CHAPTERS) chapterFilter.append(h('option', { value: c.id }, `${c.no} · ${c.title.zh}`));
+  const relationFilter = h('select', { 'aria-label': '按关系类型筛选', 'data-filter': 'relation' }, '<option value="">全部关系</option>');
+  for (const type of RELATION_TYPE_ORDER) relationFilter.append(h('option', { value: type }, `${relationMeta(type).cn} · ${type}`));
+  filters.append(chapterFilter, relationFilter);
   side.append(
     h('div', { class: 'panel-head' }, '<span class="panel-head__title">搜索与概念目录</span>'),
     h('div', { class: 'atlas-search' }, searchInput, searchClear),
     searchNote,
+    filters,
     listEl,
     footEl
   );
@@ -105,6 +114,7 @@ export function createAtlasWorkspace({
     reducedMotion,
     onSelectConcept: (concept) => selectConcept(concept.id, { focus: false, source: 'canvas' }),
     onSelectEdge: (edge) => selectEdge(edge),
+    onOpenConcept: (id) => onOpenKnowledge?.(id, { from: 'atlas' }),
   });
   const toolbar = h('div', { class: 'atlas-toolbar' });
   const mkTool = (label, aria, fn) => {
@@ -128,7 +138,7 @@ export function createAtlasWorkspace({
     <span class="atlas-legend__item"><i class="sg-line" data-type="RELATED"></i>RELATED · 相关（无向）</span>
     <span class="atlas-legend__item"><i class="sg-line" data-type="CONTRASTS"></i>CONTRASTS · 对照（无向）</span>`);
   const hint = h('div', { class: 'atlas-hint' },
-    `画布只绘制 ${stats.concepts} 个已开放节点，其余 ${knowledge.concepts - stats.concepts} 个概念在左栏目录标注「内容建设中」· 拖动平移 · 滚轮缩放 · 双击聚焦`);
+    `36 个概念 · 拖动空白处平移 · 滚轮缩放 · 单击查看 · 双击进入详情 · 目录可用键盘探索`);
   center.append(graph.el, toolbar, legend, hint);
 
   /* ----------------------------- 右栏：详情 ----------------------------- */
@@ -145,11 +155,16 @@ export function createAtlasWorkspace({
   const graphNodeIds = new Set(GRAPH_ORDER);
 
   function renderList() {
-    const result = query ? searchConcepts(query) : null;
+    const focusedId = listEl.contains(document.activeElement) ? document.activeElement.dataset.concept : null;
+    const model = queryAtlas({ query, chapterId: chapterFilter.value || null, relationType: relationFilter.value || null });
+    const visible = new Set(model.nodes.map(c => c.id));
+    graph.setFilter(model.nodes, model.edges);
+    const result = query ? searchConcepts(query, { chapterId: chapterFilter.value || null }) : null;
     const matched = result && !result.cleared ? new Set(result.matches.map((m) => m.concept.id)) : null;
 
     listEl.replaceChildren();
     for (const { chapter, concepts } of conceptsByChapter()) {
+      if (!concepts.some(c => visible.has(c.id))) continue;
       const readyCount = concepts.filter((c) => conceptAvailability(c.id).hasBody).length;
       const group = h('section', { class: 'atlas-group', 'data-chapter': chapter.id });
       group.append(
@@ -160,6 +175,7 @@ export function createAtlasWorkspace({
       );
       const ul = h('ul', { class: 'atlas-group__list' });
       for (const concept of concepts) {
+        if (!visible.has(concept.id)) continue;
         const availability = conceptAvailability(concept.id);
         const label = learningLabelMeta(learning.labelOf(concept.id));
         const li = h('li');
@@ -189,9 +205,10 @@ export function createAtlasWorkspace({
       group.append(ul);
       listEl.append(group);
     }
+    if (focusedId) listEl.querySelector(`[data-concept="${focusedId}"]`)?.focus({preventScroll:true});
 
     if (!result) {
-      searchNote.textContent = `共 ${CONCEPT_ORDER.length} 个概念（6 章）· 画布仅绘制 ${stats.concepts} 个已开放节点`;
+      searchNote.textContent = `显示 ${model.nodes.length}/${CONCEPT_ORDER.length} 个概念 · ${model.edges.length} 条关系`;
       graph.clearMatches();
       return;
     }
@@ -219,7 +236,7 @@ export function createAtlasWorkspace({
     const summary = learning.summary();
     footEl.replaceChildren(
       h('div', { class: 'atlas-progress', 'data-el': 'progress' }, `
-        <div><b>${summary.explored}</b>/${summary.total} 已查看 · <b>${summary.experiments}</b> 完成实验 · <b>${summary.related}</b> 发现关联</div>
+        <div><b>${summary.explored}</b>/${summary.total} 已探索 · <b>${summary.completedLabs}</b>/6 完成实验 · <b>${summary.related}</b> 发现关联</div>
         <div class="atlas-progress__note">仅本机记录，不计分数；看索引页 ≠ 学完正文，章内可用数量见各章标题。</div>`)
     );
   }
@@ -259,8 +276,8 @@ export function createAtlasWorkspace({
           <div class="section__label"><span>怎么读这张图</span></div>
           <p class="explain">节点是概念，连线是<b>人工逐条配置</b>的语义关系。USES 表示「会用到」、PART_OF 表示「是它的组成部分」，两者方向明确所以画箭头；RELATED 与 CONTRASTS 只说明容易一起出现或容易混淆，<b>不表示必需依赖</b>。</p>`),
         h('div', { class: 'section' }, `
-          <div class="section__label"><span>为什么画布只有 ${stats.concepts} 个节点</span></div>
-          <div class="note"><span class="note__key">诚实声明</span><span>其余 ${knowledge.concepts - stats.concepts} 个概念只有索引、没有正文，因此不画在星图上、也不高亮成「已完成」；它们仍可在左栏目录里选中并查看索引页。</span></div>`)
+          <div class="section__label"><span>从任意一处开始</span></div>
+          <div class="note"><span class="note__key">自由探索</span><span>六章 36 个概念均可访问。可按章节收拢图谱，或搜索中文、英文与别名。选中节点只查看摘要；进入知识页后才记录阅读。</span></div>`)
       );
       return;
     }
@@ -269,7 +286,7 @@ export function createAtlasWorkspace({
     const availability = conceptAvailability(selectedId);
     const label = learningLabelMeta(learning.labelOf(selectedId));
     const pos = positionInChapter(selectedId);
-    const experiment = concept.experimentId ? experimentOfConcept(selectedId) : null;
+    const experiment = experimentOfConcept(selectedId) || EXPERIMENTS.find(e => e.chapterId === concept.chapterId);
 
     const hero = h('div', { class: 'atlas-detail__hero', 'data-concept': concept.id }, `
       <div class="inspector__eyebrow">
@@ -325,6 +342,9 @@ export function createAtlasWorkspace({
     acts.append(learn);
 
     if (experiment) {
+      const lab = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'open-lab' }, `进入本章实验 · ${experiment.title}`);
+      lab.addEventListener('click', () => onOpenLab?.(experiment.id, experiment.entryConceptId));
+      if (experiment.status === 'available') acts.append(lab);
       acts.append(
         h('div', { class: `note ${experiment.status === 'available' ? 'note--info' : ''}`, 'data-act': 'experiment-entry' }, `
           <span class="note__key">实验</span>
@@ -368,12 +388,15 @@ export function createAtlasWorkspace({
   function selectConcept(conceptId, { focus = false, source = 'api' } = {}) {
     const concept = getConcept(conceptId);
     if (!concept) return;
+    if (source !== 'search') {
+      const visible = queryAtlas({ query, chapterId: chapterFilter.value || null }).nodes.some(c => c.id === conceptId);
+      if (!visible) { query = ''; searchInput.value = ''; chapterFilter.value = ''; }
+    }
     selectedId = conceptId;
     graph.setSelectedEdge(null);
     graph.setSelection(graphNodeIds.has(conceptId) ? conceptId : null);
     if (focus && graphNodeIds.has(conceptId)) graph.focusConcept(conceptId);
-    if (source === 'relation' || source === 'related') learning.markRelatedDiscovered(conceptId);
-    else learning.markExplored(conceptId);
+    // 搜索、程序聚焦、选中摘要不构成阅读；由知识页记录真实查看事件。
     renderDetail();
     renderList();
     const availability = conceptAvailability(conceptId);
@@ -422,7 +445,7 @@ export function createAtlasWorkspace({
   /* ---------------- 搜索 ---------------- */
   function applySearch(value) {
     query = String(value || '');
-    const result = searchConcepts(query);
+    const result = searchConcepts(query, { chapterId: chapterFilter.value || null });
     renderList();
     if (!result.cleared && !result.empty) {
       selectConcept(result.matches[0].concept.id, { focus: true, source: 'search' });
@@ -438,9 +461,17 @@ export function createAtlasWorkspace({
 
   let searchTimer = 0;
   searchInput.addEventListener('input', () => {
+    if (composing) return;
     clearTimeout(searchTimer);
     const value = searchInput.value;
     searchTimer = setTimeout(() => applySearch(value), 140);
+  });
+  let composing = false;
+  searchInput.addEventListener('compositionstart', () => { composing = true; clearTimeout(searchTimer); });
+  searchInput.addEventListener('compositionend', () => { composing = false; applySearch(searchInput.value); });
+  for (const filter of [chapterFilter, relationFilter]) filter.addEventListener('change', () => {
+    selectedId = null; graph.setSelection(null); graph.setSelectedEdge(null);
+    renderList(); renderDetail(); graph.fitView();
   });
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -452,8 +483,11 @@ export function createAtlasWorkspace({
   });
   searchClear.addEventListener('click', () => {
     searchInput.value = '';
+    chapterFilter.value = ''; relationFilter.value = '';
+    selectedId = null; graph.setSelection(null); graph.setSelectedEdge(null);
     clearTimeout(searchTimer);
     applySearch('');
+    graph.resetView();
   });
 
   /* ---------------- 对外接口 ---------------- */

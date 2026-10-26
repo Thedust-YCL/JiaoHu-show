@@ -386,6 +386,8 @@ export function createReportView({ onLog, onViewEvent, onSwitchMode, getRun, mis
 
   /* ------------------------------ 来源检视 ------------------------------ */
   function metadataOf(sourceId) {
+    const visible=run?.artifacts?.reads?.find(r=>r.sourceId===sourceId)?.metadata;
+    if(visible)return {publishedAt:visible.publishedAt||null,publisherId:visible.publisherId||null,eventKey:visible.eventKey||null,supersedes:Array.isArray(visible.supersedes)?visible.supersedes.join(','):null,validity:visible.validity||null};
     const claims = run?.artifacts?.evidence?.claims || [];
     const pick = (predicate) => claims.find((c) => c.sourceId === sourceId && c.predicate === predicate)?.value ?? null;
     return {

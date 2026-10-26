@@ -12,11 +12,12 @@
  */
 import { defaultPermissions, defaultSettings, getModule, getPort } from '../model/modules.js';
 import { applyPatch, deriveStatus, isStructuralError, validateConnection, validateModuleConfig } from '../model/validation.js';
+import { createConfiguration, createInstance, DEFAULT_RUNTIME } from '../model/configuration.js';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** 持久化命名空间键（M0.2_TASK §9） */
-export const CONSTRUCTOR_STORAGE_KEY = 'agent-zero:constructor:v1';
+export const CONSTRUCTOR_STORAGE_KEY = 'agent-zero:constructor:v2';
 
 export function createInitialUi() {
   return {
@@ -34,7 +35,7 @@ export function createInitialUi() {
 }
 
 export function createInitialState() {
-  return { schemaVersion: SCHEMA_VERSION, modules: [], ui: createInitialUi() };
+  return { ...createConfiguration(), ui: createInitialUi() };
 }
 
 function withUi(state, uiPatch, notice) {
@@ -121,13 +122,7 @@ export function reduce(state, action) {
           fix: '请先移除已占用的模块',
         }, { preview: null });
       }
-      const installed = {
-        moduleId,
-        portId,
-        enabled: true,
-        permissions: defaultPermissions(),
-        settings: defaultSettings(moduleId),
-      };
+      const installed = createInstance(moduleId, Math.max(-1,...state.modules.map(m=>Number.isInteger(m?.order)?m.order:-1))+1, action.instanceId);
       return withUi(
         { ...state, modules: [...state.modules, installed] },
         { preview: null, selectedModuleId: moduleId },
@@ -135,7 +130,7 @@ export function reduce(state, action) {
           level: 'signal',
           code: 'ASSEMBLED',
           message: `${mod.cn}已装配到 ${portId}（连接关系已建立，非模拟 API 请求成功）`,
-          fix: '尚未授予只读模拟权限，模块当前为 Unconfigured',
+          fix: mod.moduleType==='tools' ? '尚未授予只读模拟权限，模块当前为 Unconfigured' : '在 Inspector 配置后查看预检',
         }
       );
     }
@@ -147,13 +142,17 @@ export function reduce(state, action) {
       const current = state.modules[index];
       const mod = getModule(action.moduleId);
       const { settings, permissions } = applyPatch(action.moduleId, current, action.patch);
-      const check = validateModuleConfig(action.moduleId, settings, permissions);
+      const rootSettings={...state.settings};
+      for(const field of mod.fields.filter(f=>f.scope==='root'))if(Object.hasOwn(action.patch||{},field.key))rootSettings[field.key]=field.numeric ? Number(action.patch[field.key]) : action.patch[field.key];
+      const check = validateModuleConfig(action.moduleId, action.moduleId==='runtime'?rootSettings:settings, permissions);
+      if(mod.fields.some(f=>f.scope==='root'))check.errors.push(...validateModuleConfig('runtime',rootSettings,{}).errors);
       const structural = check.errors.filter(isStructuralError);
       if (structural.length > 0) {
         // 拒绝写入非法值：已有合法配置不被局部破坏（M0.2_TASK §7.2）
         return noticeOnly(state, {
           level: 'error',
           code: 'INVALID_CONFIG',
+          moduleId: action.moduleId,
           message: structural[0].message,
           field: structural[0].field,
           fix: structural[0].fix,
@@ -162,15 +161,15 @@ export function reduce(state, action) {
       }
       const modules = [...state.modules];
       modules[index] = { ...current, settings, permissions };
-      const status = deriveStatus(modules[index]);
+      const status = deriveStatus(modules[index],{...state,settings:rootSettings});
       const permissionErrors = check.errors.filter((e) => !isStructuralError(e));
       return withUi(
-        { ...state, modules },
+        { ...state, modules, settings:rootSettings },
         { selectedModuleId: action.moduleId },
         {
           level: status === 'Ready' ? 'success' : 'info',
           code: 'CONFIG_SAVED',
-          message: `${mod.cn}配置已保存 · 当前状态 ${status}`,
+          message: `${mod.cn}草稿已更新 · 当前状态 ${status}`,
           fix: permissionErrors.length ? permissionErrors[0].fix : undefined,
         }
       );
@@ -180,12 +179,12 @@ export function reduce(state, action) {
       const index = findIndex(state.modules, action.moduleId);
       if (index < 0) return state;
       const current = state.modules[index];
-      const mod = getModule(action.moduleId);
+      const mod = getModule(action.moduleId)||{cn:action.moduleId};
       const enabled = typeof action.enabled === 'boolean' ? action.enabled : current.enabled !== true;
       if (enabled === current.enabled) return state;
       const modules = [...state.modules];
       modules[index] = { ...current, enabled };
-      const status = deriveStatus(modules[index]);
+      const status = deriveStatus(modules[index],state);
       let message = `${mod.cn}已${enabled ? '重新启用' : '禁用'}`;
       let fix;
       if (enabled) {
@@ -201,7 +200,8 @@ export function reduce(state, action) {
       } else {
         message += ' · 结构继续在位，仅连接关系不再活跃';
       }
-      return withUi({ ...state, modules }, { selectedModuleId: action.moduleId }, { level: enabled && status === 'Ready' ? 'success' : 'attention', code: 'TOGGLED', message, fix });
+      const connections=(state.connections||[]).map(e=>e&&(e.sourceInstanceId===current.instanceId||e.targetInstanceId===current.instanceId)&&!enabled?{...e,enabled:false}:e);
+      return withUi({ ...state, modules, connections }, { selectedModuleId: action.moduleId }, { level: enabled && status === 'Ready' ? 'success' : 'attention', code: 'TOGGLED', message, fix });
     }
 
     case 'module/remove': {
@@ -216,7 +216,8 @@ export function reduce(state, action) {
         preview: state.ui.preview?.moduleId === action.moduleId ? null : state.ui.preview,
         drag: state.ui.drag?.moduleId === action.moduleId ? null : state.ui.drag,
       };
-      return withUi({ ...state, modules }, uiPatch, {
+      const connections=(state.connections||[]).filter(e=>!e||(e.sourceInstanceId!==removed.instanceId&&e.targetInstanceId!==removed.instanceId));
+      return withUi({ ...state, modules, connections }, uiPatch, {
         level: 'attention',
         code: 'REMOVED',
         message: `${mod ? mod.cn : action.moduleId}已移除 · 接口 ${removed.portId}（${getPort(removed.portId)?.cn || ''}）已释放`,
@@ -225,8 +226,8 @@ export function reduce(state, action) {
     }
 
     case 'module/reset': {
-      if (state.modules.length === 0 && !state.ui.preview && !state.ui.drag) return state;
-      return withUi({ ...state, modules: [] }, { preview: null, drag: null, selectedModuleId: null }, {
+      if (state.modules.length === 0 && !state.ui.preview && !state.ui.drag && !state.connections?.length && JSON.stringify(state.settings)===JSON.stringify(DEFAULT_RUNTIME)) return state;
+      return withUi({ ...state, modules: [], connections:[],settings:{...DEFAULT_RUNTIME} }, { preview: null, drag: null, selectedModuleId: null }, {
         level: 'attention',
         code: 'RESET',
         message: '构建器已重置：全部模块实例与接口占用已清空（不影响开场偏好等其它本地数据）',
@@ -281,8 +282,13 @@ export function reduce(state, action) {
 
     /* ---------------- 载入（持久化恢复 / 重置） ---------------- */
     case 'config/hydrate': {
+      if(action.configuration)return withUi({...action.configuration,ui:state.ui},{preview:null,drag:null,selectedModuleId:null},action.notice||null);
       const modules = Array.isArray(action.modules) ? action.modules : [];
       return withUi({ ...state, modules }, { preview: null, drag: null, selectedModuleId: null }, action.notice || null);
+    }
+    case 'config/rename': {
+      if(typeof action.name!=='string'||!action.name.trim()||action.name.length>80)return noticeOnly(state,{level:'error',code:'INVALID_NAME',message:'名称须为 1–80 字符'});
+      return withUi({...state,name:action.name.trim()}, {}, {level:'info',code:'RENAMED',message:'草稿名称已更新，请保存配置'});
     }
 
     default:

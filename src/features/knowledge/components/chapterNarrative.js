@@ -1,7 +1,7 @@
 /**
  * src/features/knowledge/components/chapterNarrative.js
  * ------------------------------------------------------------------
- * STORY 章节叙事页（M1.2 D02 / §3）：一个模板渲染 Chapter 01–03。
+ * STORY 章节叙事页（M1.2 D02 / §3）：一个模板渲染六章；M1.4整合续学、跳过/重读与主动完成总结。
  *
  * 每章必须包含（缺一不可，由 src/content/chapters/index.js 的校验器保证）：
  *   · 章节开场目标与研究任务；
@@ -30,6 +30,7 @@ export function createChapterNarrative({
   onOpenStory,
   onBackToHub,
   onLog,
+  reducedMotion = false,
 } = {}) {
   const el = h('div', { class: 'workspace workspace--chapter', 'data-open': 'true' });
   let currentId = getChapterStory(chapterId) ? chapterId : STORY_ORDER[0];
@@ -70,7 +71,7 @@ export function createChapterNarrative({
     for (const id of STORY_ORDER) {
       const story = CHAPTER_STORIES[id];
       const chapter = getChapter(id);
-      const done = story.concepts.every((c) => (learning?.labelOf(c) || 'unexplored') !== 'unexplored');
+      const progress = learning?.chapterSummary(id);
       const b = h('button', {
         class: 'ch-rail__item',
         type: 'button',
@@ -79,14 +80,14 @@ export function createChapterNarrative({
       }, `
         <span class="ch-rail__no">${chapter.no}</span>
         <span class="ch-rail__name">${esc(chapter.title.zh)}<em>${esc(chapter.title.en)}</em></span>
-        <span class="ch-rail__state">${done ? '已浏览' : '未浏览'}</span>`);
+        <span class="ch-rail__state">${progress?.completed ? '总结已完成' : `${progress?.explored || 0}/${story.concepts.length} 已探索`}</span>`);
       b.addEventListener('click', () => openChapter(id));
       rail.append(b);
     }
     rail.append(
       h('div', { class: 'note', style: 'margin-top:10px' }, `
-        <span class="note__key">后续阶段</span>
-        <span>第 04–06 章的叙事属于 M1.3：目录里可浏览元数据，但当前没有正文与实验入口。</span>`)
+        <span class="note__key">自由学习</span>
+        <span>可从任意一章开始。阅读、实验和章节总结分别记录；跳过叙事不计为完成。</span>`)
     );
   }
 
@@ -114,6 +115,12 @@ export function createChapterNarrative({
           <div class="ch-opening__cell ch-opening__cell--expect"><span class="ch-k">读完应该能回答</span><p>${esc(story.opening.expectation)}</p></div>
         </div>`)
     );
+    const playback = h('div', { class:'ch-playback chips' });
+    const skip = h('button', {class:'btn btn--sm',type:'button','data-act':'skip-narrative'},'跳过叙事，查看总结 ↓');
+    const replay = h('button', {class:'btn btn--sm btn--ghost',type:'button','data-act':'replay-narrative'},'重读开场 ↑');
+    skip.addEventListener('click',()=>goSection('summary'));
+    replay.addEventListener('click',()=>goSection('opening'));
+    playback.append(skip,replay); main.prepend(playback);
 
     /* 叙事节拍 */
     const beats = h('section', { class: 'ch-beats', 'aria-label': '叙事节拍' });
@@ -185,6 +192,10 @@ export function createChapterNarrative({
         <div class="ch-reading__a">${esc(item.a)}</div>`));
     }
     main.append(reading);
+    reading.setAttribute('tabindex','-1');
+    const complete = h('button', {class:'btn btn--primary',type:'button','data-act':'complete-chapter'}, learning?.chapterSummary(currentId).completed ? '本章总结已完成' : '我已读完本章总结');
+    complete.addEventListener('click',()=>{learning?.markChapterCompleted(currentId);complete.textContent='本章总结已完成';});
+    reading.append(complete);
 
     /* 章节过渡 + 上下章导航 */
     const transition = h('section', { class: 'ch-transition', 'data-act': 'transition' });
@@ -205,8 +216,8 @@ export function createChapterNarrative({
     } else {
       navRow.append(
         h('div', { class: 'note', 'data-act': 'next-planned' }, `
-          <span class="note__key">后续章节</span>
-          <span>第 04–06 章（信息与方法 / 执行系统 / 可靠性与边界）的叙事与实验属于 M1.3，当前不提供入口。</span>`)
+          <span class="note__key">继续探索</span>
+          <span>六章叙事到此收束。可回到星图沿关系探索，或从学习日志回访概念与实验。</span>`)
       );
     }
     const atlasOut = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'exit-atlas' }, '退出到 ATLAS');
@@ -223,6 +234,8 @@ export function createChapterNarrative({
     const story = getChapterStory(currentId);
     const chapter = getChapter(currentId);
     asideBody.replaceChildren();
+    const progress = learning?.chapterSummary(currentId);
+    asideBody.append(h('div',{class:'section','data-el':'chapter-progress'}, `<b>${progress?.explored || 0}/${story.concepts.length}</b> 个概念已探索 · 实验${progress?.labCompleted ? '已完成' : '未完成'} · ${progress?.completed?'总结已完成':'总结未完成'}`));
 
     asideBody.append(
       h('div', { class: 'section' }, `
@@ -268,11 +281,19 @@ export function createChapterNarrative({
       onLog?.('叙事', `第 ${getChapter(id)?.no || id} 章的叙事尚未开放（M1.3）`, 'attention');
       return;
     }
+    if (onOpenChapter) { onOpenChapter(id); return; }
     currentId = id;
     renderRail();
     renderMain();
     onLog?.('叙事', `Story 切到第 ${getChapter(id).no} 章 ${getChapter(id).title.zh}`, 'signal');
     onOpenChapter?.(id);
+  }
+
+  function goSection(section) {
+    learning?.setStoryPosition(currentId, section);
+    const target = main.querySelector(section === 'summary' ? '.ch-reading' : '.ch-opening');
+    target?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block:'start' });
+    target?.setAttribute('tabindex','-1'); target?.focus({preventScroll:true});
   }
 
   function openLabEntry(story) {
@@ -282,11 +303,19 @@ export function createChapterNarrative({
 
   renderRail();
   renderMain();
-  const unsubscribe = learning?.subscribe?.(() => renderRail());
+  const unsubscribe = learning?.subscribe?.(() => {renderRail();renderAside();});
+  let activated = false;
 
   return {
     el,
-    activate() {},
+    activate() {
+      if (activated) return;
+      activated = true;
+      const position = learning?.storyPosition();
+      const section = position?.chapterId === currentId ? position.section : 'opening';
+      learning?.setStoryPosition(currentId,section);
+      if (section === 'summary') requestAnimationFrame(()=> {if (el.isConnected) goSection(section);});
+    },
     currentChapter: () => currentId,
     openChapter,
     chapters: () => STORY_ORDER.slice(),

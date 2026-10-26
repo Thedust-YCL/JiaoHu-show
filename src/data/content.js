@@ -288,6 +288,11 @@ export const PART_ORDER = [
  *  命名策略：分类与说明用中文，只有专有名词保留英文。 */
 export const NAV = Object.freeze([
   {
+    id: 'journal', idx: '07', name: '学习日志', en: 'Journal', cn: '本机学习记录与回访',
+    milestone: 'M1.4 已实现', locked: false,
+    detail: '查看六章学习进度、已完成实验和最近活动。可按章节与活动类型筛选并回访；活动记录与学习进度分别清除，均不影响装配配置和研究运行记录。',
+  },
+  {
     id: 'story',
     idx: '01',
     name: '引导叙事',

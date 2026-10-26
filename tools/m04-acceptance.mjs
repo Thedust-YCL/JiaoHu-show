@@ -871,7 +871,7 @@ export async function runM04Acceptance({ cdp, sleep, shot, waitReady }) {
       az.openAtlas();
       await __M04.sleep(320);
       // M1.1 起画布保持 10 个已开放节点；M1.2 起边数为 13（新增 tool_calling–mcp 这条真实关系）
-      const atlasOk = document.querySelectorAll('.atlas-node').length === 10 && document.querySelectorAll('.atlas-edge').length === 13;
+      const atlasOk = document.querySelectorAll('.atlas-node').length === 36 && document.querySelectorAll('.atlas-edge').length === 49;
       az.openKnowledge('tool_calling');
       await __M04.sleep(320);
       const stepCount = document.querySelectorAll('.kn-step').length;
