@@ -13,6 +13,7 @@
  */
 import { h, esc } from '../../constructor/components/dom.js';
 import { PHASE_META, STATUS_META, EVENT_TYPE_META } from '../../../simulation/events/schema.js';
+import { RUNTIME_STATUS } from '../../../simulation/engine/runtimeScenarios.js';
 
 const VIEW_W = 420;
 const VIEW_H = 300;
@@ -21,6 +22,72 @@ const TOOLS = {
   announcement_search: { x: 74, y: 76, label: 'Search', cn: '公告检索' },
   document_reader: { x: 346, y: 224, label: 'Reader', cn: '文档读取' },
 };
+
+const RUN_TONE = Object.freeze({
+  idle: 'attention',
+  ready: 'muted',
+  running: 'signal',
+  paused: 'attention',
+  waiting_approval: 'attention',
+  completed: 'success',
+  failed: 'error',
+  cancelled: 'muted',
+});
+
+/**
+ * Normalize both the M0 research-event shape (`id`/`message`) and Runtime v2
+ * shape (`eventId`/`reason`) before either the 2D core or the parked 3D core
+ * presents it. A run without a selected event is still meaningful (notably
+ * when A/B first opens an already-completed pair), so it exposes the real run
+ * state instead of claiming that execution has not started.
+ */
+export function normalizeCorePresentation(run, event) {
+  if (event) {
+    const status = event.status || 'info';
+    return {
+      id: event.eventId || event.id || null,
+      sequence: Number.isFinite(event.sequence) ? event.sequence : null,
+      phase: event.phase || null,
+      type: event.type || 'runtime.control',
+      typeLabel: EVENT_TYPE_META[event.type]?.cn || event.type || '运行事件',
+      status,
+      statusLabel: STATUS_META[status]?.cn || status,
+      tone: STATUS_META[status]?.tone || RUN_TONE[status] || 'muted',
+      toolId: event.toolId || null,
+      message: event.message || event.reason || '本次事件没有附加说明。',
+    };
+  }
+
+  if (run) {
+    const status = run.status || 'ready';
+    const reason = run.result?.terminationReason || run.pendingApproval?.reason || '';
+    return {
+      id: run.runId || null,
+      sequence: null,
+      phase: null,
+      type: 'runtime.status',
+      typeLabel: '运行状态',
+      status,
+      statusLabel: RUNTIME_STATUS[status] || status,
+      tone: RUN_TONE[status] || 'muted',
+      toolId: run.pendingApproval?.toolId || null,
+      message: reason ? `当前运行：${RUNTIME_STATUS[status] || status} · ${reason}` : `当前运行：${RUNTIME_STATUS[status] || status}`,
+    };
+  }
+
+  return {
+    id: null,
+    sequence: null,
+    phase: null,
+    type: null,
+    typeLabel: '等待运行',
+    status: 'ready',
+    statusLabel: '未开始',
+    tone: 'muted',
+    toolId: null,
+    message: '尚未开始模拟运行：点击 RUN SIMULATION 或 New Run。',
+  };
+}
 
 function svgEl(tag, attrs = {}) {
   const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -97,19 +164,20 @@ export function createExecutionCore({ onLog } = {}) {
    * 只读事件数据，不推断任何未发生的事。
    */
   function render2D(event) {
-    const tone = event ? STATUS_META[event.status]?.tone || 'muted' : 'muted';
-    const toolId = event?.toolId && TOOLS[event.toolId] ? event.toolId : null;
-    svg2d.setAttribute('data-status', event?.status || 'info');
+    const presentation = normalizeCorePresentation(run, event);
+    const { tone } = presentation;
+    const toolId = presentation.toolId && TOOLS[presentation.toolId] ? presentation.toolId : null;
+    svg2d.setAttribute('data-status', presentation.status);
     svg2d.setAttribute('data-tone', tone);
 
     for (const node of svg2d.querySelectorAll('.exc-node[data-tool]')) {
       const id = node.getAttribute('data-tool');
       node.setAttribute('data-active', id === toolId ? 'true' : 'false');
-      node.setAttribute('data-state', event && id === toolId ? event.status : 'idle');
+      node.setAttribute('data-state', toolId && id === toolId ? presentation.status : 'idle');
     }
     for (const edge of svg2d.querySelectorAll('.exc-edge')) {
       edge.setAttribute('data-active', edge.getAttribute('data-tool') === toolId ? 'true' : 'false');
-      edge.setAttribute('data-state', event && edge.getAttribute('data-tool') === toolId ? event.status : 'idle');
+      edge.setAttribute('data-state', toolId && edge.getAttribute('data-tool') === toolId ? presentation.status : 'idle');
     }
 
     if (toolId && event && (event.type === 'tool.call' || event.type === 'tool.result' || event.type === 'tool.error')) {
@@ -125,13 +193,12 @@ export function createExecutionCore({ onLog } = {}) {
       packet.removeAttribute('style');
     }
 
-    const typeMeta = event ? EVENT_TYPE_META[event.type] || { cn: event.type } : null;
     caption.replaceChildren(
       h('div', { class: 'ex-core__caption-line' }, `
-        <span class="mono">${event ? `#${String(event.sequence).padStart(2, '0')}` : '—'}</span>
-        <span class="ex-core__type">${esc(typeMeta ? typeMeta.cn : '等待运行')}</span>
-        <span class="tag tag--${tone}">${esc(event ? STATUS_META[event.status]?.cn || event.status : '未开始')}</span>`),
-      h('div', { class: 'ex-core__caption-msg' }, esc(event ? event.message : '尚未开始模拟运行：点击 RUN SIMULATION 或 New Run。'))
+        <span class="mono">${presentation.sequence === null ? '—' : `#${String(presentation.sequence).padStart(2, '0')}`}</span>
+        <span class="ex-core__type">${esc(presentation.typeLabel)}</span>
+        <span class="tag tag--${tone}">${esc(presentation.statusLabel)}</span>`),
+      h('div', { class: 'ex-core__caption-msg' }, esc(presentation.message))
     );
     phaseBar.replaceChildren();
     for (const phase of ['VALIDATION', 'PLAN', 'SEARCH', 'READ', 'EVIDENCE', 'END']) {
@@ -162,7 +229,9 @@ export function createExecutionCore({ onLog } = {}) {
       head.querySelector('[data-el="mode"]').textContent =
         view === '3d' ? (has3D ? '3D · 真实三维核心（只读聚焦）' : '3D 不可用 · 已用二维执行核心替代') : '2D · 执行核心投影';
       svg2d.style.display = view === '3d' && has3D ? 'none' : 'block';
-      caption.style.display = view === '3d' && has3D ? 'block' : 'none';
+      // The caption is the non-colour, textual equivalent of both renderers.
+      // Keeping it visible in 2D also fixes WebGL/reduced-motion fallback semantics.
+      caption.style.display = 'block';
       onLog?.('执行', `中央执行视图切换为 ${view.toUpperCase()}${view === '3d' && !has3D ? '（当前环境无 WebGL，使用二维等价视图）' : ''}`, 'info');
     },
     getView: () => view,

@@ -1,6 +1,6 @@
 /** M2.2 browser acceptance: isolated profile, local static files only. */
 import { spawn } from 'node:child_process';
-import { mkdir,writeFile,readFile } from 'node:fs/promises';
+import { mkdir,writeFile,readFile,readdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import os from 'node:os';
@@ -64,8 +64,9 @@ try {
   await check('A35','WebGL 不可用时运行检查器和审批仍完整可用',`__AZ.skipIntro('fallback');__AZ.openRuntime();document.querySelector('[aria-label="本地模拟场景"]').value='PERMISSION_REQUIRED';document.querySelector('[data-rt-act="new"]').click();while(__AZ.runtimeApi().currentRun().status!=='waiting_approval')document.querySelector('[data-rt-act="step"]').click();return {pass:!__AZ.scene.ok&&!!document.querySelector('.ex-core__svg')&&!!document.querySelector('[data-rt-act="approve"]')&&!!document.querySelector('[aria-label="步骤检查器"]')};`);
   await shot('runtime-fallback');
   const files=new Map([['/agent-zero/',['dist/index.html','text/html']],['/agent-zero/assets/app.js',['dist/assets/app.js','text/javascript']],['/agent-zero/assets/app.css',['dist/assets/app.css','text/css']]]);
+  for (const name of await readdir('dist/assets')) if (/^chunk-[A-Z0-9]+\.js$/.test(name)) files.set(`/agent-zero/assets/${name}`,[`dist/assets/${name}`,'text/javascript']);
   server=createServer(async(req,res)=>{const f=files.get(req.url);if(!f){res.writeHead(404);res.end();return;}res.writeHead(200,{'content-type':f[1]+'; charset=utf-8'});res.end(await readFile(f[0]));});await new Promise(r=>server.listen(0,'127.0.0.1',r));
-  await cdp.send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/agent-zero/#/runtime`});await waitReady(cdp);
+  await cdp.send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/agent-zero/#/runtime`});if(!await waitReady(cdp))throw Error('静态子路径应用未就绪');
   await check('A39-subpath','真实静态子路径及 Runtime 深链',`return {pass:!!__AZ.runtimeApi()&&performance.getEntriesByType('resource').some(e=>e.name.includes('/agent-zero/assets/app.js'))};`);
   await check('A36','运行不产生远程业务请求',`return {pass:performance.getEntriesByType('resource').every(e=>!/^https?:/.test(e.name)||e.name.startsWith(location.origin))};`);
   rows.push({id:'A36-network',name:'完整验收无远程请求',pass:network.every(url=>!/^https?:/.test(url)||/^http:\/\/127\.0\.0\.1/.test(url)),note:JSON.stringify([...new Set(network)])});

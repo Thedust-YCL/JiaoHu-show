@@ -19,10 +19,16 @@ import { h, md } from '../../features/constructor/components/dom.js';
  * ==================================================================== */
 export function Topbar({ onReplay, onToggleDock, onToggleInspect, onToggleStatus }) {
   const el = h('header', { class: 'topbar', role: 'banner' });
+  const skip = h('button',{class:'skip-link',type:'button'},'跳到主工作区');
+  skip.addEventListener('click',()=>{
+    const target=document.querySelector('.workspace-host[data-open="true"] .ws-head__title')||document.getElementById('az-main');
+    target?.focus({preventScroll:true});
+  });
+  el.append(skip);
 
   const left = h('div', { class: 'topbar__left' });
   left.append(
-    h('div', { class: 'brand' }, `
+    h('div', { class: 'brand', 'aria-label':'AGENT / ZERO' }, `
       <span class="brand__mark" aria-hidden="true">A<b>/</b>0</span>
       <span class="brand__text">
         <span class="brand__name">AGENT / ZERO</span>
@@ -60,16 +66,24 @@ export function Topbar({ onReplay, onToggleDock, onToggleInspect, onToggleStatus
   );
   const replayBtn = h('button', { class: 'btn tip', type: 'button', 'data-tip': '重播约 11 秒开场序列' }, '重播开场');
   replayBtn.addEventListener('click', onReplay);
+  dockBtn.setAttribute('aria-controls','az-dock');
+  inspectBtn.setAttribute('aria-controls','az-inspector');
+  statusBtn.setAttribute('aria-controls','az-status');
 
   right.append(dockBtn, inspectBtn, statusBtn, h('span', { class: 'topbar__sep', 'aria-hidden': 'true' }), replayBtn);
   el.append(left, center, right);
 
   return {
     el,
+    focusNavigation(){dockBtn.focus({preventScroll:true});},
+    focusInspector(){inspectBtn.focus({preventScroll:true});},
     setPressed({ dock, inspect, status }) {
       dockBtn.setAttribute('aria-pressed', dock ? 'true' : 'false');
       inspectBtn.setAttribute('aria-pressed', inspect ? 'true' : 'false');
       statusBtn.setAttribute('aria-pressed', status ? 'true' : 'false');
+      dockBtn.setAttribute('aria-expanded',String(!!dock));
+      inspectBtn.setAttribute('aria-expanded',String(!!inspect));
+      statusBtn.setAttribute('aria-expanded',String(!!status));
     },
   };
 }
@@ -78,7 +92,7 @@ export function Topbar({ onReplay, onToggleDock, onToggleInspect, onToggleStatus
  * 左导航 / 能力架 + 术语索引
  * ==================================================================== */
 export function Dock({ onMode, onTerm, onToggleCollapse, bayEl }) {
-  const el = h('aside', { class: 'dock surface', 'aria-label': '主导航与能力架' });
+  const el = h('aside', { id:'az-dock',class: 'dock surface', 'aria-label': '主导航与能力架' });
   const head = h('div', { class: 'panel-head' }, `
     <span class="panel-head__title">导航</span>`);
   const collapse = h('button', { class: 'btn btn--sm', type: 'button', 'aria-label': '折叠或展开左侧导航' }, '折叠');
@@ -88,7 +102,7 @@ export function Dock({ onMode, onTerm, onToggleCollapse, bayEl }) {
   // M0.2 能力架：常驻 Dock 顶部，装配入口不藏在二级页面里
   if (bayEl) scroll.append(bayEl);
   const modeGroup = h('div', { class: 'dock__group' });
-  modeGroup.append(h('div', { class: 'dock__group-label' }, '<span>主要入口</span><span>M0.3</span>'));
+  modeGroup.append(h('div', { class: 'dock__group-label' }, '<span>主要入口</span>'));
 
   const items = new Map();
   for (const item of NAV) {
@@ -114,15 +128,15 @@ export function Dock({ onMode, onTerm, onToggleCollapse, bayEl }) {
   }
   scroll.append(modeGroup);
 
-  const termGroup = h('div', { class: 'dock__group' });
+  const termGroup = h('div', { class: 'dock__group dock__group--terms' });
   termGroup.append(
     h('div', { class: 'dock__group-label' }, `<span>术语索引</span><span>${TERM_INDEX.length} 个</span>`),
     h('div', { class: 'note note--info', style: 'margin:0 4px 8px' }, `
       <span class="note__key">索引</span>
-      <span>这里是全站术语速查（点击展开一行中文解释）。要看概念之间的<b>语义关系图</b>，请进入左侧「知识星图」（画布绘制 10 个已开放节点，目录覆盖六章全部概念）。</span>`)
+      <span>点击术语可展开解释；进入「知识星图」可搜索六章概念，查看它们之间的语义关系。</span>`)
   );
   const terms = h('div');
-  for (const [en, cn, ch, note] of TERM_INDEX) {
+  for (const [index,[en, cn, ch, note]] of TERM_INDEX.entries()) {
     const t = h(
       'button',
       {
@@ -130,15 +144,18 @@ export function Dock({ onMode, onTerm, onToggleCollapse, bayEl }) {
         type: 'button',
         title: `${cn}（第 ${ch} 章）— ${note}`,
         'aria-label': `${en}，${cn}：${note}`,
+        'aria-expanded':'false',
+        'aria-controls':`az-term-${index}`,
       },
       `<span class="term__en">${en}</span><span class="term__cn">${cn}</span><span class="term__ch">第${ch}章</span>`
     );
     // 中文解释就地可见：悬停或键盘聚焦时展开，不必离开页面去查
-    const detail = h('span', { class: 'term__note', text: note });
+    const detail = h('span', { id:`az-term-${index}`,class: 'term__note', text: note });
     const row = h('div', { class: 'term-row' });
     row.append(t, detail);
     t.addEventListener('click', () => {
       row.dataset.open = row.dataset.open === 'true' ? 'false' : 'true';
+      t.setAttribute('aria-expanded',row.dataset.open);
       onTerm({ en, cn, ch, note });
     });
     terms.append(row);
@@ -156,13 +173,17 @@ export function Dock({ onMode, onTerm, onToggleCollapse, bayEl }) {
 
   collapse.addEventListener('click', () => {
     const collapsed = el.dataset.collapsed === 'true';
-    el.dataset.collapsed = collapsed ? 'false' : 'true';
-    collapse.textContent = collapsed ? '折叠' : '展开';
     onToggleCollapse?.(!collapsed);
   });
 
   return {
     el,
+    setCollapsed(collapsed, narrow = false) {
+      el.dataset.collapsed = String(collapsed);
+      collapse.textContent = narrow ? '关闭' : collapsed ? '展开' : '折叠';
+      collapse.setAttribute('aria-label', narrow ? '关闭左侧导航' : collapsed ? '展开左侧导航' : '折叠左侧导航');
+      collapse.setAttribute('aria-expanded', String(!collapsed));
+    },
     setMode(id) {
       for (const [key, node] of items) node.setAttribute('aria-current', key === id ? 'true' : 'false');
     },
@@ -173,7 +194,7 @@ export function Dock({ onMode, onTerm, onToggleCollapse, bayEl }) {
  * 中央舞台的外框（Canvas 由 scene.js 注入）
  * ==================================================================== */
 export function Stage({ onViewChange, onReset, onToggleStatus }) {
-  const el = h('section', { class: 'stage', 'aria-label': 'AZ-CORE 01 三维舞台' });
+  const el = h('section', { id:'az-main',tabindex:'-1',class: 'stage', 'aria-label': 'AZ-CORE 01 主工作区' });
   const canvasHost = h('div', { class: 'stage__canvas' });
   const badge = h('div', { class: 'stage__badge' }, `${SIMULATED_CONSTANT} · 非真实模型执行`);
   const vignette = h('div', { class: 'stage__vignette', 'aria-hidden': 'true' });
@@ -261,7 +282,7 @@ export function Stage({ onViewChange, onReset, onToggleStatus }) {
  * 右 Inspector：唯一选中状态驱动
  * ==================================================================== */
 export function Inspector({ onSelect, onToggle }) {
-  const el = h('aside', { class: 'inspector surface', 'aria-label': '结构检视面板' });
+  const el = h('aside', { id:'az-inspector',class: 'inspector surface', 'aria-label': '结构检视面板' });
   const head = h('div', { class: 'panel-head' }, '<span class="panel-head__title">结构检视</span>');
   const toggle = h('button', { class: 'btn btn--sm', type: 'button', 'aria-label': '收起检视面板' }, '收起');
   toggle.addEventListener('click', onToggle);
@@ -438,7 +459,7 @@ export function Inspector({ onSelect, onToggle }) {
  * 底部：事件日志 + 真实运行诊断
  * ==================================================================== */
 export function Status({ onClear, onToggle }) {
-  const el = h('section', { class: 'status surface', 'aria-label': '系统事件与运行诊断' });
+  const el = h('section', { id:'az-status',class: 'status surface', 'aria-label': '系统事件与运行诊断' });
 
   const logCol = h('div', { class: 'status__log' });
   const logHead = h('div', { class: 'panel-head' }, `

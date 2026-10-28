@@ -1,0 +1,358 @@
+{
+  "results": [
+    {
+      "name": "first page does not request deferred lab entries",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "new user journey from boot to Journal",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "journey progress survives refresh",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "open exp-token-lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "open exp-context-lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "open exp-retrieval-lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "open exp-agent-loop-lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "open exp-boundary-lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "slow request cannot replace newer navigation",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "failed chunk exposes a recovery action",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "recovery action really reopens the failed lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "recovery preserves saved configuration",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "direct subpath lab deep link",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "deep link reload restores the lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "browser back restores the loaded lab",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "browser forward restores Story",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "no unexpected static resource failures",
+      "pass": true,
+      "value": true
+    },
+    {
+      "name": "offline file opens lab synchronously",
+      "pass": true,
+      "value": true
+    }
+  ],
+  "requests": [
+    {
+      "pathname": "/agent-zero/",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.css",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-IPV4WD5A.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HA7XUYBN.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-MMWUGASJ.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-JA3EGSJR.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-5ZJKIHAT.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-EMIKU2P2.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.css",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-IPV4WD5A.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-MMWUGASJ.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HA7XUYBN.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-JA3EGSJR.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-5ZJKIHAT.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-EMIKU2P2.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HVHWIVG6.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HVMHHDIB.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-5HEHVBGY.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-P6TKTP5Z.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.css",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-IPV4WD5A.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-MMWUGASJ.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HA7XUYBN.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-JA3EGSJR.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-5ZJKIHAT.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.css",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-MMWUGASJ.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-IPV4WD5A.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HA7XUYBN.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-JA3EGSJR.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-EMIKU2P2.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-P6TKTP5Z.js",
+      "status": 503,
+      "intentional": true
+    },
+    {
+      "pathname": "/agent-zero/",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.css",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-IPV4WD5A.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-MMWUGASJ.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HA7XUYBN.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-JA3EGSJR.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-P6TKTP5Z.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.css",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-JA3EGSJR.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-IPV4WD5A.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-MMWUGASJ.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HA7XUYBN.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-5ZJKIHAT.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-EMIKU2P2.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/app.css",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-IPV4WD5A.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-HA7XUYBN.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-JA3EGSJR.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-MMWUGASJ.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-5ZJKIHAT.js",
+      "status": 200
+    },
+    {
+      "pathname": "/agent-zero/assets/chunk-EMIKU2P2.js",
+      "status": 200
+    }
+  ],
+  "console": []
+}

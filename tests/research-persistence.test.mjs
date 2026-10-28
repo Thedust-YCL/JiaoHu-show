@@ -206,6 +206,29 @@ test('A66 全部记录都坏时给出可读提示，而不是静默空状态', (
   assert.match(restored.notice.message, /字段不合法|版本/);
 });
 
+test('损坏、未知版本和部分损坏的研究历史不会被新运行覆盖', () => {
+  const good = runA();
+  const fixtures = [
+    '{broken',
+    JSON.stringify({ schemaVersion: 99, runs: [{ run: good }] }),
+    JSON.stringify({ schemaVersion: 2, runs: [{ run: good }, { run: null }] }),
+  ];
+  for (const raw of fixtures) {
+    const store = memoryStorage({ [RESEARCH_STORAGE_KEY]: raw });
+    const result = appendResearchRun(store, runB());
+    assert.equal(result.ok, false);
+    assert.equal(store.getItem(RESEARCH_STORAGE_KEY), raw);
+    assert.match(result.notice.message, /保留/);
+  }
+});
+
+test('无法读取研究历史时不得尝试覆盖未知的原始数据', () => {
+  let writes = 0;
+  const store = { getItem() { throw Error('denied'); }, setItem() { writes++; } };
+  assert.equal(appendResearchRun(store, runA()).ok, false);
+  assert.equal(writes, 0);
+});
+
 /* ==================================================================== *
  * 容量 / 隐私模式
  * ==================================================================== */

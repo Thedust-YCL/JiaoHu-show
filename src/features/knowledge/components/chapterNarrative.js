@@ -111,9 +111,9 @@ export function createChapterNarrative({
         <div class="ch-opening__grid">
           <div class="ch-opening__cell"><span class="ch-k">本章目标</span><p>${esc(story.opening.goal)}</p></div>
           <div class="ch-opening__cell"><span class="ch-k">研究任务</span><p>${esc(story.opening.task)}</p></div>
-          <div class="ch-opening__cell"><span class="ch-k">阅读须知</span><p>${esc(story.opening.prompt)}</p></div>
           <div class="ch-opening__cell ch-opening__cell--expect"><span class="ch-k">读完应该能回答</span><p>${esc(story.opening.expectation)}</p></div>
-        </div>`)
+        </div>
+        <details class="ch-reading-note"><summary>阅读须知</summary><p>${esc(story.opening.prompt)}</p></details>`)
     );
     const playback = h('div', { class:'ch-playback chips' });
     const skip = h('button', {class:'btn btn--sm',type:'button','data-act':'skip-narrative'},'跳过叙事，查看总结 ↓');
@@ -133,6 +133,7 @@ export function createChapterNarrative({
           <span class="tag tag--${beat.kind === 'limit' ? 'attention' : beat.kind === 'experiment' ? 'signal' : 'muted'}">${
             beat.kind === 'limit' ? '可观察的局限' : beat.kind === 'experiment' ? '实验入口' : beat.kind === 'opening' ? '开场' : '理解'
           }</span>`),
+        ...(beat.takeaway ? [h('p', { class: 'ch-beat__takeaway' }, `<span>要点</span>${esc(beat.takeaway)}`)] : []),
         h('p', { class: 'ch-beat__text' }, esc(beat.text))
       );
       if (beat.sample) {
@@ -145,7 +146,6 @@ export function createChapterNarrative({
       if (beat.observation) {
         card.append(h('div', { class: 'ch-beat__observe' }, `<span class="note__key">观察</span>${esc(beat.observation)}`));
       }
-      if (beat.takeaway) card.append(h('p', { class: 'ch-beat__takeaway' }, esc(beat.takeaway)));
       if (beat.kind === 'experiment') {
         const enter = h('button', { class: 'btn btn--primary btn--sm', type: 'button', 'data-act': 'enter-lab' }, `EXPERIMENT · 打开「${story.lab.title.split(' · ')[0]}」`);
         enter.addEventListener('click', () => openLabEntry(story));
@@ -173,14 +173,16 @@ export function createChapterNarrative({
     for (const step of story.lab.steps) stepList.append(h('li', {}, esc(step)));
     const observeList = h('ul', { class: 'lab-reading' });
     for (const item of story.lab.observe) observeList.append(h('li', {}, esc(item)));
-    labBox.append(
+    const labDetails = h('details', { class: 'ch-lab__details' });
+    labDetails.append(
+      h('summary', {}, '查看实验步骤与观察要点'),
       h('div', { class: 'ch-lab__cols' },
         h('div', {}, h('div', { class: 'ch-k' }, '动手步骤'), stepList),
         h('div', {}, h('div', { class: 'ch-k' }, '要观察什么'), observeList))
     );
     const runBtn = h('button', { class: 'btn btn--primary', type: 'button', 'data-act': 'run-experiment' }, `RUN · 打开 ${story.lab.title}`);
     runBtn.addEventListener('click', () => openLabEntry(story));
-    labBox.append(runBtn);
+    labBox.append(runBtn, labDetails);
     main.append(labBox);
 
     /* 结果解读 */

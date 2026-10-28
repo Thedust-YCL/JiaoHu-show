@@ -281,3 +281,18 @@ M0.1 只需落实 `DORMANT → BOOTING → IDLE → FOCUSED`；装配、运行�
 ---
 
 **开发关联**：`PRD.md` 为完整产品权威需求；`M0.1_TASK.md` 为首轮具体开发与验收任务。
+
+## 15. M3.1 实现统一规则（2026-10-26）
+
+本节扩展既有 AZ-DESIGN，不改变冻结的品牌、机械轨道、几何核心或 Cyan/Amber 语义。
+
+- 高频颜色继续使用 `tokens.css` 中的 `--void/--panel/--raised/--border/--text-1..3/--signal/--attention/--success/--error`，不在工作区重复声明色值。辅助文本 `--text-3` 调整为 `#8D9CA8`，在 Raised `#17212C` 上计算对比度约 5.78:1。
+- 字号：辅助/技术标签 12px、控制台正文 14px、解释正文 15px；长文沿用页面既有较宽行高。字体继续使用系统中文与等宽回退，不增加远程字体。
+- 空间：4px 基准，`--space-1..8` 与现有 `--gap-1..3`；常规/紧凑控件高度 36/32px，窄屏主要操作至少 44px。圆角与描边保持原规范。
+- 控件复用 `.btn` 的 primary、secondary、ghost、destructive variants；禁用使用真实 disabled，loading 使用 `aria-busy` 与可读操作文字，不用装饰动效推导业务结果。表单焦点用 Amber 轮廓，错误关联 `aria-invalid/aria-describedby`。
+- 状态：Cyan 活动、Amber 待确认/暂停、Green 已完成、Red 失败/拒绝，均有文字。Run 的 completed 与证据充分性分别显示；completed 不能掩盖 evidence-insufficient。
+- 布局：桌面 >1100px，紧凑/平板 768–1100px，窄屏 <768px。Atlas 依据自身信息密度在 1180px 下纵向展开。A/B 指标允许局部横滚，轨迹窄屏单列；不让整页横向溢出。
+- 页面进入采用 `--dur-page:180ms` 的短淡入；reduced-motion 直接呈现。Boot、运行与回放仍消费真实时间线/事件，只有表现可以减少动态。
+- 层级：现有 stage/chrome/drawer/boot/toast 保留，确认弹层统一 `--layer-dialog:60`；浮层可滚动，关闭后恢复焦点，隐藏区域移出键盘顺序。
+
+验收证据与剩余问题以 `M3_VISUAL_AUDIT.md` 和 `DELIVERY_M3.1.md` 为准。

@@ -21,6 +21,33 @@ const STATUS_COLOR = {
   Available: 0x8ba0b2,
 };
 
+const EXECUTION_TONE_COLOR = Object.freeze({
+  signal: 0x77d8ec,
+  started: 0x77d8ec,
+  info: 0x77d8ec,
+  success: 0x80d9b4,
+  attention: 0xf0bd78,
+  blocked: 0xf0bd78,
+  unresolved: 0xf0bd78,
+  error: 0xff8585,
+  muted: 0xaabee0,
+  skipped: 0xaabee0,
+});
+
+export function executionToneColor(tone) {
+  return EXECUTION_TONE_COLOR[tone] || EXECUTION_TONE_COLOR.signal;
+}
+
+function portStateColor(state) {
+  return state === 'preview'
+    ? 0xf0bd78
+    : state === 'invalid'
+      ? 0xff8585
+      : state === 'occupied'
+        ? 0x77d8ec
+        : STATUS_COLOR.Available;
+}
+
 const UP = new THREE.Vector3(0, 1, 0);
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
@@ -365,7 +392,7 @@ export function createModuleBay({ core, reduced = false }) {
     const hasFocus = Object.values(portStates || {}).some((v) => v === 'preview' || v === 'invalid');
     for (const [portId, spot] of hotspots) {
       const state = portStates?.[portId] || 'free';
-      const color = state === 'preview' ? 0xf0bd78 : state === 'invalid' ? 0xff8585 : state === 'occupied' ? 0x77d8ec : STATUS_COLOR.Available;
+      const color = portStateColor(state);
       const dimmed = hasFocus && state === 'free';
       spot.ringMat.color.setHex(color);
       spot.hexMat.color.setHex(color);
@@ -390,6 +417,8 @@ export function createModuleBay({ core, reduced = false }) {
     if (!execFocus) return;
     const inst = instances.get(execFocus);
     if (inst) {
+      const color = executionToneColor(execTone);
+      inst.pulseMat.color.setHex(color);
       inst.pulseT = 0;
       inst.pulse.visible = true;
     }
@@ -398,6 +427,18 @@ export function createModuleBay({ core, reduced = false }) {
   function clearExecutionFocus() {
     execFocus = null;
     execTone = 'signal';
+    for (const spot of hotspots.values()) {
+      const color = portStateColor(spot.state);
+      spot.ringMat.color.setHex(color);
+      spot.hexMat.color.setHex(color);
+      spot.hubMat.color.setHex(color);
+      spot.haloMat.color.setHex(color);
+      const base = spot.baseOpacity || { ring: 0.45, halo: 0.07, hex: 0.5 };
+      spot.ringMat.opacity = base.ring;
+      spot.hexMat.opacity = base.hex;
+      spot.haloMat.opacity = base.halo;
+    }
+    for (const inst of instances.values()) applyStatusColor(inst);
   }
 
   function getExecutionFocus() {
@@ -419,8 +460,14 @@ export function createModuleBay({ core, reduced = false }) {
     // M0.3 执行回放聚焦：从基准值重算接口亮度，避免逐帧累乘导致淡出
     if (execFocus) {
       const focusPort = portIdForModule(execFocus);
+      const focusColor = executionToneColor(execTone);
       for (const [portId, spot] of hotspots) {
         const on = portId === focusPort;
+        const color = on ? focusColor : portStateColor(spot.state);
+        spot.ringMat.color.setHex(color);
+        spot.hexMat.color.setHex(color);
+        spot.hubMat.color.setHex(color);
+        spot.haloMat.color.setHex(color);
         const base = spot.baseOpacity || { ring: 0.45, halo: 0.07, hex: 0.5 };
         spot.ringMat.opacity = on ? Math.max(base.ring, 0.92) : base.ring * 0.22;
         spot.hexMat.opacity = on ? Math.max(base.hex, 0.85) : base.hex * 0.22;
@@ -511,6 +558,10 @@ export function createModuleBay({ core, reduced = false }) {
       // M0.3 执行回放聚焦：只有当前事件涉及的模块保持全亮，其余明显降亮
       if (execFocus) {
         const on = inst.moduleId === execFocus;
+        const color = on ? executionToneColor(execTone) : (STATUS_COLOR[inst.status] || STATUS_COLOR.Available);
+        inst.linkMat.color.setHex(color);
+        inst.haloMat.color.setHex(color);
+        inst.housing.glowMats.forEach((m) => m.color.setHex(color));
         inst.linkMat.opacity *= on ? 1 : 0.14;
         inst.haloMat.opacity *= on ? 1.5 : 0.18;
         const glowK = on ? 1.35 : 0.18;

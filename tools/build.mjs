@@ -3,9 +3,9 @@
  * ------------------------------------------------------------------
  * 构建 P0 契约要求的静态产物：
  *   1. 合并 src/styles/*.css -> dist/assets/app.css
- *   2. esbuild 打包 src/main.js（three / gsap 全部内联，零 CDN）
+ *   2. esbuild 打包静态站并按需拆分 Lab（所有代码块均为同源资源）
  *   3. 产出 dist/index.html（引用相对路径，可直接部署到 GitHub Pages 子路径）
- *   4. 另外产出 单文件离线演示版 index.html（CSS/JS 全内联，file:// 双击可用）
+ *   4. 单独构建离线演示版 index.html（CSS/JS 全内联，file:// 双击可用）
  * ------------------------------------------------------------------
  */
 import { build } from 'esbuild';
@@ -44,6 +44,7 @@ ${css}
 </head>
 <body>
 <div id="app" aria-busy="true">
+  <div class="initializing" role="status">正在准备本地实验室…<p>正在加载随页面打包的界面与教学资料。若页面未出现，可重新载入。</p><button type="button" class="btn" onclick="location.reload()">重新载入</button></div>
   <noscript>
     <div class="noscript">
       <h1>AGENT / ZERO</h1>
@@ -66,7 +67,7 @@ async function main() {
   const css = (await collectCss(path.join(root, 'src', 'styles'))).join('\n');
   await writeFile(path.join(assets, 'app.css'), css, 'utf8');
 
-  const result = await build({
+  const common = {
     entryPoints: [path.join(root, 'src', 'main.js')],
     bundle: true,
     format: 'esm',
@@ -74,12 +75,13 @@ async function main() {
     minify: !debug,
     sourcemap: debug ? 'inline' : false,
     keepNames: debug,
-    legalComments: 'none',
-    write: false,
+    legalComments: 'inline',
     logLevel: 'warning',
-  });
-  const js = result.outputFiles[0].text;
-  await writeFile(path.join(assets, 'app.js'), js, 'utf8');
+  };
+  await build({ ...common, outdir: assets, entryNames: 'app', chunkNames: 'chunk-[hash]',
+    splitting: true, define: { __AZ_OFFLINE__: 'false' } });
+  const offlineResult = await build({ ...common, write: false, define: { __AZ_OFFLINE__: 'true' } });
+  const js = offlineResult.outputFiles[0].text;
 
   // 标准静态产物（相对路径，适配 GitHub Pages 子路径）
   await writeFile(
@@ -97,7 +99,10 @@ async function main() {
   const kb = (s) => (Buffer.byteLength(s, 'utf8') / 1024).toFixed(1) + ' KB';
   console.log(`[build] mode                ${debug ? 'DEBUG (unminified + inline sourcemap)' : 'release (minified)'}`);
   console.log('[build] dist/assets/app.css  ' + kb(css));
-  console.log('[build] dist/assets/app.js   ' + kb(js));
+  const builtAssets = await readdir(assets);
+  for (const file of builtAssets.filter(name => name.endsWith('.js'))) {
+    console.log(`[build] dist/assets/${file}  ${kb(await readFile(path.join(assets, file), 'utf8'))}`);
+  }
   console.log('[build] dist/index.html      ' + kb(await readFile(path.join(dist, 'index.html'), 'utf8')));
   console.log('[build] index.html (offline) ' + kb(await readFile(path.join(root, 'index.html'), 'utf8')));
   console.log(`[build] done in ${Date.now() - t0}ms — 零外部 CDN 依赖`);

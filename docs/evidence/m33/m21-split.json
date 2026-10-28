@@ -1,0 +1,1619 @@
+{
+  "stage": "M2.1",
+  "generatedAt": "2026-10-28T05:45:49.290Z",
+  "passed": 260,
+  "total": 260,
+  "results": [
+    {
+      "id": "startup",
+      "name": "应用和新配置契约可用",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A40-boot",
+      "name": "五镜头重播与跳过仍到同一稳定核心",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A40-selection",
+      "name": "核心聚焦与 Inspector 对应",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A40-orbit",
+      "name": "真实鼠标旋转及缩放限幅",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A08",
+      "name": "真实点击预览与确认写入同一配置",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A11",
+      "name": "重复安装不产生实例",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A09-valid",
+      "name": "真实鼠标拖拽到兼容端口",
+      "pass": true,
+      "note": "{\"moduleId\":\"announcement_search\",\"targetPortId\":\"SEARCH_PORT\",\"valid\":true,\"message\":\"松开即可装配到 SEARCH_PORT · 检索接口\"}"
+    },
+    {
+      "id": "A09-invalid",
+      "name": "真实鼠标非法拖拽无半成品",
+      "pass": true,
+      "note": "{\"moduleId\":\"document_reader\",\"targetPortId\":\"SEARCH_PORT\",\"valid\":false,\"message\":\"文档读取不能连接到检索接口（SEARCH_PORT）\"}"
+    },
+    {
+      "id": "A07",
+      "name": "示例确认后加载全部十类",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A17",
+      "name": "真实 3D 实体与配置启用状态一致",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A12",
+      "name": "Inspector 的文本、数值、多选修改真实更新",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A13",
+      "name": "非法数字被拒绝并显示字段反馈",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A24",
+      "name": "共享审批字段从 Guardrails 更新根 Runtime",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A18",
+      "name": "禁用与系统图/Inspector 状态同步",
+      "pass": true,
+      "note": "{\"disabled\":true,\"errors\":true,\"ready\":true}"
+    },
+    {
+      "id": "A25",
+      "name": "保存快照后本地列表可选择",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A27",
+      "name": "复制重命名和删除确认",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A29",
+      "name": "加载未保存草稿必须确认且取消不丢数据",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A26-load",
+      "name": "确认加载恢复已保存模块参数和名称",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A31",
+      "name": "Preflight 由真实草稿产生摘要和警告",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A32",
+      "name": "模块知识链接与返回位置",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A33",
+      "name": "配置管理不改 Journal/学习/研究记录",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A26",
+      "name": "刷新恢复草稿全部字段",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A29-unblurred-setup",
+      "name": "真实可见文本框保留焦点",
+      "pass": true,
+      "note": "{\"focused\":true,\"visible\":true}"
+    },
+    {
+      "id": "A29-unblurred",
+      "name": "刷新前提交尚未失焦的文本草稿",
+      "pass": true,
+      "note": "{\"value\":\"离开前尚未失焦的研究目标\"}"
+    },
+    {
+      "id": "A34-1440",
+      "name": "响应式无页面横向溢出",
+      "pass": true,
+      "note": "{\"width\":1440,\"scrollWidth\":1440}"
+    },
+    {
+      "id": "A34-1024",
+      "name": "响应式无页面横向溢出",
+      "pass": true,
+      "note": "{\"width\":1024,\"scrollWidth\":1024}"
+    },
+    {
+      "id": "A34-768",
+      "name": "响应式无页面横向溢出",
+      "pass": true,
+      "note": "{\"width\":768,\"scrollWidth\":768}"
+    },
+    {
+      "id": "A34-390",
+      "name": "响应式无页面横向溢出",
+      "pass": true,
+      "note": "{\"width\":390,\"scrollWidth\":390}"
+    },
+    {
+      "id": "A34-mobile-form",
+      "name": "窄屏检视抽屉真实可见且能编辑",
+      "pass": true,
+      "note": "{\"visible\":true,\"x\":57,\"right\":351,\"width\":390}"
+    },
+    {
+      "id": "A34-mobile-preflight",
+      "name": "窄屏目录可进入预检并让出抽屉空间",
+      "pass": true,
+      "note": "{\"x\":35,\"right\":373,\"width\":390}"
+    },
+    {
+      "id": "A34-keyboard-setup",
+      "name": "键盘确认弹层准备",
+      "pass": true,
+      "note": "{\"pass\":true,\"dirty\":true}"
+    },
+    {
+      "id": "A34-dialog-focus",
+      "name": "Enter 打开确认并聚焦取消",
+      "pass": true,
+      "note": "{\"pass\":true,\"open\":\"true\",\"focus\":\"<button class=\\\"btn btn--ghost\\\" type=\\\"button\\\">取消</button>\",\"dirty\":true,\"shellInert\":true}"
+    },
+    {
+      "id": "A34-focus-trap",
+      "name": "确认弹层焦点圈定",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A34-focus-return",
+      "name": "Escape 取消且焦点返回触发按钮",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m03-A01",
+      "name": "Atlas 初始载入：M1.4画布36个节点 + 目录 36 个概念索引，画布可观察、信息可读",
+      "pass": true,
+      "note": "节点=36 · 清单=36 · viewBox=0 0 1500 1020"
+    },
+    {
+      "id": "R-m03-A02",
+      "name": "语义关系：M1.4画布49条真实关系都有合法类型与文字含义，无悬空关系（M1.1 新增 api–mcp、workflow–harness；M1.2 新增 tool_calling–mcp）",
+      "pass": true,
+      "note": "边=49 · 类型={\"USES\":7,\"RELATED\":34,\"CONTRASTS\":5,\"PART_OF\":3} · 说明缺失=0 · M1.4完整统一关系数据"
+    },
+    {
+      "id": "R-m03-A03",
+      "name": "搜索：英文大小写、去空格写法与中文别名都能定位正确节点",
+      "pass": true,
+      "note": "LLM→llm · TOOLCALLING→tool_calling · 工具调用→tool_calling · 空结果提示=true"
+    },
+    {
+      "id": "R-m03-A04",
+      "name": "缩放 / 平移 / 复位：限幅生效，Reset 恢复标准视角",
+      "pass": true,
+      "note": "基准 k=1 · 放大上限=2.60 · 缩小下限=0.55 · 平移=630,428 · 复位 k=1"
+    },
+    {
+      "id": "R-m03-A05",
+      "name": "点击 / 聚焦：选中、详情与关联高亮一致；刷新或切页不重排节点",
+      "pass": true,
+      "note": "详情标题=工具调用 · 选中=true · 关联高亮=true · 聚焦 k=1.50 · 坐标固定=true"
+    },
+    {
+      "id": "R-m03-A06",
+      "name": "关系 Inspector：方向与文字解释正确，可选关系没被画成必需依赖",
+      "pass": true,
+      "note": "RELATED=无向 true · USES=有向 true · CONTRASTS=无向 true"
+    },
+    {
+      "id": "R-m03-A07",
+      "name": "键盘与触屏访问：不必操作画布命中点也能选择节点并打开详情",
+      "pass": true,
+      "note": "清单按钮可聚焦=true · 详情=模型上下文协议 · 节点可聚焦=true · 关系可聚焦=true"
+    },
+    {
+      "id": "R-m03-A08",
+      "name": "Tool Calling 入门：DISCOVER 与 UNDERSTAND 的三方职责清楚，无错误概念",
+      "pass": true,
+      "note": "三段职责=request→execute→return · 当前高亮=request · 一句话=Tool Calling 让模型可以请求调用外部工具，实际执行通常由…"
+    },
+    {
+      "id": "R-m03-A09",
+      "name": "Tool Calling 深入：简化请求格式、权限检查与 MCP/API 边界清楚",
+      "pass": true,
+      "note": "INSPECT 请求=true · 权限检查=true · MCP 边界=true · Skills 边界=true"
+    },
+    {
+      "id": "R-m03-A10",
+      "name": "Tool Calling 实验：step/play/reset 生效，且参数真实改变事件与响应",
+      "pass": true,
+      "note": "参数效应=true · 单步后 index=2 · 播放中按钮=暂停 · 暂停后=播放 · 复位后 index=0 · 分支（缺 Reader/未授权）=B03_NO_READER/B03_NO_READER"
+    },
+    {
+      "id": "R-m03-A11",
+      "name": "实验隔离：知识示范不会修改装配配置或授权，只写独立的学习进度",
+      "pass": true,
+      "note": "构建器配置不变=true · 学习进度写入实验完成标记=true · 执行记录未被知识页写入=true"
+    },
+    {
+      "id": "R-m03-A12",
+      "name": "知识导航到 Constructor：正确定位工具，尚未装配时明确说明而不偷偷添加",
+      "pass": true,
+      "note": "mode=constructor · 模块数 0→0 · 提示=Search / Reader 尚未装配：已在能力架中定位，"
+    },
+    {
+      "id": "R-m03-A13",
+      "name": "Constructor 返回知识：从工具 Inspector 往返并保持 Inspector 上下文",
+      "pass": true,
+      "note": "知识页打开=knowledge · 返回后 mode=constructor · 保持选中=document_reader"
+    },
+    {
+      "id": "R-m03-A14",
+      "name": "正常 Run：Search/Reader Ready 时确有检索、读取与样本获得事件",
+      "pass": true,
+      "note": "结局=research_partial · 分支=B01_NORMAL · 事件=23 · 执行图节点=23 · 时间轴=23 · 报告=partial · 执行分支=1 / 证据分支=2"
+    },
+    {
+      "id": "R-m03-A25",
+      "name": "回放播放 / 暂停：能播放到结束，暂停后指针与执行动画都不再推进",
+      "pass": true,
+      "note": "播放 1.8s：0→1（采样 0/0/0/1/1/1）· 暂停后 1=1 · 末尾=true · 状态标签=PLAYING · 播放中/PAUSED · 已暂停 · WebGL=true · 画布停靠=true · 期间渲染帧=68"
+    },
+    {
+      "id": "R-m03-A26",
+      "name": "单步 / Seek / 速度：首尾不越界，四档速度可用且不改变运行结果",
+      "pass": true,
+      "note": "起点不越界=0 · 末尾不越界=22 · Seek→4 · 速度=0.5/1/2/4 · 结果不变=true"
+    },
+    {
+      "id": "R-m03-A27",
+      "name": "3D/2D 同步：同一 eventId 在三维聚焦、执行图与 Inspector 三处一致",
+      "pass": true,
+      "note": "三维聚焦=document_reader · 二维高亮=document_reader · eventId 对齐=true · 阻断步骤未亮成功态=true"
+    },
+    {
+      "id": "R-m03-A24",
+      "name": "事件 Inspector：任意事件有正确序号、状态、调用 / 响应与原因，资料文本安全显示",
+      "pass": true,
+      "note": "字段完整=true · 载荷以文本节点渲染（无 HTML 注入）=true · 输入=true / 输出=true · 载荷引用=p:search-request,p:search-response"
+    },
+    {
+      "id": "R-m03-A22",
+      "name": "确定性：同一配置 + 任务版本 + 故障选项产生相同语义事件与结果",
+      "pass": true,
+      "note": "runId=run-34ef522b 两次一致=true · 事件数=23"
+    },
+    {
+      "id": "R-m03-A23",
+      "name": "配置快照隔离：运行后编辑 / 移除模块，旧轨迹与回放不被覆盖或重算",
+      "pass": true,
+      "note": "旧轨迹不变=true · 快照保留=true · 本地记录保留=true · 装配台现为=announcement_search · 新运行分支=B03_NO_READER"
+    },
+    {
+      "id": "R-m03-A17",
+      "name": "Reader 缺失：Search 可成功、Reader 不成功，且不伪造已读全文",
+      "pass": true,
+      "note": "分支=B03_NO_READER · 结局=partial · 阻断节点=1 · 样本等级=search_excerpt · 截图指针=#05"
+    },
+    {
+      "id": "R-m03-A15",
+      "name": "Search 缺失 / Disabled：不生成成功的调用结果，并说明缺失原因",
+      "pass": true,
+      "note": "缺失分支=B02_NO_SEARCH · 调用事件=0 · 原因=检索工具不可用：公告检索尚未装配到SEARCH_PORT；本次运行不… · Disabled 分支=B02_NO_SEARCH"
+    },
+    {
+      "id": "R-m03-A16",
+      "name": "Search 未授权 / Invalid：不被当作 Ready，事件说明阻断原因",
+      "pass": true,
+      "note": "分支=B02_NO_SEARCH · 原因=检索工具不可用：公告检索尚未授予只读模拟权限；本次运行不会产生任何成功的检索或读…"
+    },
+    {
+      "id": "R-m03-A16b",
+      "name": "Invalid 配置：非法字段不会被当作 Ready，运行如实阻断",
+      "pass": true,
+      "note": "模块状态=Invalid · 分支=B02_NO_SEARCH · 原因=检索工具不可用：「结果数量」的取值「999」不在允许范围内；本次运行…"
+    },
+    {
+      "id": "R-m03-A18",
+      "name": "Reader summary / full_text：返回内容范围正确，summary 不表现为全文读取",
+      "pass": true,
+      "note": "summary→summary（content=null，证据=summary_chunk，事件=读取返回（NTC-1007）：预先定义的摘要…）· full_text→full_text（228 字符）"
+    },
+    {
+      "id": "R-m03-A19",
+      "name": "includeMetadata：关闭时用户可见响应不含来源与日期，内部追踪元数据仍分离保存",
+      "pass": true,
+      "note": "关闭时用户可见响应含元数据=false · metadata=null · 内部追踪仍保留 publishedAt=true · 开启后 metadata={\"publishedAt\":\"2026-10-13\",\"publisher\":\"虚构大学 · 学生事务中心\",\"publisherId\":\"pub-student-affairs\",\"noticeScope\":\"service_notice\",\"eventKey\":\"evt-open-campus\",\"supersedes\":[\"NTC-1006\"],\"validity\":\"active\"}"
+    },
+    {
+      "id": "R-m03-A20",
+      "name": "searchScope / maxResults：过滤与上限产生可检查的不同模拟结果",
+      "pass": true,
+      "note": "all/3 → 检索返回：候选 9 条，受上限 3 限制返回 3 条… · all/5 → 检索返回：候选 9 条，受上限 5 限制返回… · campus/5 → 检索返回：候选 6 条，受上限 5 限制返回… · 候选 9 / 6"
+    },
+    {
+      "id": "R-m03-A21",
+      "name": "固定超时分支：faultMode 激活后有确定性 error / blocked 轨迹，无假成功",
+      "pass": true,
+      "note": "故障分支=B04_SEARCH_TIMEOUT · 结局=error · 错误码=SEARCH_TIMEOUT · 关闭后分支=B01_NORMAL · 模块未被写成 Invalid=true"
+    },
+    {
+      "id": "R-m03-A26b",
+      "name": "回放控制不改变运行数据：播放 / 调速 / Seek / 复位后事件数组完全一致",
+      "pass": true,
+      "note": "事件数组不变=true · 复位后 index=0 · runId 未变=true"
+    },
+    {
+      "id": "R-m03-A28",
+      "name": "存储恢复：最近一次 Run 可从本地恢复（恢复的是快照，不重算引擎）",
+      "pass": true,
+      "note": "恢复来源=restored · runId 一致=true · 事件=21 · 结局=research_partial · 指针从 0 开始（未自动播放）"
+    },
+    {
+      "id": "R-m03-A28b",
+      "name": "损坏记录安全降级：不白屏、不覆盖构建器存储、不猜测轨迹",
+      "pass": true,
+      "note": "无历史轨迹=true · 空状态提示=true · 构建器未被覆盖=true · 学习进度未被覆盖=true · 日志有可读提示=true"
+    },
+    {
+      "id": "R-m03-A29",
+      "name": "无障碍 / 降级：无 WebGL、减少动态、窄屏下知识与执行仍可学习与回放",
+      "pass": true,
+      "note": "WebGL=false · reducedMotion=true · 星图=true · 知识页=true · 执行台(2D)=true · 关键控件可键盘聚焦=true"
+    },
+    {
+      "id": "R-m03-A30",
+      "name": "纯静态构建：工作区打开时也没有任何业务后端 / CDN 请求",
+      "pass": true,
+      "note": "外部资源=0 / 全部资源=0 · 运行期全部逻辑在浏览器内"
+    },
+    {
+      "id": "R-m04-A31",
+      "name": "数据集版本与稳定 ID：资料/片段 ID 唯一，虚构标识完整，数据校验通过",
+      "pass": true,
+      "note": "资料=9 · 片段=30 · 校验问题=[] · 虚构标记=true"
+    },
+    {
+      "id": "R-m04-A34",
+      "name": "保持 M0.3 的 sourceId/chunkId 与工具 schema 不变",
+      "pass": true,
+      "note": "mini 资料逐字保留=true · 可装配工具=announcement_search,document_reader"
+    },
+    {
+      "id": "R-m04-A32",
+      "name": "更正对 10/18 → 10/20：同一事项、明确更正关系、发布时间更晚",
+      "pass": true,
+      "note": "eventKey=evt-open-campus · 2026-10-18 → 2026-10-20 · supersedes=[\"NTC-1006\"]"
+    },
+    {
+      "id": "R-m04-A33",
+      "name": "不可消解冲突：同事项两个不同取值，且没有可核实的 supersedes 关系",
+      "pass": true,
+      "note": "eventKey=evt-career-fair · 2026-10-24 / 2026-10-26 · supersedes 均为空"
+    },
+    {
+      "id": "R-m04-A35",
+      "name": "searchScope / maxResults 决定实际可见来源，不越权补资料",
+      "pass": true,
+      "note": "检索返回=5 条 → 读取=5 份 · 读到未返回资料=0"
+    },
+    {
+      "id": "R-m04-A36",
+      "name": "readMode=full_text 才返回正文片段；摘要模式不能冒充全文",
+      "pass": true,
+      "note": "读取响应=5 · 全部 textScope=full_text · 片段均为正文片段"
+    },
+    {
+      "id": "R-m04-A37",
+      "name": "includeMetadata=true 时发布主体 / 发布时间由工具真实返回",
+      "pass": true,
+      "note": "元数据声明=25 条 · 含 published_at=true"
+    },
+    {
+      "id": "R-m04-A40",
+      "name": "可见冲突被识别为独立事件，且引用了正确的资料与声明",
+      "pass": true,
+      "note": "冲突事件=2 · 首个冲突 sourceIds=[\"NTC-1008\",\"NTC-1009\"]"
+    },
+    {
+      "id": "R-m04-A41",
+      "name": "VERIFY 且条件充分时标注更正成立，旧信息保留可追踪",
+      "pass": true,
+      "note": "规则=rule.evidence.revision.confirmed · NTC-1006 → NTC-1007 · 旧资料仍在证据集中"
+    },
+    {
+      "id": "R-m04-D06",
+      "name": "决策可解释：显示必要条件、使用资料与规则依据",
+      "pass": true,
+      "note": "必要条件=8 条全部通过 · ruleId=rule.evidence.revision.confirmed"
+    },
+    {
+      "id": "R-m04-A39",
+      "name": "每条事实声明都有本次 Run 真正可见的 sourceId / chunkId / eventId",
+      "pass": true,
+      "note": "文本级声明=7 条 · 全部可追溯到事件=true"
+    },
+    {
+      "id": "R-m04-A47",
+      "name": "maxResults / searchScope 只含旧公告时，不利用隐藏的新公告宣布更正成立",
+      "pass": true,
+      "note": "campus_events 可见=[\"NTC-1006\",\"NTC-1009\",\"NTC-1008\",\"NTC-1001\",\"NTC-1002\"] · 更正事件=0 · 开放日可见取值=[\"2026-10-18\"]"
+    },
+    {
+      "id": "R-m04-A42",
+      "name": "缺关系 / 缺正文时保持 unresolved 并解释缺什么",
+      "pass": true,
+      "note": "缺失原因=[\"MISSING_SUPERSEDES\"]"
+    },
+    {
+      "id": "R-m04-A43",
+      "name": "COLLECT_ONLY：相同来源出现冲突但无 revision_confirmed，报告保留未核验状态",
+      "pass": true,
+      "note": "跳过事件=2 · 更正成立=0 · 报告状态=partial"
+    },
+    {
+      "id": "R-m04-A56",
+      "name": "未决报告：不把冲突伪装成核验通过",
+      "pass": true,
+      "note": "未决陈述=2 · conflictsResolved=0"
+    },
+    {
+      "id": "R-m04-A44",
+      "name": "Search 不可用：没有成功检索或正文事实，报告为阻断说明",
+      "pass": true,
+      "note": "分支=B02_NO_SEARCH · 成功检索=0 · 报告=blocked · 引用=0"
+    },
+    {
+      "id": "R-m04-A45",
+      "name": "Reader 不可用：保留检索摘要级线索，不出现已读正文或核验成功",
+      "pass": true,
+      "note": "分支=B03_NO_READER · 读取成功=0 · 更正成立=0 · 引用级别=search_excerpt"
+    },
+    {
+      "id": "R-m04-A46",
+      "name": "faultMode=search_timeout：确定性错误分支，无假检索成功，报告说明受限",
+      "pass": true,
+      "note": "分支=B04_SEARCH_TIMEOUT · 错误事件=1 · 报告=blocked"
+    },
+    {
+      "id": "R-m04-A38",
+      "name": "重复资料 / 非法日期 / 循环 supersedes 被校验发现，坏资料不进入语料",
+      "pass": true,
+      "note": "发现的问题码=DUPLICATE_SOURCE_ID,INVALID_DATE,DUPLICATE_CHUNK_ID,CHUNK_ID_MISMATCH,SUPERSEDES_TIME_ORDER,SUPERSEDES_CYCLE · 剔除=2 条"
+    },
+    {
+      "id": "R-m04-A49",
+      "name": "固定输入可复现：同配置 + 同策略 + 同故障条件 → 同 runId 与同一份事件 / 报告",
+      "pass": true,
+      "note": "runId=run-34ef522b / run-34ef522b · 完全一致=true"
+    },
+    {
+      "id": "R-m04-A50",
+      "name": "快照隔离：修改当前配置后旧 Run 的事件与报告内容不改变；新 Run 才使用新配置",
+      "pass": true,
+      "note": "旧 Run 未被改写=true · 新 runId 不同=true · 新 Run 读全文数=0"
+    },
+    {
+      "id": "R-m04-A48",
+      "name": "研究策略是本次 Run 的本地规则选项，不是第三个可装配工具",
+      "pass": true,
+      "note": "装配模块=announcement_search,document_reader · RunOptions={\"faultMode\":\"normal\",\"evidencePolicy\":\"VERIFY_REVISIONS\"}"
+    },
+    {
+      "id": "R-m04-A36",
+      "name": "summary 模式不能冒充全文：没有正文片段，也没有「已读全文」结论",
+      "pass": true,
+      "note": "读取响应 textScope=summary · 更正成立=0 · 证据不足事件=1"
+    },
+    {
+      "id": "R-m04-A37",
+      "name": "includeMetadata=false：核验无法偷偷使用被关闭的发布主体 / 时间 / 更正关系",
+      "pass": true,
+      "note": "元数据声明=0 · metadata_missing 事件=2 · 更正成立=0"
+    },
+    {
+      "id": "R-m04-A53",
+      "name": "六部分报告：范围 / 发现 / 概念方案比较 / 引用 / 局限 / 建议完整",
+      "pass": true,
+      "note": "R1·研究任务与范围 | R2·核心发现 | R3·方案比较（概念性） | R4·证据引用 | R5·局限与风险 | R6·研究建议与待验证 · 局限=5 · 建议=4"
+    },
+    {
+      "id": "R-m04-A54",
+      "name": "条件性建议：不把 Agent 定为唯一正确方案，明确规则自动化的适用条件",
+      "pass": true,
+      "note": "方案卡=规则自动化,固定 LLM 工作流,Agent 式流程 · 提到规则自动化=true"
+    },
+    {
+      "id": "R-m04-A55",
+      "name": "更正报告同时保留 10/18 旧事实与 10/20 更正结论的引用",
+      "pass": true,
+      "note": "旧事实引用 NTC-1006=true · 更正引用 NTC-1007=true · 相关陈述=4"
+    },
+    {
+      "id": "R-m04-A57",
+      "name": "引用完整性：每条引用都能解析到本次 Run 的 sourceId / chunkId / eventId",
+      "pass": true,
+      "note": "引用=5 条 · 无法解析=0 · 陈述引用均存在=true"
+    },
+    {
+      "id": "R-m04-A58",
+      "name": "引用文本范围：查看的就是本次真正拿到的片段，不暗中用完整资料代替",
+      "pass": true,
+      "note": "引用片段与本次读取响应逐条比对=true"
+    },
+    {
+      "id": "R-m04-A62",
+      "name": "指标准确：已读全文数 / 支持事实数 / 冲突数 / 工具调用与错误来自真实运行",
+      "pass": true,
+      "note": "读取=5/5 · 全文=5 · 冲突=2 · 调用=6/6 · 事件=23 · 面板一致=true"
+    },
+    {
+      "id": "R-m04-A53b",
+      "name": "报告阅读视图：六个部分 + 指标 + 未决项都能在正文中定位",
+      "pass": true,
+      "note": "正文区块=R1,R2,R3,R4,R5,R6,METRICS,UNRESOLVED"
+    },
+    {
+      "id": "R-m04-A59",
+      "name": "Source Inspector：来源名称、可见元数据、虚构标识与引用高亮",
+      "pass": true,
+      "note": "引用=S4 · 标题=秋季校园招聘会公告 · 高亮=1 处 · 含 sourceId/chunkId/eventId=true"
+    },
+    {
+      "id": "R-m04-A60",
+      "name": "Report → Replay：引用事件在三处观察区同步定位到同一个 eventId",
+      "pass": true,
+      "note": "citation=S4 → event=run-34ef522b#e12 · 执行图当前节点=run-34ef522b#e12 · Inspector=run-34ef522b#e12"
+    },
+    {
+      "id": "R-m04-A61",
+      "name": "Replay → Report：回到原段落与阅读上下文，而非报告顶部",
+      "pass": true,
+      "note": "返回入口可见=true · 视图=report · 高亮段落=1"
+    },
+    {
+      "id": "R-m04-A51",
+      "name": "Replay 扩展：conflict / revision / report 事件可播放、暂停、单步与 Seek",
+      "pass": true,
+      "note": "冲突事件=evidence.conflict_detected · 播放/暂停=true/true · 单步=true · Seek 末尾=true"
+    },
+    {
+      "id": "R-m04-A52",
+      "name": "2D/3D 与 Inspector 使用同一 eventId，暂停时数据流冻结",
+      "pass": true,
+      "note": "视图=2d · 节点=run-34ef522b#e20 · Inspector=run-34ef522b#e20 · 播放中=false"
+    },
+    {
+      "id": "R-m04-A63",
+      "name": "Markdown 导出：标题、模拟声明、引用列表、未决事项与 UI 报告一致",
+      "pass": true,
+      "note": "长度=3698 · 标题=true · 引用齐全=true · 未决段=true · 局限段=true · 元信息=true · 下载按钮=true · 文件名=AGENT-ZERO_MISSION-001_run-34ef522b.md"
+    },
+    {
+      "id": "R-m04-A65",
+      "name": "新版恢复：刷新后当前 Run 的来源引用与报告仍可检查，配置不丢失",
+      "pass": true,
+      "note": "事件=23 · 陈述=11 · 引用=5 · 配置保留=true"
+    },
+    {
+      "id": "R-m04-A64",
+      "name": "旧版 Run 兼容：仅轨迹时显示无报告状态，不补造历史结论",
+      "pass": true,
+      "note": "恢复的 run=run-legacy0001 · schemaVersion=1 · 报告标题=尚无结构化报告 · 陈述数=0"
+    },
+    {
+      "id": "R-m04-A66",
+      "name": "损坏数据：失效 / 坏 schema 的本地记录安全降级，不白屏也不错误宣称已核验",
+      "pass": true,
+      "note": "降级提示=true · 新运行=research_partial · 页面可用=true"
+    },
+    {
+      "id": "R-m04-A67",
+      "name": "窄屏与键盘：可阅读报告、打开来源、返回原段落，无横向溢出",
+      "pass": true,
+      "note": "横向溢出=0px · 引用可聚焦=true · 来源面板可见=true"
+    },
+    {
+      "id": "R-m04-A68",
+      "name": "WebGL 不可用 + 减少动态：二维兜底仍可完成核验阅读、回放、报告与导出",
+      "pass": true,
+      "note": "WebGL=false · reducedMotion=true · 报告=partial · 引用可打开=true"
+    },
+    {
+      "id": "R-m04-A69",
+      "name": "前三阶段回归：Boot / Hub / 装配 / Atlas / Tool Calling / Replay 无明显退化",
+      "pass": true,
+      "note": "Hub=true · Atlas 节点/边=true · 知识页=true · 装配=true · 回放=true"
+    },
+    {
+      "id": "R-m04-A70",
+      "name": "纯静态部署：构建产物相对路径、无业务 API、无 CDN 依赖",
+      "pass": true,
+      "note": "外部资源=0 · 绝对 URL 引用=0 · 单文件内联=true · 业务 API 请求=true"
+    },
+    {
+      "id": "R-m11-A19",
+      "name": "学习迁移：旧版 v1 记录逐条迁移到 v2，原有标志不丢，旧键原样保留",
+      "pass": true,
+      "note": "迁移来源=agent-zero:learning:v1 · tool_calling={\"e\":true,\"r\":true,\"x\":true,\"v\":3} · v2.schemaVersion=2 · v1 原样保留=true"
+    },
+    {
+      "id": "R-m11-A02",
+      "name": "六章完整：恰好 6 个稳定 chapterId，顺序、编号、双语标题与核心问题符合 PRD",
+      "pass": true,
+      "note": "章节=6 · 中文标题=智能诞生/指令与上下文/外部能力/信息与方法/执行系统/可靠性与边界 · 问题齐全=true"
+    },
+    {
+      "id": "R-m11-A03",
+      "name": "概念索引：36 个稳定概念元数据，目录里可逐条浏览（30–40 建议区间内）",
+      "pass": true,
+      "note": "概念=36 · ID 唯一=true · 目录条目=36"
+    },
+    {
+      "id": "R-m11-A04",
+      "name": "M0 ID 兼容：原 10 个概念 ID 全部保留，目录与搜索仍可定位",
+      "pass": true,
+      "note": "既有 10 个 ID 均在目录中"
+    },
+    {
+      "id": "R-m11-A15",
+      "name": "Story 目录：六章可浏览，展示真实开放状态与可用内容入口",
+      "pass": true,
+      "note": "章状态=ready/ready/ready/ready/ready/ready · 每章概念=6 · 每章实验登记可见"
+    },
+    {
+      "id": "R-m11-A05",
+      "name": "归属有效：36 个概念按六章分组，全部指向合法章节",
+      "pass": true,
+      "note": "分组=6 · 条目=36 · 状态分布={\"reviewed\":11,\"published\":25}"
+    },
+    {
+      "id": "R-m11-A16",
+      "name": "Atlas 衔接：已开放节点可选中 / 搜索 / 聚焦，详情可用；建设中概念弱化但可选",
+      "pass": true,
+      "note": "画布节点=36 · 目录条目=36 · 画布条目=36"
+    },
+    {
+      "id": "R-m11-A06",
+      "name": "双语搜索：中文、英文、别名、大小写、部分匹配均有效，空查询与零结果状态清晰",
+      "pass": true,
+      "note": "LLM→llm · TOOLCALLING→tool_calling · 工具调用→tool_calling · 幻觉→hallucination · 沙→sandbox · 零结果提示=true"
+    },
+    {
+      "id": "R-m11-A11",
+      "name": "语义关系：每条边端点存在、类型合法、有文字解释（画布与详情同源）",
+      "pass": true,
+      "note": "画布边=49（M1.4画布覆盖36个固定坐标节点）· 选中 agent 的关系=8 · 说明全非空"
+    },
+    {
+      "id": "R-m11-A12",
+      "name": "关系方向：USES / PART_OF 有向并写明「→」，RELATED / CONTRASTS 标注无向而非强依赖",
+      "pass": true,
+      "note": "有向行=3 · 无向行=5 · 示例=智能体执行系统 → 大语言模型 | 智能体执行系统 → 工具 | 无向 · 不表示必需依赖"
+    },
+    {
+      "id": "R-m11-A13",
+      "name": "旧关系保留：M0.3 的 10 条边在统一数据源中完整可查，语义未改写",
+      "pass": true,
+      "note": "选中 agent 后可见的 M0.3 边=6/6（其余在 llm/tools/mcp 等节点下）"
+    },
+    {
+      "id": "R-m11-A08",
+      "name": "分层模板：已发布/已审校概念可正确呈现 UNDERSTAND 与 INSPECT 两个深度层",
+      "pass": true,
+      "note": "UNDERSTAND 段=3 · INSPECT 条=4 · 示例块=true"
+    },
+    {
+      "id": "R-m11-A09",
+      "name": "误区模板：常见误解与更正成对呈现，缺字段的空概念不白屏",
+      "pass": true,
+      "note": "误解条目=1 · 章内目录=6 条"
+    },
+    {
+      "id": "R-m11-A14",
+      "name": "来源诚实：外部来源必须已核验且带核验日期，未核验内容不列为引用",
+      "pass": true,
+      "note": "来源行=3 · 外部来源行=1 · 外部链接均为 https=true · 含核验日期=true"
+    },
+    {
+      "id": "R-m11-A07",
+      "name": "内容状态：M1.3 起 36 概念全部有正文；reviewed 概念不出现「内容建设中」横幅",
+      "pass": true,
+      "note": "状态=reviewed · 有正文=true · 建设横幅=false · 深度层开关=1"
+    },
+    {
+      "id": "R-m11-A09",
+      "name": "误区模板：常见误解与纠正成对呈现，缺字段的空概念不白屏",
+      "pass": true,
+      "note": "误解区块=1 · 正文长度=2678 · 关系行=7"
+    },
+    {
+      "id": "R-m11-A10",
+      "name": "实验链接：没有登记实验的概念只说明「暂无实验」，没有可点击的假运行按钮",
+      "pass": true,
+      "note": "运行按钮=无 · 无实验提示=暂无实验 本概念的实验尚未登记；登记后会在此处出现真实入口。 · 章内目录=6"
+    },
+    {
+      "id": "R-m11-A10",
+      "name": "实验链接：Lab 只给真实可用实验运行入口（M1.3 起六个实验全部可操作）",
+      "pass": true,
+      "note": "可操作卡片=6（exp-token-lab/exp-context-lab/exp-tool-calling-demo/exp-retrieval-lab/exp-agent-loop-lab/exp-boundary-lab）· 计划实验=0 · 运行按钮=6 · 后续阶段提示=0"
+    },
+    {
+      "id": "R-m11-A17",
+      "name": "Tool Calling 回归：四步学习路径、内嵌实验与 Constructor 入口均正常",
+      "pass": true,
+      "note": "步骤=4 · 直接落在=experiment · 事件行=9 · 本地记录=true · 未改动装配台=true"
+    },
+    {
+      "id": "R-m11-A18",
+      "name": "学习状态独立：访问、实验完成、关联发现可以分别表示，且不能凭空记录实验",
+      "pass": true,
+      "note": "transformer explored=true · 实验=false · lastViewed=transformer/intelligence · 汇总={\"total\":36,\"explored\":4,\"experiments\":1,\"related\":1,\"unexplored\":32,\"completedLabs\":1} · 拒绝无实验记录=true"
+    },
+    {
+      "id": "R-m11-A21",
+      "name": "Run 隔离：阅读与搜索不修改装配配置，也不重置 M0.4 研究 Run",
+      "pass": true,
+      "note": "runId 保持=true · 事件数=5→5 · 配置未变=true · 运行记录未改写=true"
+    },
+    {
+      "id": "R-m11-A22",
+      "name": "数据自洽：知识层校验器零问题（章节 / 概念 / 关系 / 来源 / 实验）",
+      "pass": true,
+      "note": "issues=[]"
+    },
+    {
+      "id": "R-m11-A23",
+      "name": "路径适配：页面不依赖任何绝对路径或外部 CDN，可在子路径下直接打开与刷新",
+      "pass": true,
+      "note": "外部脚本=[] · 外部样式=[] · 内联资源=true · 外部请求=0 · 页面协议=file:"
+    },
+    {
+      "id": "R-m11-A20",
+      "name": "损坏数据：损坏的学习记录不白屏、不清空其它命名空间，可继续正常记录",
+      "pass": true,
+      "note": "页面可读长度=4185 · 提示可见=true · 继续记录 llm=true · 命名空间=[\"agent-zero:learning:v2\",\"agent-zero:learning:v1\"]"
+    },
+    {
+      "id": "R-m11-A24",
+      "name": "M0 回归：开场 / 装配 / Atlas / Tool Calling / 执行回放 / 报告在主链路上仍可用",
+      "pass": true,
+      "note": "场景=3D · 装配 Ready=true · Atlas 节点=36 · 四步=true · CONNECT=true · 运行事件=12 · Seek=true · 报告=true"
+    },
+    {
+      "id": "R-m11-A23b",
+      "name": "静态构建：dist/index.html 以相对路径加载资源并正常启动（GitHub Pages 子路径可用）",
+      "pass": true,
+      "note": "脚本=[\"./assets/app.js\"] · 样式=[\"./assets/app.css\"] · 概念=36"
+    },
+    {
+      "id": "R-m11-A24b",
+      "name": "控制台无未捕获异常（M1.1 知识层与既有链路）",
+      "pass": true,
+      "note": "无异常"
+    },
+    {
+      "id": "R-m12-A01",
+      "name": "仓库审计：复用 M0.3/M0.4/M1.1 既有模块与数据，未另建平行学习系统",
+      "pass": true,
+      "note": "validateKnowledge 问题=0 · 章节=6 · 概念=36 · 可用实验=6"
+    },
+    {
+      "id": "R-m12-A02",
+      "name": "章节目录：六章全部可导航；第 04–06 章由 M1.3 交付后为已发布状态",
+      "pass": true,
+      "note": "叙事章节=6 · 第 04–06 章已发布=18/18 · 可运行实验=18/18"
+    },
+    {
+      "id": "R-m12-A03",
+      "name": "概念覆盖：前三章 18 个概念均有完整 M1.1 分层字段",
+      "pass": true,
+      "note": "前三章概念=18 · 全部有正文=true · UNDERSTAND≥2=true · INSPECT≥3=true"
+    },
+    {
+      "id": "R-m12-A04",
+      "name": "中文入门内容：每概念有准确的入门解释与研究场景实例",
+      "pass": true,
+      "note": "示例齐全=18/18 · 示例均标注本地示意=true"
+    },
+    {
+      "id": "R-m12-A05",
+      "name": "技术深入内容：每概念有技术机制、适用条件或局限",
+      "pass": true,
+      "note": "INSPECT 条数=4/4/4/4/4/4/4/4/4/4/4/5/4/5/6/4/5/4 · 最短字符数=221"
+    },
+    {
+      "id": "R-m12-A06",
+      "name": "常见误解：每概念至少一条实际误解及纠正",
+      "pass": true,
+      "note": "误解总数=19 · 最少条数=1"
+    },
+    {
+      "id": "R-m12-A07",
+      "name": "参考来源：每概念有核实过的来源元数据，无伪造来源",
+      "pass": true,
+      "note": "外部已核验来源=30 · 每概念至少一条外部来源=true · 审校日期齐全=true"
+    },
+    {
+      "id": "R-m12-A08",
+      "name": "概念 ID：保持 M0.3/M1.1 稳定 ID 与别名兼容",
+      "pass": true,
+      "note": "既有 10 个 ID 全部保留=true · 别名冲突问题=0"
+    },
+    {
+      "id": "R-m12-A09",
+      "name": "关系图谱：相关边语义明确，无杜撰的必要依赖",
+      "pass": true,
+      "note": "关系总数=49 · 关系类问题=0 · 每概念有 related=true"
+    },
+    {
+      "id": "R-m12-A10",
+      "name": "Story 01：讲清「模型能生成语言但没有证据」这一局限",
+      "pass": true,
+      "note": "局限原文=「能生成回答，并不等于已经检索、阅读和核验了资料。」· 含 limit 节拍=true · 实验入口=true"
+    },
+    {
+      "id": "R-m12-A11",
+      "name": "Story 02：引导配置上下文并展示局限",
+      "pass": true,
+      "note": "局限=「指令更清晰，但没有接入真实资料，仍无法核实公告。」· 实验=exp-context-lab · 结果解读条数=3"
+    },
+    {
+      "id": "R-m12-A12",
+      "name": "Story 03：外部工具与 MCP 连接路径被准确讲解",
+      "pass": true,
+      "note": "局限=「工具可以带来可检查的资料，但返回数据不自动保证正确。」· 提到 Host/Client/Server=true · 实验=exp-tool-calling-demo"
+    },
+    {
+      "id": "R-m12-A13",
+      "name": "叙事衔接：模型→上下文→工具→知识检索自然连贯（六章成链）",
+      "pass": true,
+      "note": "过渡链=intelligence→context context→connection connection→knowledge knowledge→runtime runtime→reliability reliability→M1.4 · 第 01 章下一章按钮=「第 02 章 指令与上下文 →」· 第 03 章下一章按钮=「第 04 章 信息与方法 →」"
+    },
+    {
+      "id": "R-m12-A14",
+      "name": "Token 样例：真实分词样例，编码来源明确",
+      "pass": true,
+      "note": "中文样例 69 字符 → cl100k_base 61 token / o200k_base 43 token（离线预计算并逐条校验）"
+    },
+    {
+      "id": "R-m12-A15",
+      "name": "Token 预算：改变预算会改变截断/舍弃显示并解释原因",
+      "pass": true,
+      "note": "窗口 384 舍弃=1 条（原因含「整条舍弃」）· 窗口 1024 舍弃=0 条 · 窗口 256 超限缺口=5 token · 清空资料后资料占用=0"
+    },
+    {
+      "id": "R-m12-A16",
+      "name": "Token 准确性：没有按字符数伪称真实 token 数",
+      "pass": true,
+      "note": "字符/token=1.13（不是固定折算）· 61 ≠ 按 0.75 折算的 52 · 该数值来自预计算表并可用 node tools/tokens-verify.mjs 复算"
+    },
+    {
+      "id": "R-m12-A17",
+      "name": "Context 控件：指令、范围、背景、预算能够操作并更新状态",
+      "pass": true,
+      "note": "维度=goal,format,evidence,background,budget · 默认有来源事实=0 → 完整配置=7 · 受限预算进入卡片=2/3"
+    },
+    {
+      "id": "R-m12-A18",
+      "name": "Context 因果：改变配置导致可解释的结构/遗漏变化",
+      "pass": true,
+      "note": "报告节数 2→4 · 有来源事实 5<7 · 被舍弃=1 · 同配置两次结果一致=true · 变化维度=上下文预算"
+    },
+    {
+      "id": "R-m12-A19",
+      "name": "无来源处理：无资料时不能生成虚构引用",
+      "pass": true,
+      "note": "引用条数=0 · 有来源事实=0 · 报告含「未验证」标记=true · 报告里没有出现具体日期/地点=true"
+    },
+    {
+      "id": "R-m12-A20",
+      "name": "工具调用复用：原有 Tool Calling 事件链保留并被扩展",
+      "pass": true,
+      "note": "归一化后事件=9 条（tool.call/tool.result 均在）· MCP 模式下事件 ID 完全一致=true"
+    },
+    {
+      "id": "R-m12-A21",
+      "name": "Search/Reader 约束：未装配或无权限时不会显示工具成功",
+      "pass": true,
+      "note": "Search 未装配：成功读取=0 条 · Reader 未授权：成功读取=0 条 · 均有阻断事件=true"
+    },
+    {
+      "id": "R-m12-A22",
+      "name": "失败场景：工具超时展示异常事件与相应原因",
+      "pass": true,
+      "note": "超时分支结局=error（正常=sample_acquired）· 异常事件=2 条 · 无伪造读取=true"
+    },
+    {
+      "id": "R-m12-A23",
+      "name": "MCP 准确性：Host/Client/Server 与 Tools/Resources/Prompts 区分正确",
+      "pass": true,
+      "note": "角色=client/host/server · 能力类型=prompts/resources/tools · 界面声明「教学可视化/不发起网络请求」=true"
+    },
+    {
+      "id": "R-m12-A24",
+      "name": "协议中立：MCP 路径不无依据改变研究事实或成功率",
+      "pass": true,
+      "note": "对照表 6/6 项一致 · 结局相同=true · 载荷键相同=true"
+    },
+    {
+      "id": "R-m12-A25",
+      "name": "跨视图导航：Story/Atlas/Knowledge/Lab 可双向定位且无空链接",
+      "pass": true,
+      "note": "知识页实验入口=「EXPERIMENT · 打开「Lab 01」」→ lab-token · Story 叙事按钮=6 · 章节实验入口→lab-token · 概念页来源卡片=2 条"
+    },
+    {
+      "id": "R-m12-A26",
+      "name": "进度准确：浏览与实验完成分别记录，刷新后恢复",
+      "pass": true,
+      "note": "初始状态 token.experimentCompleted=false → 后=true · 仅浏览 transformer 时 explored=true / experimentCompleted=false · 刷新后 token=true"
+    },
+    {
+      "id": "R-m12-A27",
+      "name": "旧数据保护：M0 配置、轨迹、报告以及 M1.1 进度未被清空",
+      "pass": true,
+      "note": "旧版学习键原样保留=true · v2 schema=2 · 装配模块数=0 · research 键存在=false"
+    },
+    {
+      "id": "R-m12-A28",
+      "name": "可访问性：键盘、减少动画与移动端关键学习流程可用",
+      "pass": true,
+      "note": "可聚焦控件=31（均有可访问名称=true）· 窄屏 390px 列数=1 · 横向溢出=0px · lang=zh-CN · 减少动态下 token 片段=61 个、控件=29 个、过渡时长=0s"
+    },
+    {
+      "id": "R-m12-A29",
+      "name": "纯前端构建：无业务 API/远程 LLM，静态构建并适配项目子路径",
+      "pass": true,
+      "note": "运行时网络请求=0 条（远程 0）· dist/index.html 使用相对路径=true"
+    },
+    {
+      "id": "R-m13-A01",
+      "name": "仓库审计：知识层零问题、六章 36 概念、6 个实验可操作",
+      "pass": true,
+      "note": "validateKnowledge=0 问题 · 章节 6 · 概念 36 · 实验 6/6 · 关系 49 · 来源 37"
+    },
+    {
+      "id": "R-m13-A02",
+      "name": "章节覆盖：第 04–06 章正确注册，顺序与编号无冲突",
+      "pass": true,
+      "note": "04 信息与方法(KNOWLEDGE) · 05 执行系统(RUNTIME) · 06 可靠性与边界(RELIABILITY)"
+    },
+    {
+      "id": "R-m13-A03",
+      "name": "概念覆盖：18 个稳定概念 ID 均存在、归属正确、状态为已发布",
+      "pass": true,
+      "note": "knowledge:✓✓✓✓✓✓ runtime:✓✓✓✓✓✓ reliability:✓✓✓✓✓✓"
+    },
+    {
+      "id": "R-m13-A04",
+      "name": "ID 兼容：M0/M1.1/M1.2 的持久化 ID 与深链保持有效",
+      "pass": true,
+      "note": "深链 rag→rag · tool_calling 路由=knowledge · 缺失 0 个"
+    },
+    {
+      "id": "R-m13-A05",
+      "name": "分层内容：18 个概念均具备 UNDERSTAND / INSPECT / 例子 / 误解 / 关系",
+      "pass": true,
+      "note": "最小 understand=2 段 · 最小 inspect=4 条"
+    },
+    {
+      "id": "R-m13-A06",
+      "name": "参考来源：每个概念都有已核验外部来源，URL 可核验、审校日期齐全",
+      "pass": true,
+      "note": "外部已核验来源 30 条 · 概念审校日期 1 种"
+    },
+    {
+      "id": "R-m13-A07",
+      "name": "概念准确性：界面同时写明「规则模拟」与「不构成真实隔离」",
+      "pass": true,
+      "note": "命中规则模拟=true · 不构成真实隔离=true · 状态标签=已发布 · 含实验"
+    },
+    {
+      "id": "R-m13-A08",
+      "name": "关系校验：related 目标全部有效、无自指、方向由关系数据表达",
+      "pass": true,
+      "note": "检查 18 个概念的相关提示"
+    },
+    {
+      "id": "R-m13-A09",
+      "name": "Knowledge Lab 文档：本地虚构资料可浏览，片段带 ID 与原文定位",
+      "pass": true,
+      "note": "工作区=lab-knowledge · 文档卡片=9 · 片段卡片=30"
+    },
+    {
+      "id": "R-m13-A10",
+      "name": "Chunking：切分方式变化后片段边界与 ID 确实更新",
+      "pass": true,
+      "note": "段落切分 30 片段 → 固定 60 字符 39 片段 · 首片段边界标记=句子被切断"
+    },
+    {
+      "id": "R-m13-A11",
+      "name": "Retrieval：候选排序由确定性规则产生，分数与理由可查看",
+      "pass": true,
+      "note": "候选 5 个 · 行数 5 · 首名 NTC-1009:20"
+    },
+    {
+      "id": "R-m13-A12",
+      "name": "Embedding 示意：只用预计算二维坐标，明确标注非模型输出；无坐标即不可用",
+      "pass": true,
+      "note": "向量候选 5 个 · 无坐标问题可用=false · 结论=资料不足 / 未验证"
+    },
+    {
+      "id": "R-m13-A13",
+      "name": "RAG 流程：检索片段、上下文与结论可追溯（引用必须指向进入上下文的片段）",
+      "pass": true,
+      "note": "结论 有片段支撑 · 引用 1 条 · 上下文 3 段"
+    },
+    {
+      "id": "R-m13-A14",
+      "name": "无证据处理：没有资料时输出资料不足，且不生成任何引用",
+      "pass": true,
+      "note": "状态 资料不足 / 未验证 · 引用 0 条 · 上下文 0 段"
+    },
+    {
+      "id": "R-m13-A15",
+      "name": "Memory 区分：三栏并列、只有手动保存才写入、清除不影响学习进度",
+      "pass": true,
+      "note": "记忆条目=1 · 清除=1 · 学习进度未变=true · 三栏=3 · 未自动写入=true"
+    },
+    {
+      "id": "R-m13-A16",
+      "name": "Skills 区分：Skill 改变方法步骤，但不自动增加工具或权限",
+      "pass": true,
+      "note": "方法步骤 3 → 7 · 工具 announcement_search/document_reader 保持不变 · 检查 3 项"
+    },
+    {
+      "id": "R-m13-A17",
+      "name": "Runtime 模式：Workflow 与 Agent Loop 使用同一任务与数据条件",
+      "pass": true,
+      "note": "Workflow 5 步 / plan-complete · Agent Loop 4 步 / no-more-actions"
+    },
+    {
+      "id": "R-m13-A17b",
+      "name": "成功路径：单一取值时两种模式都给出「有证据支撑」，且以「目标达成」终止",
+      "pass": true,
+      "note": "Agent Loop supported / target-reached · Workflow supported / plan-complete · 来源 1/1"
+    },
+    {
+      "id": "R-m13-A18",
+      "name": "循环终止：步数上限与重试上限生效，事件里给出明确终止原因",
+      "pass": true,
+      "note": "cap3→max-steps(3 步) · retry1→retry-limit(1 次)"
+    },
+    {
+      "id": "R-m13-A19",
+      "name": "Harness 解释：五项运行职责可视化，且明确不是另一个模型",
+      "pass": true,
+      "note": "职责=context/dispatch/loop/policy/log · 当前触发 2 项"
+    },
+    {
+      "id": "R-m13-A20",
+      "name": "Orchestration：任务分派有明确事件、输入输出与顺序说明",
+      "pass": true,
+      "note": "分派事件=true · 交接事件=2 条"
+    },
+    {
+      "id": "R-m13-A21",
+      "name": "Multi-Agent：三角色职责与交接可查看，单角色失败会改变结论",
+      "pass": true,
+      "note": "角色卡片=3 · 正常结论=unresolved · Verifier 失败结论=核验未完成"
+    },
+    {
+      "id": "R-m13-A22",
+      "name": "结果指标：步骤数、调用数、重试数与来源覆盖均可由事件数据复算",
+      "pass": true,
+      "note": "步骤 4 · 调用 3 · 重试 0 · 来源 3 · 事件 10"
+    },
+    {
+      "id": "R-m13-A23",
+      "name": "播放控制：可播放、暂停、逐步前进、选中事件、展开全部，且不改变运行结果",
+      "pass": true,
+      "note": "选中第 1 条→可见 1 · 前进一步→2 · 全部=6/6 · 播放中=true"
+    },
+    {
+      "id": "R-m13-A24",
+      "name": "权限规则：允许/拒绝开关真实影响模拟工具结果（两层互补）",
+      "pass": true,
+      "note": "默认=denied · 仅开权限=denied · 权限+关闭沙箱=allowed"
+    },
+    {
+      "id": "R-m13-A25",
+      "name": "Sandbox 边界：白名单/隔离演示可操作，并明确不构成真实隔离",
+      "pass": true,
+      "note": "2×2 矩阵：权限拒绝一律阻断 · 权限+关闭隔离可放行 · 页面声明=true"
+    },
+    {
+      "id": "R-m13-A26",
+      "name": "Injection 样例：恶意文本被标记为不可信资料，且不覆盖系统配置",
+      "pass": true,
+      "note": "标记=true · 护栏命中=true · 拒绝 3/3 · 配置变更=false · 指令变更=false"
+    },
+    {
+      "id": "R-m13-A27",
+      "name": "Guardrails：命中规则、阻止原因与漏检边界均有展示",
+      "pass": true,
+      "note": "开启时检查事件 2 条 · 关闭后 2 条 · 漏检说明=true"
+    },
+    {
+      "id": "R-m13-A28",
+      "name": "Tracing：事件可筛选、可查看，并追溯来源与终止原因",
+      "pass": true,
+      "note": "全部 18 条 · 允许/拒绝 5 · 规则 5 · 来源 2 · 筛选后行数 5"
+    },
+    {
+      "id": "R-m13-A29",
+      "name": "Evals：固定样例、评分标准、判定理由与结果可重现（可定位事件）",
+      "pass": true,
+      "note": "样例 4 条 · 默认通过 4/4 · 放宽后通过 2/4 · 重跑一致=true"
+    },
+    {
+      "id": "R-m13-A30",
+      "name": "安全声明：不声称教学模拟等同真实安全测试或生产防护",
+      "pass": true,
+      "note": "声明存在=true · 禁止表述=true"
+    },
+    {
+      "id": "R-m13-A31",
+      "name": "学习进度：只有真实操作才记录实验完成，刷新后恢复且旧数据保留",
+      "pass": true,
+      "note": "chunking 完成=true · permissions 完成=true · 刷新后恢复=true · 旧键保留=true"
+    },
+    {
+      "id": "R-m13-A32",
+      "name": "旧数据保护：M0 配置、M0.4 运行记录与 M1.3 学习进度互不覆盖",
+      "pass": true,
+      "note": "构建器键保留=true · 研究键保留=true · 学习键保留=true"
+    },
+    {
+      "id": "R-m13-A33",
+      "name": "跨页面联动：Story / 章节叙事 / Lab / 知识页 / Atlas 双向可达",
+      "pass": true,
+      "note": "目录 6 章 · 章节→lab-knowledge · 知识页→lab-knowledge · 星图=atlas"
+    },
+    {
+      "id": "R-m13-A34",
+      "name": "响应式与无障碍：键盘可聚焦控件均有名称、窄屏单列、减少动态下结果仍正确",
+      "pass": true,
+      "note": "lang=zh-CN · 可聚焦=146（有名称=146）· aria-live=6 · 打开时工作区=lab-knowledge · 390px 工作区=lab-knowledge 列数=1 溢出=0px · 减少动态下片段=30 结论可见=true"
+    },
+    {
+      "id": "R-m13-A35",
+      "name": "纯前端：无后端、无真实 AI / Embedding / MCP / 搜索 API 依赖",
+      "pass": true,
+      "note": "运行时资源请求 0 条（远程 0）· dist 相对路径=true"
+    },
+    {
+      "id": "R-m14-A01",
+      "name": "仓库与知识契约",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"chapters\":6,\"concepts\":36,\"edges\":49,\"byStatus\":{\"outline\":0,\"draft\":0,\"reviewed\":11,\"published\":25},\"byType\":{\"USES\":7,\"RELATED\":34,\"CONTRASTS\":5,\"PART_OF\":3},\"canvas\":{\"nodes\":36,\"edges\":49},\"chapterStats\":[{\"id\":\"intelligence\",\"no\":\"01\",\"total\":6,\"ready\":6,\"outline\":0,\"experiments\":1},{\"id\":\"context\",\"no\":\"02\",\"total\":6,\"ready\":6,\"outline\":0,\"experiments\":1},{\"id\":\"connection\",\"no\":\"03\",\"total\":6,\"ready\":6,\"outline\":0,\"experiments\":1},{\"id\":\"knowledge\",\"no\":\"04\",\"total\":6,\"ready\":6,\"outline\":0,\"experiments\":1},{\"id\":\"runtime\",\"no\":\"05\",\"total\":6,\"ready\":6,\"outline\":0,\"experiments\":1},{\"id\":\"reliability\",\"no\":\"06\",\"total\":6,\"ready\":6,\"outline\":0,\"experiments\":1}],\"experiments\":{\"total\":6,\"available\":6,\"planned\":0},\"sources\":37}"
+    },
+    {
+      "id": "R-m14-A02",
+      "name": "六章稳定顺序",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A03",
+      "name": "36概念均可打开同一详情",
+      "status": "PASS",
+      "pass": true,
+      "note": "36 / 36"
+    },
+    {
+      "id": "R-m14-A04",
+      "name": "深链与稳定ID",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A04-lab-route",
+      "name": "MCP概念入口进入工具实验保留实验深链",
+      "status": "PASS",
+      "pass": true,
+      "note": "#/labs/exp-tool-calling-demo"
+    },
+    {
+      "id": "R-m14-A04-lab-refresh",
+      "name": "Tool Calling 实验刷新仍在实验步骤",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A04-history",
+      "name": "浏览器后退前进恢复学习工作区",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"back\":true,\"forward\":true,\"backHash\":\"#/chapters\",\"forwardHash\":\"#/journal\"}"
+    },
+    {
+      "id": "R-m14-A05",
+      "name": "49关系有效",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A06",
+      "name": "全图缩放平移复位",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"changed\":true,\"moved\":true}"
+    },
+    {
+      "id": "R-m14-A07",
+      "name": "选中与直接邻居高亮",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A08",
+      "name": "名称别名关键词搜索不记录阅读",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A08-api",
+      "name": "外部定位会清除阻挡目标的筛选",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A09",
+      "name": "组合筛选与恢复全图",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A10",
+      "name": "布局稳定与旧十节点坐标保留",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A11",
+      "name": "关系跳转与详情一致",
+      "status": "PASS",
+      "pass": true,
+      "note": "相关节点：大语言模型 · LLM"
+    },
+    {
+      "id": "R-m14-A12",
+      "name": "共享六章模板目标概念实验总结",
+      "status": "PASS",
+      "pass": true,
+      "note": "6/6"
+    },
+    {
+      "id": "R-m14-A13",
+      "name": "六章叙事衔接",
+      "status": "PASS",
+      "pass": true,
+      "note": "intelligence→context→connection→knowledge→runtime→reliability"
+    },
+    {
+      "id": "R-m14-A14",
+      "name": "跳过重读不自动完成",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A15",
+      "name": "任意章节可自由跳转",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A16",
+      "name": "章节进度来自操作",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A17",
+      "name": "按章推荐路径与续学",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-reading-directory",
+      "name": "章节入口先出现，概念目录可展开并打开知识页",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true,\"closed\":true,\"before\":true,\"visible\":true}"
+    },
+    {
+      "id": "R-m14-reading-atlas",
+      "name": "星图的知识入口位于长篇补充说明之前",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A18",
+      "name": "切换学习路径不重置进度",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A19",
+      "name": "真实阅读深入与去重",
+      "status": "PASS",
+      "pass": true,
+      "note": "[{\"type\":\"concept_inspected\",\"at\":1793166341964,\"chapterId\":\"knowledge\",\"conceptId\":\"rag\"},{\"type\":\"concept_viewed\",\"at\":1793166341938,\"chapterId\":\"knowledge\",\"conceptId\":\"rag\"}]"
+    },
+    {
+      "id": "R-m14-A20",
+      "name": "学习状态分层且不宣称掌握",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A21",
+      "name": "日志章节与类型筛选",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A22",
+      "name": "日志回访",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A23",
+      "name": "新用户空态可跳过引导",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A24",
+      "name": "清除确认取消与确定",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A25",
+      "name": "清除活动与其他命名空间隔离",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A26",
+      "name": "刷新恢复概念实验章节和位置",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A26-refresh",
+      "name": "刷新实际恢复",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A27",
+      "name": "旧版非破坏性迁移与损坏容错",
+      "status": "PASS",
+      "pass": true,
+      "note": "准备真实刷新迁移；另有Node损坏/未来版本保护测试"
+    },
+    {
+      "id": "R-m14-A27-migration",
+      "name": "实际迁移保留旧键",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A28",
+      "name": "六个Lab从章节Atlas及全局可达",
+      "status": "PASS",
+      "pass": true,
+      "note": "6/6"
+    },
+    {
+      "id": "R-m14-A29",
+      "name": "打开实验不完成，只有关键操作完成",
+      "status": "PASS",
+      "pass": true,
+      "note": "完成关键操作回归由M1.2/M1.3实验验收逐项执行"
+    },
+    {
+      "id": "R-m14-A30",
+      "name": "跨页面状态一致与章内导航",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A31",
+      "name": "36概念内容与模拟示例",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A32",
+      "name": "来源标记不虚报",
+      "status": "PASS",
+      "pass": true,
+      "note": "37条来源，补充任务书已实际核对"
+    },
+    {
+      "id": "R-m14-A33",
+      "name": "本地模拟与虚构材料声明",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A34-1440",
+      "name": "响应式核心路径 1440",
+      "status": "PASS",
+      "pass": true,
+      "note": "[{\"kind\":\"story\",\"overflow\":0},{\"kind\":\"atlas\",\"overflow\":0},{\"kind\":\"journal\",\"overflow\":0},{\"kind\":\"chapter\",\"overflow\":0}]"
+    },
+    {
+      "id": "R-m14-A34-1024",
+      "name": "响应式核心路径 1024",
+      "status": "PASS",
+      "pass": true,
+      "note": "[{\"kind\":\"story\",\"overflow\":0},{\"kind\":\"atlas\",\"overflow\":0},{\"kind\":\"journal\",\"overflow\":0},{\"kind\":\"chapter\",\"overflow\":0}]"
+    },
+    {
+      "id": "R-m14-A34-768",
+      "name": "响应式核心路径 768",
+      "status": "PASS",
+      "pass": true,
+      "note": "[{\"kind\":\"story\",\"overflow\":0},{\"kind\":\"atlas\",\"overflow\":0},{\"kind\":\"journal\",\"overflow\":0},{\"kind\":\"chapter\",\"overflow\":0}]"
+    },
+    {
+      "id": "R-m14-A34-390",
+      "name": "响应式核心路径 390",
+      "status": "PASS",
+      "pass": true,
+      "note": "[{\"kind\":\"story\",\"overflow\":0},{\"kind\":\"atlas\",\"overflow\":0},{\"kind\":\"journal\",\"overflow\":0},{\"kind\":\"chapter\",\"overflow\":0}]"
+    },
+    {
+      "id": "R-m14-A35",
+      "name": "减少动态效果和键盘替代",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A35-keyboard",
+      "name": "浏览器真实Enter选择、焦点反馈",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A35-keyboard-open",
+      "name": "浏览器真实Enter打开知识页",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A37",
+      "name": "保留品牌与核心",
+      "status": "PASS",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "R-m14-A38",
+      "name": "运行时无远程请求",
+      "status": "PASS",
+      "pass": true,
+      "note": "[]"
+    },
+    {
+      "id": "A05-XSS-setup",
+      "name": "异常文本只作为数据预备",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A05-XSS",
+      "name": "损坏字段不执行 HTML，也不使页面崩溃",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A30-setup",
+      "name": "保留损坏的原始存储",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A30",
+      "name": "损坏数据提示、锁定、备份恢复",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A35",
+      "name": "真实 WebGL 不可用时仍可配置/预检",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A36",
+      "name": "无远程运行资源",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A39-subpath",
+      "name": "真实静态项目子路径与知识深链",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    }
+  ],
+  "console": []
+}

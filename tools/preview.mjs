@@ -18,7 +18,12 @@ const types = {
 createServer(async (req, res) => {
   try {
     const url = decodeURIComponent((req.url || '/').split('?')[0]);
-    let file = path.join(root, url === '/' ? 'index.html' : url.replace(/^\/+/, ''));
+    let file = path.resolve(root, url === '/' ? 'index.html' : url.replace(/^\/+/, ''));
+    const relative = path.relative(root, file);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      res.writeHead(403).end('403');
+      return;
+    }
     const info = await stat(file).catch(() => null);
     if (info && info.isDirectory()) file = path.join(file, 'index.html');
     const body = await readFile(file);
@@ -31,4 +36,4 @@ createServer(async (req, res) => {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('404');
   }
-}).listen(port, () => console.log(`[preview] http://127.0.0.1:${port}/  ← dist/ 静态产物预览`));
+}).listen(port, '127.0.0.1', () => console.log(`[preview] http://127.0.0.1:${port}/  ← dist/ 静态产物预览`));

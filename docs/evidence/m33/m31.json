@@ -1,0 +1,1255 @@
+{
+  "browser": "Chrome headless / SwiftShader",
+  "rows": [
+    {
+      "id": "A06",
+      "name": "开场可随时跳过，同一机械核心",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A03-logo",
+      "name": "A/0 三个字形在同一行",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "boxes": [
+          {
+            "top": 21.96875,
+            "height": 15
+          },
+          {
+            "top": 21.96875,
+            "height": 15
+          },
+          {
+            "top": 21.96875,
+            "height": 15
+          }
+        ]
+      }
+    },
+    {
+      "id": "A02-contrast",
+      "name": "辅助文本在 Raised 背景达到 4.5:1",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "ratio": 5.776258865975991
+      }
+    },
+    {
+      "id": "A04-target",
+      "name": "窄屏工具按钮触控目标至少 44px",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "height": 44
+      }
+    },
+    {
+      "id": "A03/A04",
+      "name": "共享控件 variants、focus、disabled、loading 可辨",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "colors": [
+          "rgba(119, 216, 236, 0.16)",
+          "rgb(23, 33, 44)",
+          "rgba(255, 255, 255, 0.016)",
+          "rgba(255, 133, 133, 0.14)"
+        ]
+      }
+    },
+    {
+      "id": "A06-full",
+      "name": "五镜头完整播放后稳定进入 Hub",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A14/A15",
+      "name": "配置草稿导航后保留、禁用不等于移除",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A21-form",
+      "name": "字段非法时保留原值并关联错误",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "message": "\n      最大步数必须是 1–100 的整数；已保留原值修复：输入允许范围内的整数"
+      }
+    },
+    {
+      "id": "A22-export-error",
+      "name": "导出失败有实际原因和恢复路径",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "text": "无法导出：M31 下载能力被阻止。请保留当前页面，检查浏览器下载权限后重试。"
+      }
+    },
+    {
+      "id": "A22-download",
+      "name": "本地配置真实请求下载",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A26/A20",
+      "name": "Atlas 零结果与键盘列表替代",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "empty": "没有找到相关概念「M31没有这个概念」。可以试试 LLM、工具调用、幻觉，或直接清空搜索恢复全图。"
+      }
+    },
+    {
+      "id": "A13-atlas",
+      "name": "Atlas 知识往返恢复搜索、选中与缩放",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "before": {
+          "id": "mcp",
+          "transform": {
+            "k": 1.875,
+            "x": -652.5,
+            "y": -371.25
+          },
+          "query": "MCP"
+        },
+        "after": {
+          "id": "mcp",
+          "transform": {
+            "k": 1.875,
+            "x": -652.5,
+            "y": -371.25
+          },
+          "query": "MCP"
+        }
+      }
+    },
+    {
+      "id": "A12-history",
+      "name": "浏览器前进/后退恢复对应工作区",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "back": "story",
+        "forward": "atlas"
+      }
+    },
+    {
+      "id": "A16",
+      "name": "Runtime 单步、连续、暂停、继续、取消均为真实状态",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "one": 1,
+        "status": "cancelled"
+      }
+    },
+    {
+      "id": "A16/A31",
+      "name": "Runtime 等待审批明确且拒绝后没有受限成功",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "status": "failed",
+        "text": "等待模拟审批公告检索受限动作等待本次运行的单次模拟批准权限public:read影响范围仅本次模拟工具动作；不授予浏览器或系统权限批准本次模拟动作拒绝"
+      }
+    },
+    {
+      "id": "A21/A33",
+      "name": "证据不足与工具失败保留真实失败和原因",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "results": [
+          {
+            "scenario": "MISSING_EVIDENCE",
+            "status": "completed",
+            "evidence": "insufficient",
+            "errors": 0,
+            "text": "运行摘要状态已完成步骤 / 工具调用 / 重试5 / 1 / 0审批请求 / 批准 / 拒绝0 / 0 / 0证据声明 / 冲突0 / 0证据状态证据不足证据不足，无法得出结论。终止原因：insufficient_evidence结果、引用与限制{\n  \"simulationOnly\": true,\n  \"isFictional\": true,\n  \"objective\": \"核验虚构校园公告的日期与来源。\",\n  \"format\": \"evidence-table\",\n  \"style\": \"structured"
+          },
+          {
+            "scenario": "TOOL_FAILURE_EXHAUSTED",
+            "status": "failed",
+            "evidence": "insufficient",
+            "errors": 2,
+            "text": "运行摘要状态失败步骤 / 工具调用 / 重试4 / 2 / 1审批请求 / 批准 / 拒绝0 / 0 / 0证据声明 / 冲突0 / 0证据状态证据不足证据不足，无法得出结论。终止原因：retry_exhausted结果、引用与限制{\n  \"simulationOnly\": true,\n  \"isFictional\": true,\n  \"objective\": \"核验虚构校园公告的日期与来源。\",\n  \"format\": \"evidence-table\",\n  \"style\": \"structured\",\n  \"p"
+          },
+          {
+            "scenario": "CONFLICTING_SOURCES",
+            "status": "completed",
+            "evidence": "conflicting",
+            "errors": 0,
+            "text": "运行摘要状态已完成步骤 / 工具调用 / 重试7 / 3 / 0审批请求 / 批准 / 拒绝0 / 0 / 0证据声明 / 冲突2 / 1证据状态存在未决冲突本地资料存在未决冲突，无法确定唯一结论。终止原因：insufficient_evidence结果、引用与限制{\n  \"simulationOnly\": true,\n  \"isFictional\": true,\n  \"objective\": \"核验虚构校园公告的日期与来源。\",\n  \"format\": \"evidence-table\",\n  \"style\": \""
+          }
+        ]
+      }
+    },
+    {
+      "id": "A17/A18",
+      "name": "A/B 两侧、模拟声明与真实指标",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "A": "completed",
+        "B": "completed"
+      }
+    },
+    {
+      "id": "A14-comparison",
+      "name": "新建实验取消后保留未保存结果",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A17-selected",
+      "name": "A/B 观察侧、Inspector 与核心快照一致",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "display": "B"
+      }
+    },
+    {
+      "id": "A22-ab-download",
+      "name": "A/B Markdown 实际请求下载",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A20-journal",
+      "name": "学习日志空状态提供真实下一步",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "empty": "已有真实学习记录"
+      }
+    },
+    {
+      "id": "A30-journal",
+      "name": "日志确认弹窗进入焦点并返回触发按钮",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A38",
+      "name": "六章六个 Lab 全部可访问",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "results": [
+          {
+            "id": "intelligence",
+            "kind": "chapter",
+            "title": "STORY · INTELLIGENCE"
+          },
+          {
+            "id": "context",
+            "kind": "chapter",
+            "title": "STORY · CONTEXT"
+          },
+          {
+            "id": "connection",
+            "kind": "chapter",
+            "title": "STORY · CONNECTION"
+          },
+          {
+            "id": "knowledge",
+            "kind": "chapter",
+            "title": "STORY · KNOWLEDGE"
+          },
+          {
+            "id": "runtime",
+            "kind": "chapter",
+            "title": "STORY · RUNTIME"
+          },
+          {
+            "id": "reliability",
+            "kind": "chapter",
+            "title": "STORY · RELIABILITY"
+          },
+          {
+            "id": "exp-token-lab",
+            "kind": "lab-token",
+            "title": "LAB 01 · TOKEN / CONTEXT BUDGET"
+          },
+          {
+            "id": "exp-context-lab",
+            "kind": "lab-context",
+            "title": "LAB 02 · INSTRUCTIONS / CONTEXT"
+          },
+          {
+            "id": "exp-tool-calling-demo",
+            "kind": "knowledge",
+            "title": "KNOWLEDGE · TOOL CALLING"
+          },
+          {
+            "id": "exp-retrieval-lab",
+            "kind": "lab-knowledge",
+            "title": "LAB 04 · KNOWLEDGE LAB"
+          },
+          {
+            "id": "exp-agent-loop-lab",
+            "kind": "lab-runtime",
+            "title": "LAB 05 · RUNTIME LAB"
+          },
+          {
+            "id": "exp-boundary-lab",
+            "kind": "lab-reliability",
+            "title": "LAB 06 · RELIABILITY LAB"
+          }
+        ]
+      }
+    },
+    {
+      "id": "A23",
+      "name": "1366×768 八个工作区布局",
+      "status": "PASS",
+      "evidence": [
+        {
+          "id": "story",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 1300,
+          "box": {
+            "left": 33,
+            "right": 1333,
+            "width": 1300
+          }
+        },
+        {
+          "id": "atlas",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 1300,
+          "box": {
+            "left": 54,
+            "right": 275.75,
+            "width": 221.75
+          }
+        },
+        {
+          "id": "labs",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 1300,
+          "box": {
+            "left": 33,
+            "right": 1333,
+            "width": 1300
+          }
+        },
+        {
+          "id": "constructor",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 738,
+          "box": {
+            "left": 264,
+            "right": 1002,
+            "width": 738
+          }
+        },
+        {
+          "id": "runtime",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 1300,
+          "box": {
+            "left": 451.375,
+            "right": 517.859375,
+            "width": 66.484375
+          }
+        },
+        {
+          "id": "comparison",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 1300,
+          "box": {
+            "left": 686,
+            "right": 826.15625,
+            "width": 140.15625
+          }
+        },
+        {
+          "id": "report",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 1300,
+          "box": {
+            "left": 33,
+            "right": 1333,
+            "width": 1300
+          }
+        },
+        {
+          "id": "journal",
+          "pass": true,
+          "width": 1366,
+          "scroll": 1366,
+          "mainWidth": 1300,
+          "box": {
+            "left": 33,
+            "right": 1333,
+            "width": 1300
+          }
+        }
+      ]
+    },
+    {
+      "id": "A23",
+      "name": "1440×900 八个工作区布局",
+      "status": "PASS",
+      "evidence": [
+        {
+          "id": "story",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 1374,
+          "box": {
+            "left": 33,
+            "right": 1407,
+            "width": 1374
+          }
+        },
+        {
+          "id": "atlas",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 1374,
+          "box": {
+            "left": 54,
+            "right": 275.75,
+            "width": 221.75
+          }
+        },
+        {
+          "id": "labs",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 1374,
+          "box": {
+            "left": 33,
+            "right": 1407,
+            "width": 1374
+          }
+        },
+        {
+          "id": "constructor",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 812,
+          "box": {
+            "left": 264,
+            "right": 1076,
+            "width": 812
+          }
+        },
+        {
+          "id": "runtime",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 1374,
+          "box": {
+            "left": 451.375,
+            "right": 517.859375,
+            "width": 66.484375
+          }
+        },
+        {
+          "id": "comparison",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 1374,
+          "box": {
+            "left": 686,
+            "right": 826.15625,
+            "width": 140.15625
+          }
+        },
+        {
+          "id": "report",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 1374,
+          "box": {
+            "left": 33,
+            "right": 1407,
+            "width": 1374
+          }
+        },
+        {
+          "id": "journal",
+          "pass": true,
+          "width": 1440,
+          "scroll": 1440,
+          "mainWidth": 1374,
+          "box": {
+            "left": 33,
+            "right": 1407,
+            "width": 1374
+          }
+        }
+      ]
+    },
+    {
+      "id": "A24",
+      "name": "1024×768 八个工作区布局",
+      "status": "PASS",
+      "evidence": [
+        {
+          "id": "story",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 958,
+          "box": {
+            "left": 33,
+            "right": 991,
+            "width": 958
+          }
+        },
+        {
+          "id": "atlas",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 958,
+          "box": {
+            "left": 54,
+            "right": 921.75,
+            "width": 867.75
+          }
+        },
+        {
+          "id": "labs",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 958,
+          "box": {
+            "left": 33,
+            "right": 991,
+            "width": 958
+          }
+        },
+        {
+          "id": "constructor",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 728,
+          "box": {
+            "left": 264,
+            "right": 992,
+            "width": 728
+          }
+        },
+        {
+          "id": "runtime",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 958,
+          "box": {
+            "left": 443.375,
+            "right": 509.859375,
+            "width": 66.484375
+          }
+        },
+        {
+          "id": "comparison",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 958,
+          "box": {
+            "left": 686,
+            "right": 826.15625,
+            "width": 140.15625
+          }
+        },
+        {
+          "id": "report",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 958,
+          "box": {
+            "left": 33,
+            "right": 991,
+            "width": 958
+          }
+        },
+        {
+          "id": "journal",
+          "pass": true,
+          "width": 1024,
+          "scroll": 1024,
+          "mainWidth": 958,
+          "box": {
+            "left": 33,
+            "right": 991,
+            "width": 958
+          }
+        }
+      ]
+    },
+    {
+      "id": "A24",
+      "name": "768×1024 八个工作区布局",
+      "status": "PASS",
+      "evidence": [
+        {
+          "id": "story",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 702,
+          "box": {
+            "left": 33,
+            "right": 735,
+            "width": 702
+          }
+        },
+        {
+          "id": "atlas",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 702,
+          "box": {
+            "left": 52,
+            "right": 667.75,
+            "width": 615.75
+          }
+        },
+        {
+          "id": "labs",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 702,
+          "box": {
+            "left": 33,
+            "right": 735,
+            "width": 702
+          }
+        },
+        {
+          "id": "constructor",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 472,
+          "box": {
+            "left": 264,
+            "right": 736,
+            "width": 472
+          }
+        },
+        {
+          "id": "runtime",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 702,
+          "box": {
+            "left": 103.375,
+            "right": 169.859375,
+            "width": 66.484375
+          }
+        },
+        {
+          "id": "comparison",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 702,
+          "box": {
+            "left": 49,
+            "right": 189.15625,
+            "width": 140.15625
+          }
+        },
+        {
+          "id": "report",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 702,
+          "box": {
+            "left": 33,
+            "right": 735,
+            "width": 702
+          }
+        },
+        {
+          "id": "journal",
+          "pass": true,
+          "width": 768,
+          "scroll": 768,
+          "mainWidth": 702,
+          "box": {
+            "left": 33,
+            "right": 735,
+            "width": 702
+          }
+        }
+      ]
+    },
+    {
+      "id": "A25",
+      "name": "390×844 八个工作区布局",
+      "status": "PASS",
+      "evidence": [
+        {
+          "id": "story",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 356,
+          "box": {
+            "left": 17,
+            "right": 373,
+            "width": 356
+          }
+        },
+        {
+          "id": "atlas",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 356,
+          "box": {
+            "left": 36,
+            "right": 301.75,
+            "width": 265.75
+          }
+        },
+        {
+          "id": "labs",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 356,
+          "box": {
+            "left": 17,
+            "right": 373,
+            "width": 356
+          }
+        },
+        {
+          "id": "constructor",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 358,
+          "box": {
+            "left": 16,
+            "right": 374,
+            "width": 358
+          }
+        },
+        {
+          "id": "runtime",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 356,
+          "box": {
+            "left": 95.375,
+            "right": 165.859375,
+            "width": 70.484375
+          }
+        },
+        {
+          "id": "comparison",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 356,
+          "box": {
+            "left": 199,
+            "right": 343.15625,
+            "width": 144.15625
+          }
+        },
+        {
+          "id": "report",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 356,
+          "box": {
+            "left": 17,
+            "right": 373,
+            "width": 356
+          }
+        },
+        {
+          "id": "journal",
+          "pass": true,
+          "width": 390,
+          "scroll": 390,
+          "mainWidth": 356,
+          "box": {
+            "left": 17,
+            "right": 373,
+            "width": 356
+          }
+        }
+      ]
+    },
+    {
+      "id": "A25",
+      "name": "360×800 八个工作区布局",
+      "status": "PASS",
+      "evidence": [
+        {
+          "id": "story",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 326,
+          "box": {
+            "left": 17,
+            "right": 343,
+            "width": 326
+          }
+        },
+        {
+          "id": "atlas",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 326,
+          "box": {
+            "left": 36,
+            "right": 271.75,
+            "width": 235.75
+          }
+        },
+        {
+          "id": "labs",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 326,
+          "box": {
+            "left": 17,
+            "right": 343,
+            "width": 326
+          }
+        },
+        {
+          "id": "constructor",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 328,
+          "box": {
+            "left": 16,
+            "right": 344,
+            "width": 328
+          }
+        },
+        {
+          "id": "runtime",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 326,
+          "box": {
+            "left": 95.375,
+            "right": 165.859375,
+            "width": 70.484375
+          }
+        },
+        {
+          "id": "comparison",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 326,
+          "box": {
+            "left": 184,
+            "right": 328.15625,
+            "width": 144.15625
+          }
+        },
+        {
+          "id": "report",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 326,
+          "box": {
+            "left": 17,
+            "right": 343,
+            "width": 326
+          }
+        },
+        {
+          "id": "journal",
+          "pass": true,
+          "width": 360,
+          "scroll": 360,
+          "mainWidth": 326,
+          "box": {
+            "left": 17,
+            "right": 343,
+            "width": 326
+          }
+        }
+      ]
+    },
+    {
+      "id": "A25",
+      "name": "430×932 八个工作区布局",
+      "status": "PASS",
+      "evidence": [
+        {
+          "id": "story",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 396,
+          "box": {
+            "left": 17,
+            "right": 413,
+            "width": 396
+          }
+        },
+        {
+          "id": "atlas",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 396,
+          "box": {
+            "left": 36,
+            "right": 341.75,
+            "width": 305.75
+          }
+        },
+        {
+          "id": "labs",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 396,
+          "box": {
+            "left": 17,
+            "right": 413,
+            "width": 396
+          }
+        },
+        {
+          "id": "constructor",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 398,
+          "box": {
+            "left": 16,
+            "right": 414,
+            "width": 398
+          }
+        },
+        {
+          "id": "runtime",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 396,
+          "box": {
+            "left": 95.375,
+            "right": 165.859375,
+            "width": 70.484375
+          }
+        },
+        {
+          "id": "comparison",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 396,
+          "box": {
+            "left": 219,
+            "right": 363.15625,
+            "width": 144.15625
+          }
+        },
+        {
+          "id": "report",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 396,
+          "box": {
+            "left": 17,
+            "right": 413,
+            "width": 396
+          }
+        },
+        {
+          "id": "journal",
+          "pass": true,
+          "width": 430,
+          "scroll": 430,
+          "mainWidth": 396,
+          "box": {
+            "left": 17,
+            "right": 413,
+            "width": 396
+          }
+        }
+      ]
+    },
+    {
+      "id": "A27",
+      "name": "窄屏审批、拒绝、结果可滚动访问",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "rect": {
+          "top": 356.953125,
+          "bottom": 400.953125,
+          "height": 44
+        }
+      }
+    },
+    {
+      "id": "A29-approval",
+      "name": "真实 Enter 批准且焦点回单步",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "approvals": 1,
+        "focused": "<button type=\"button\" class=\"btn btn--sm btn--primary\" data-rt-act=\"step\">逐步执行</button>"
+      }
+    },
+    {
+      "id": "A28",
+      "name": "窄屏指标表可横向滚动、A/B 轨迹单列",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "scroll": 200,
+        "columns": "332px"
+      }
+    },
+    {
+      "id": "A29/A30",
+      "name": "窄屏导航抽屉键盘可关闭且返回焦点",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A30-drawer",
+      "name": "关闭后背景恢复、隐藏抽屉不可聚焦",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A07/A12",
+      "name": "静态子路径深链 execution",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "hash": "#/execution",
+        "kind": "execution"
+      }
+    },
+    {
+      "id": "A07/A12",
+      "name": "静态子路径深链 report",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "hash": "#/report",
+        "kind": "execution"
+      }
+    },
+    {
+      "id": "A07/A12",
+      "name": "静态子路径深链 runtime",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "hash": "#/runtime",
+        "kind": "runtime"
+      }
+    },
+    {
+      "id": "A07/A12",
+      "name": "静态子路径深链 compare",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "hash": "#/compare",
+        "kind": "comparison"
+      }
+    },
+    {
+      "id": "A07/A12",
+      "name": "静态子路径深链 atlas",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "hash": "#/atlas",
+        "kind": "atlas"
+      }
+    },
+    {
+      "id": "A08",
+      "name": "减少动态开场、知识与 Runtime 路径仍可用",
+      "status": "PASS",
+      "evidence": {
+        "pass": true,
+        "animation": "none",
+        "reducedState": {
+          "reduced": true,
+          "phase": "hub",
+          "time": 0.75,
+          "duration": 0.75
+        },
+        "steps": 1,
+        "status": "paused"
+      }
+    },
+    {
+      "id": "A11",
+      "name": "WebGL 失败仍可装配、运行、A/B、读证据",
+      "status": "PASS",
+      "evidence": {
+        "pass": true
+      }
+    },
+    {
+      "id": "A22-file",
+      "name": "磁盘实际导出文件",
+      "status": "PASS",
+      "evidence": [
+        "agent-zero-configuration.json",
+        "AGENT-ZERO_AB_experiment-07fa376b-cdf8-424a-87ab-603ae0e8eae3.md",
+        "AGENT-ZERO_AB_experiment-104f3507-a997-45ea-9071-e44c0861be4c.md",
+        "AGENT-ZERO_AB_experiment-27d12b8e-c32f-48e1-9dbe-f9ff2654ea31.md",
+        "AGENT-ZERO_AB_experiment-3a21f0d4-e8de-43a1-985e-f2b361efbb17.md",
+        "AGENT-ZERO_AB_experiment-5210c9b0-023a-48bf-9520-8955bedb7c06.md",
+        "AGENT-ZERO_AB_experiment-590c74b8-62ef-4051-82c2-f94919236a13.md",
+        "AGENT-ZERO_AB_experiment-6cb47b90-bbc1-4d1e-b238-ce65448bbec6.md",
+        "AGENT-ZERO_AB_experiment-6e6bdef8-64bb-4a30-906b-5ace1d0e434f.md",
+        "AGENT-ZERO_AB_experiment-7c3285d1-6b5e-41da-add4-f2d2dab2c8d0.md",
+        "AGENT-ZERO_AB_experiment-8d3070da-15f7-4adc-9f79-23eaa45322e3.md",
+        "AGENT-ZERO_AB_experiment-c9756e52-ecb8-4ed4-a8b5-008e82a2f4be.md",
+        "AGENT-ZERO_AB_experiment-cb9efe5a-9f72-48fc-8fa2-60131001059d.md",
+        "AGENT-ZERO_AB_experiment-df3b133a-21d6-4a70-8eef-07914b7db837.md",
+        "AGENT-ZERO_AB_experiment-e4d0e7ef-cafe-4b0b-9711-99297f168c80.md",
+        "AGENT-ZERO_AB_experiment-f3884338-434b-488e-b880-39d54c192085.md",
+        "downloads.htm",
+        "downloads.htm (1).crdownload",
+        "downloads.htm (10).crdownload",
+        "downloads.htm (11).crdownload",
+        "downloads.htm (12).crdownload",
+        "downloads.htm (13).crdownload",
+        "downloads.htm (14).crdownload",
+        "downloads.htm (2).crdownload",
+        "downloads.htm (3).crdownload",
+        "downloads.htm (4).crdownload",
+        "downloads.htm (5).crdownload",
+        "downloads.htm (6).crdownload",
+        "downloads.htm (7).crdownload",
+        "downloads.htm (8).crdownload",
+        "downloads.htm (9).crdownload",
+        "downloads.htm.crdownload"
+      ]
+    },
+    {
+      "id": "A36-network",
+      "name": "仅本地静态请求",
+      "status": "PASS",
+      "evidence": [
+        "http://127.0.0.1:8187/agent-zero/?intro=always",
+        "http://127.0.0.1:8187/agent-zero/assets/app.css",
+        "http://127.0.0.1:8187/agent-zero/assets/app.js",
+        "http://127.0.0.1:8187/favicon.ico",
+        "http://127.0.0.1:8187/agent-zero/?m31=deep-execution",
+        "http://127.0.0.1:8187/agent-zero/?m31=deep-report",
+        "http://127.0.0.1:8187/agent-zero/?m31=deep-runtime",
+        "http://127.0.0.1:8187/agent-zero/?m31=deep-compare",
+        "http://127.0.0.1:8187/agent-zero/?m31=deep-atlas"
+      ]
+    }
+  ],
+  "network": [
+    "http://127.0.0.1:8187/agent-zero/?intro=always",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js",
+    "http://127.0.0.1:8187/favicon.ico",
+    "http://127.0.0.1:8187/agent-zero/?m31=deep-execution",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js",
+    "http://127.0.0.1:8187/agent-zero/?m31=deep-report",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js",
+    "http://127.0.0.1:8187/agent-zero/?m31=deep-runtime",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js",
+    "http://127.0.0.1:8187/agent-zero/?m31=deep-compare",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js",
+    "http://127.0.0.1:8187/agent-zero/?m31=deep-atlas",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js",
+    "http://127.0.0.1:8187/agent-zero/?intro=always",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js",
+    "http://127.0.0.1:8187/agent-zero/?intro=always",
+    "http://127.0.0.1:8187/agent-zero/assets/app.css",
+    "http://127.0.0.1:8187/agent-zero/assets/app.js"
+  ],
+  "console": []
+}

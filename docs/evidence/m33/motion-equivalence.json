@@ -1,0 +1,22 @@
+[
+  {
+    "reduced": false,
+    "status": "completed",
+    "scenarioId": "PERMISSION_REQUIRED",
+    "seed": "31415",
+    "configId": "agent-00a6a94d-c8a9-43d3-a839-328712df4259",
+    "steps": 6,
+    "approvals": 1,
+    "events": 29
+  },
+  {
+    "reduced": true,
+    "status": "completed",
+    "scenarioId": "PERMISSION_REQUIRED",
+    "seed": "31415",
+    "configId": "agent-00a6a94d-c8a9-43d3-a839-328712df4259",
+    "steps": 6,
+    "approvals": 1,
+    "events": 29
+  }
+]

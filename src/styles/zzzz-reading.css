@@ -1,0 +1,114 @@
+/* Reading surfaces: keep prose comfortable without enlarging console controls. */
+.story-intro__lead,
+.story-chapter__intro,
+.story-chapter__hook,
+.ch-opening__cell p,
+.ch-beat__text,
+.ch-beat__observe,
+.ch-limit__detail,
+.ch-lab__prompt,
+.ch-lab__steps,
+.ch-reading__a,
+.ch-transition__text,
+.workspace--kpage .kn-hero__lead,
+.workspace--kpage .explain,
+.workspace--kpage .kn-inspect__list,
+.workspace--kpage .misconception__claim,
+.workspace--kpage .misconception__fix,
+.workspace--kpage .kn-sample__body {
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.ch-beat__text,
+.ch-reading__a,
+.workspace--kpage .explain,
+.workspace--kpage .kn-inspect__list { max-width: 42em; }
+.ch-beats { gap: 16px; }
+.ch-beat { padding: 16px; }
+.ch-beat__title { font-size: 18px; line-height: 1.45; }
+.ch-beat__takeaway {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--signal);
+  background: rgba(119, 216, 236, 0.07);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.ch-beat__takeaway span { flex: none; color: var(--signal); font-size: 12px; }
+.ch-reading-note, .ch-lab__details { margin-top: 12px; color: var(--text-2); }
+.ch-reading-note summary, .ch-lab__details summary {
+  width: fit-content;
+  min-height: 36px;
+  padding: 7px 0;
+  color: var(--signal);
+  cursor: pointer;
+  font-size: 14px;
+}
+.ch-reading-note summary:focus-visible, .ch-lab__details summary:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+}
+.ch-reading-note p { max-width: 42em; margin: 4px 0 0; font-size: 15px; line-height: 1.8; }
+.ch-lab__details .ch-lab__cols { margin-top: 12px; }
+.ch-reading__item { padding: 14px 0; }
+.ch-reading__q { font-size: 16px; font-weight: 600; line-height: 1.6; }
+.workspace--kpage .section[data-layer] .explain + .explain { margin-top: 16px; }
+.workspace--kpage .kn-inspect__list { gap: 14px; }
+
+/* Directory and atlas: let the next action appear before optional detail. */
+.story-chapter { padding: 16px; margin-bottom: 16px; }
+.story-chapter__hook { margin: 12px 0; color: var(--text-1); }
+.story-chapter__story { margin: 12px 0; }
+.story-concept-list, .story-summary { margin: 12px 0 0; }
+.story-concept-list:not([open]) > :not(summary) { display: none; }
+.story-concept-list summary, .story-summary summary, .atlas-detail__more summary {
+  padding: 8px 0;
+  min-height: 36px;
+  color: var(--signal);
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.story-concept-list summary:focus-visible, .story-summary summary:focus-visible,
+.atlas-detail__more summary:focus-visible { outline: var(--focus-ring); outline-offset: 3px; }
+.story-concept__line { font-size: 14px; line-height: 1.6; }
+.atlas-detail__learn { margin: 14px 0 2px; }
+.atlas-detail__more .explain { font-size: 15px; line-height: 1.75; }
+.atlas-detail__more .explain + .explain { margin-top: 12px; }
+
+/* Explanations and results remain readable in experiments and workspaces. */
+.workspace--lab-lab .lab-hero__lead,
+.workspace--lab-lab .knl-chunk__text,
+.workspace--lab-lab .ctx-card__note,
+.workspace--lab-lab .tc-step__body,
+.workspace--lab-lab .note > span:not(.note__key),
+.runtime-workspace .rt-detail p,
+.comparison-workspace .ab-main p,
+.rp-doc__sub, .rp-claim__text, .rp-list li, .rp-source__body {
+  font-size: 16px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.workspace--lab-lab .tk-field__hint,
+.workspace--lab-lab .lab-params .note > span:not(.note__key),
+.workspace--lab-lab .lab-inspector .note > span:not(.note__key),
+.config-manager__notes, .field__hint,
+.runtime-workspace .rt-hint, .comparison-workspace .ab-hint {
+  font-size: 14px !important;
+  line-height: 1.65;
+}
+.rp-claim__text, .rp-list li, .rp-doc__sub { max-width: 42em; }
+.rp-claim { padding: 14px 16px; margin-bottom: 14px; }
+.runtime-workspace .rt-detail summary, .comparison-workspace summary { font-size: 14px; line-height: 1.6; }
+
+/* On narrow screens, reach the chapter before its full navigation and metadata. */
+@media (max-width: 1080px) {
+  .ch-main { order: 0; }
+  .ch-rail { order: 1; }
+  .ch-aside { order: 2; }
+}

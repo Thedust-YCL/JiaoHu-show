@@ -10,7 +10,7 @@
   inset: 0;
   z-index: 30;
   display: none;
-  background: radial-gradient(120% 90% at 50% 30%, #0c1119 0%, #07090d 58%, #05070a 100%);
+  background: radial-gradient(120% 90% at 50% 30%, #0c1119 0%, var(--void) 58%, var(--surface-sunken) 100%);
 }
 .workspace-host[data-open='true'] {
   display: block;
@@ -247,7 +247,7 @@
   min-height: 0;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-l);
-  background: radial-gradient(110% 80% at 50% 40%, #0b1017 0%, #070a0e 65%, #05070a 100%);
+  background: radial-gradient(110% 80% at 50% 40%, #0b1017 0%, #070a0e 65%, var(--surface-sunken) 100%);
   overflow: hidden;
 }
 /* 少量静态星点建立深度：不随机、不闪烁 */

@@ -3,7 +3,7 @@
 .learning-nav .btn { min-height:36px; }
 .learning-nav .btn[aria-current='page'] { border-color:var(--attention); color:var(--attention); }
 .learning-filters { display:flex; flex-wrap:wrap; gap:8px; padding:8px 12px; }
-.learning-filters select { min-width:0; max-width:100%; padding:8px; color:var(--text-1); background:var(--panel, #10151d); border:1px solid var(--border-soft); border-radius:4px; font:inherit; }
+.learning-filters select { min-width:0; max-width:100%; padding:8px; color:var(--text-1); background:var(--panel); border:1px solid var(--border-soft); border-radius:4px; font:inherit; }
 .atlas-side .learning-filters { flex:0 0 auto; }
 .atlas-side .learning-filters select { width:100%; }
 .atlas-side .learning-filters { display:grid; grid-template-columns:1fr 1fr; }
@@ -51,7 +51,7 @@
 .journal-tools { padding:24px 0; }
 .journal-tools > .btn { margin:0 8px 8px 0; }
 .learning-notice { border-left:2px solid var(--attention); padding:12px; color:var(--attention); line-height:1.7; }
-.learning-dialog { width:min(520px,calc(100vw - 32px)); box-sizing:border-box; background:#10151d; color:var(--text-1); padding:24px; border:1px solid var(--border-soft); border-radius:8px; }
+.learning-dialog { width:min(520px,calc(100vw - 32px)); box-sizing:border-box; background:var(--panel); color:var(--text-1); padding:24px; border:1px solid var(--border-soft); border-radius:8px; }
 .learning-dialog::backdrop { background:rgba(0,0,0,.75); }
 .learning-dialog h2 { font-size:22px; font-weight:500; }
 .learning-dialog p { color:var(--text-2); line-height:1.8; margin:20px 0; }

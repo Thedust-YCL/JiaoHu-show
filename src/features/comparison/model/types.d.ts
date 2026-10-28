@@ -5,6 +5,7 @@ export type Side='A'|'B';
 export type RunRecord=ReturnType<ReturnType<typeof createRuntime>['getRun']>;
 export interface PairControls {taskId:string;datasetId:string;datasetVersion:string;missionVersion:number;scenarioId:string;seed:string|number;approvalPolicyId:string;collaboration:'single'|'sequential';engineVersion?:string}
 export interface ComparisonSession {
+  savedExperimentId?:string|null;
   drafts?:Record<Side,AgentConfiguration>;side?:Side;tab?:string;events?:Record<Side,string|null>;scrolls?:Record<string,number>;
   title?:string;controls?:PairControls;editingSide?:Side;moduleId?:string;linked?:boolean;speed?:number;difference?:boolean;showEqual?:boolean;
   metricsOpen?:boolean;

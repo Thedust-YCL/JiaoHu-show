@@ -13,7 +13,7 @@
   --border-faint: rgba(43, 56, 69, 0.3);
   --text-1: #e8edf2;
   --text-2: #a6b5c1;
-  --text-3: #6f808d;
+  --text-3: #8d9ca8;
   --signal: #77d8ec;
   --attention: #f0bd78;
   --success: #80d9b4;
@@ -30,6 +30,22 @@
   --gap-1: 8px;
   --gap-2: 16px;
   --gap-3: 24px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --control-h: 36px;
+  --control-compact: 32px;
+  --control-touch: 44px;
+  --line-body: 1.7;
+  --line-heading: 1.4;
+  --focus-ring: 2px solid var(--attention);
+  --surface-overlay: #0a0e14;
+  --surface-sunken: #05070a;
+  --surface-disabled: rgba(255, 255, 255, 0.01);
   --radius-s: 6px;
   --radius-m: 8px;
   --radius-l: 12px;
@@ -39,10 +55,10 @@
     'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', Consolas, 'Liberation Mono', monospace;
 
-  --fs-micro: 10.5px;
-  --fs-tag: 11.5px;
-  --fs-body: 13px;
-  --fs-explain: 14.5px;
+  --fs-micro: 12px;
+  --fs-tag: 12px;
+  --fs-body: 14px;
+  --fs-explain: 15px;
   --fs-title: 17px;
   --fs-page: 30px;
   --fs-mega: clamp(38px, 7vw, 74px);
@@ -54,6 +70,8 @@
   --dur-fast: 150ms;
   --dur-mid: 240ms;
   --dur-slow: 620ms;
+  --dur-page: 180ms;
+  --dur-exit: 120ms;
   --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-inout: cubic-bezier(0.65, 0.02, 0.28, 1);
 
@@ -68,6 +86,7 @@
   --layer-drawer: 31;
   --layer-boot: 40;
   --layer-toast: 50;
+  --layer-dialog: 60;
 
   --shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.55);
 }

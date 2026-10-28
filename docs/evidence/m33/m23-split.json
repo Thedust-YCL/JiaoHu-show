@@ -1,0 +1,153 @@
+{
+  "rows": [
+    {
+      "id": "A04/A05",
+      "name": "选择、复制及独立草稿",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A04-cancel",
+      "name": "取消编辑不留下回流标记或覆盖 B 草稿",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A04-edit",
+      "name": "复制到现有 Constructor 编辑后返回",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A07/A10/A15",
+      "name": "相同条件配对运行、独立 Run 与真实指标",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A22/A26/A29",
+      "name": "指标定位 Inspector 和同侧系统快照",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A29-select-module",
+      "name": "系统图显式选中模块可切换 Inspector",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A24/A25",
+      "name": "结构化差异视图保留未匹配事件",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A30",
+      "name": "回放暂停与速度不改数据",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A30-view-switch",
+      "name": "切换轨迹视图会停止旧回放调度",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A31",
+      "name": "知识跳转返回保留实验、侧和事件",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A27/A28",
+      "name": "双栏报告引用到实际片段与读取事件",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A27-full",
+      "name": "复用已有 Research Report 阅读器",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A32/A33",
+      "name": "保存、重命名、复制与范围明确的删除",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A35-rebuild",
+      "name": "打开历史实验后配置和共同条件进入同一 REBUILD 上下文",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A09/A34/A35",
+      "name": "旧快照隔离与新实验重跑",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A36",
+      "name": "真正触发浏览器 Markdown 下载",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A36-file",
+      "name": "磁盘实际下载文件内容",
+      "pass": true,
+      "note": "AGENT-ZERO_AB_experiment-0a6e75e2-449b-4371-87dc-c5845ba27f57.md,AGENT-ZERO_AB_experiment-279ee322-32ef-49ab-a693-5eae59672021.md,AGENT-ZERO_AB_experiment-370a4b18-74d6-446a-8dfc-7691f7b8a549.md,AGENT-ZERO_AB_experiment-4abcef66-d3ef-4ed9-b225-f38f6e1cdd12.md,AGENT-ZERO_AB_experiment-6c60dae7-5d82-4eca-876d-dcbe983dd48a.md,AGENT-ZERO_AB_experiment-7380c11a-6c20-46f5-8c28-bd081e905f6f.md,AGENT-ZERO_AB_experiment-79bed83b-19bf-4238-ab17-a0f485e32c52.md,AGENT-ZERO_AB_experiment-83806a43-b79b-48a9-ae90-7857a0b72f18.md,AGENT-ZERO_AB_experiment-8a55054b-5ae6-4380-b552-7dcfc88a9618.md,AGENT-ZERO_AB_experiment-93116be6-8c93-43c3-bd2b-aa943cc149f0.md,AGENT-ZERO_AB_experiment-a7052d53-9b97-4f40-b3c8-8ba499b23cc7.md,AGENT-ZERO_AB_experiment-ae386105-30f9-490b-a6c4-e4df8e7b1909.md,AGENT-ZERO_AB_experiment-c28c0c82-775b-46f8-aee3-fe991179bb4c.md,AGENT-ZERO_AB_experiment-c7608a51-1466-4fd6-a789-7ed15780dd20.md,AGENT-ZERO_AB_experiment-e28d7844-7708-4a50-b3c0-9ef4adfd7d33.md,AGENT-ZERO_AB_experiment-f544b8dc-e8da-49f7-9a6a-e5cad026a6bb.md"
+    },
+    {
+      "id": "A37-keyboard",
+      "name": "真实方向键切换标签且焦点轮廓可见",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A29-toggle",
+      "name": "A/B 不同模块状态在 3D 和 2D 同步且不写编辑器",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A37-mobile",
+      "name": "窄屏不横向溢出，主要控件可达",
+      "pass": true,
+      "note": "{\"width\":390,\"scroll\":390}"
+    },
+    {
+      "id": "A32-refresh",
+      "name": "刷新后档案从 IndexedDB 恢复",
+      "pass": true,
+      "note": "{\"rendered\":1,\"valid\":1,\"corrupt\":[],\"notice\":null}"
+    },
+    {
+      "id": "A37-fallback",
+      "name": "无 WebGL 时档案、运行和指标可用",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A38",
+      "name": "无外部业务请求",
+      "pass": true,
+      "note": "[\"http://127.0.0.1:8183/agent-zero/\",\"http://127.0.0.1:8183/agent-zero/assets/app.css\",\"http://127.0.0.1:8183/agent-zero/assets/app.js\",\"http://127.0.0.1:8183/agent-zero/assets/chunk-IPV4WD5A.js\",\"http://127.0.0.1:8183/agent-zero/assets/chunk-MMWUGASJ.js\",\"http://127.0.0.1:8183/agent-zero/assets/chunk-HA7XUYBN.js\",\"http://127.0.0.1:8183/agent-zero/assets/chunk-JA3EGSJR.js\",\"http://127.0.0.1:8183/favicon.ico\"]"
+    }
+  ],
+  "network": [
+    "http://127.0.0.1:8183/agent-zero/",
+    "http://127.0.0.1:8183/agent-zero/assets/app.css",
+    "http://127.0.0.1:8183/agent-zero/assets/app.js",
+    "http://127.0.0.1:8183/agent-zero/assets/chunk-IPV4WD5A.js",
+    "http://127.0.0.1:8183/agent-zero/assets/chunk-MMWUGASJ.js",
+    "http://127.0.0.1:8183/agent-zero/assets/chunk-HA7XUYBN.js",
+    "http://127.0.0.1:8183/agent-zero/assets/chunk-JA3EGSJR.js",
+    "http://127.0.0.1:8183/favicon.ico"
+  ],
+  "console": []
+}

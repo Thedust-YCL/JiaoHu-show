@@ -1,4 +1,20 @@
-# AGENT / ZERO — M2.3 A/B 架构对比与实验室整合
+# AGENT / ZERO — 交互式 AI 知识实验室
+
+> V1.0 发布准备：**BLOCKED，尚未发布**。当前包版本为 `0.9.0`，`1.0.0` 是待门禁通过后确定的目标版本。M3.2 的真实设备长时性能与首屏同步加载仍是阻断项；见 [发布审计](docs/M3_3_RELEASE_AUDIT.md)。下方历史阶段内容保留作记录，若与本段和当前交付文档不一致，以后者为准。
+
+AGENT / ZERO 在浏览器中提供 Story、Atlas、六个实验、Agent Constructor、Runtime、A/B 对比和 Knowledge Journal。所有研究资料和运行结果是本地教学模拟；没有真实 AI API、远程 MCP、业务后端或云数据库。用户数据保存在当前浏览器，不同站点源之间不共享，也不能保证永久保存。
+
+本地复现：Node.js 24.16.0 / npm 11.13.0 已用于本次检查。运行 `npm ci`、`npm test`、`npm run typecheck`、`npm run check`、`npm run tokens:verify`、`npm run build`、`npm run preview`，访问 `http://127.0.0.1:5188/`。构建会同时更新 `dist/` 和根目录离线 `index.html`。类型检查仅覆盖配置指定的 Runtime/比较等代码，不能代表全部 JavaScript 已严格类型化。
+
+`dist/` 使用相对资源和 Hash 路由，适合静态子路径；实际 Pages 部署来源和网址尚未确认，也尚未线上验证。静态站按需获取实验代码，若相关代码块尚未缓存，断网时无法首次打开该实验；根目录离线单文件无需获取这些代码块。无 WebGL 时提供二维替代；减少动态效果受系统偏好控制。浏览器与真机覆盖范围见发布审计。使用方法、架构、发布和恢复说明分别见 [用户指南](docs/USER_GUIDE.md)、[架构](docs/ARCHITECTURE.md)、[检查清单](docs/RELEASE_CHECKLIST.md) 和 [回滚方案](docs/ROLLBACK_PLAN.md)。
+
+本轮沿用 AZ-DESIGN 与原有机械轨道/几何核心，统一共享颜色、字号、控件、状态和窄屏操作；补齐 Runtime 快照联动、Atlas 返回、真实执行/报告路由、焦点管理和 A/B 未保存保护。全部为纯前端本地教学模拟，没有新增业务后端、真实 AI API 或大型依赖。
+
+审计见 [M3 视觉审计](docs/M3_VISUAL_AUDIT.md)，逐项验收见 [M3.1 交付报告](docs/DELIVERY_M3.1.md)，后续问题见 [M3.2 待办](docs/M3.2_BACKLOG.md)。完成状态以实际验收报告为准。
+
+验证：`npm run accept:m31`（全站多视口 + 审查回归 + 状态故障）；`node tools/m31-workspace-probe.mjs`（工作区往返/键盘）；`npm test`、`npm run check`、`npm run typecheck`、`npm run tokens:verify`、`npm run build`。浏览器脚本使用本机 Chrome 与独立临时配置，输出到 `verify/m31/`；不访问用户日常浏览器资料。主脚本分别支持 `--review-only` 与 `--states-only`，对应 JSON 结果可另行留存。
+
+## M2.3 A/B 架构对比与实验室整合（保留）
 
 入口：装配台的「A/B COMPARISON · 对比实验」、工作区导航的「A/B 对比」，或静态深链 `#/compare`。
 
@@ -82,7 +98,7 @@ M1.4 验证：`npm test`、`npm run check`、`npm run build`、`npm run audit:m1
    **报告、证据状态与轨迹都会按配置变化**；本地保留最近两次运行，可随时切回上一次对照。
 6. **看实验边界**：`实验空间 / LAB` → 六个已开放实验（Token、Context、Tool Calling/MCP、Knowledge、Runtime、Reliability）；
    实验是本地教学模拟，完成关键操作才记录学习进度。
-7. **降级与无障碍**：任何页面都可只用键盘完成操作；无 WebGL 时自动使用二维执行核心与结构投影，
+7. **降级与无障碍**：已对主要路径进行键盘验证，完整辅助技术审查尚未完成；无 WebGL 时使用二维执行核心与结构投影，
    报告阅读、引用反查与 Markdown 导出仍然可用。
 
 ## 2. 构建与部署
@@ -91,7 +107,7 @@ M1.4 验证：`npm test`、`npm run check`、`npm run build`、`npm run audit:m1
 npm install          # 安装依赖（three、esbuild）
 npm run dev          # 本地开发预览（静态服务）
 npm run build        # 产出 dist/ 与离线单文件 index.html
-npm test             # 371 项纯逻辑测试，包含 M2.1 配置/迁移/预检与前序阶段回归
+npm test             # 运行全部 node:test 测试；具体数量以当次输出为准
 npm run tokens:verify # 用真实分词器复算 Lab 01 的 token 表（24 组序列逐条比对）
 npm run accept:m12   # 构建 + 浏览器验收 A01–A30（含 M0.3/M0.4/M1.1 回归）
 npm run preview      # 预览 dist/ 产物
@@ -99,7 +115,7 @@ npm run shots        # 无头 Chrome 真实渲染自检：T01–T13 + M0.2 + M0.
 ```
 
 - `npm run build` 产出：
-  - `dist/index.html` + `dist/assets/app.js` + `dist/assets/app.css`（标准静态包，引用相对路径）
+  - `dist/index.html` + `dist/assets/app.js` + `dist/assets/app.css` + `dist/assets/chunk-*.js`（标准静态包，引用相对路径；上传时须包含所有代码块）
   - 根目录 `index.html`（**离线单文件版**，便于无服务器演示）
 - **GitHub Pages**：把 `dist/` 内容推到 Pages 分支即可。产物使用相对路径，放在仓库子路径下也能正常加载；
   页面使用 hash 路由，项目子路径和刷新可用，无需业务 API。
@@ -107,7 +123,7 @@ npm run shots        # 无头 Chrome 真实渲染自检：T01–T13 + M0.2 + M0.
 
 ## 3. 这一轮实现了什么（M1.2 新增 · M1.1 基础保留）
 
-### 3.0 M1.2 交付（当前阶段）
+### 3.0 M1.2 交付（历史阶段记录）
 
 | 交付 | 实际内容 | 从这里进入 |
 |---|---|---|
@@ -120,6 +136,8 @@ npm run shots        # 无头 Chrome 真实渲染自检：T01–T13 + M0.2 + M0.
 > 三个实验都在本地运行：不联网、不调用模型、不写入装配配置与运行记录；实验完成状态只在**真实改过参数并看到结果**之后写入本地学习进度。
 
 ### 3.1（M1.1 基础，仍然有效）六章统一注册表 + 36 概念索引
+
+以下内容状态数字描述当时的 M1.2，并非当前状态；当前 `npm run check` 的结果为 25 published、11 reviewed。
 
 
 - 六个稳定 `chapterId`：`intelligence / context / connection / knowledge / runtime / reliability`，

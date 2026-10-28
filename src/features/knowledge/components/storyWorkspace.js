@@ -80,8 +80,8 @@ export function createStoryWorkspace({
   const main = h('section', { class: 'story-main', 'aria-label': '六章目录' });
   const intro = h('div', { class: 'story-intro' }, `
     <div class="story-intro__tag">按章学习 · GUIDED PATH / 01 → 06</div>
-    <h2 class="story-intro__title">六章主线：从语言能力到可靠执行</h2>
-    <p class="story-intro__lead">第 01–03 章讲「模型怎么说话、上下文怎么影响它、工具怎么把资料拿回来」；第 04–06 章接着讲「拿回来之后怎么找、谁决定下一步、怎么限制与验证」。六章都有<b>完整叙事与可操作实验</b>，每章都能进入对应实验并回到本章概念。</p>
+    <h2 class="story-intro__title">六章主线：<span>从语言能力到可靠执行</span></h2>
+    <p class="story-intro__lead">从模型如何回答开始，逐步了解上下文、工具、资料与可靠执行。每章都可以先读故事，再动手实验。</p>
     <div class="story-intro__stats">
       <span><b>${stats.chapters}</b> 章</span>
       <span><b>${stats.concepts}</b> 概念索引</span>
@@ -118,7 +118,6 @@ export function createStoryWorkspace({
         <span class="tag tag--${status.tone}">${esc(status.cn)}</span>
         <span class="story-chapter__count">${progress.ready}/${progress.total} 可用 · ${progress.explored} 已查看</span>`),
       h('blockquote', { class: 'story-chapter__question' }, esc(chapter.question)),
-      h('p', { class: 'story-chapter__intro' }, esc(chapter.intro)),
       h('div', { class: 'story-chapter__hook' }, `<span class="note__key">一句话</span>${esc(chapter.hook)}`)
     );
 
@@ -147,7 +146,8 @@ export function createStoryWorkspace({
       li.append(btn);
       list.append(li);
     }
-    section.append(list);
+    const conceptList = h('details', { class: 'story-concept-list' });
+    conceptList.append(h('summary', {}, `查看本章 ${concepts.length} 个概念`), h('p', { class: 'story-chapter__intro' }, esc(chapter.intro)), list);
 
     const chapters_experiments = EXPERIMENTS.filter((e) => e.chapterId === chapter.id);
     section.append(
@@ -161,9 +161,8 @@ export function createStoryWorkspace({
     // 叙事入口：只有真的写完叙事的章节才有按钮（第 04–06 章不出现假入口）
     const story = getChapterStory(chapter.id);
     if (story) {
-      section.append(h('p',{class:'story-chapter__intro'},`学习目标：${esc(story.opening.goal)}`));
+      conceptList.insertBefore(h('p', { class: 'story-chapter__intro' }, `学习目标：${esc(story.opening.goal)}`), list);
       const summary = h('details',{class:'story-summary'},`<summary>本章总结与边界</summary><p>${esc(story.limitation.text)}</p>${story.reading.items.map(i=>`<p><b>${esc(i.q)}</b><br>${esc(i.a)}</p>`).join('')}<p>${esc(story.transition.text)}</p>`);
-      section.append(summary);
       const storyRow = h('div', { class: 'story-chapter__story' });
       const openBtn = h('button', { class: 'btn btn--primary btn--sm', type: 'button', 'data-act': 'open-chapter-story' },
         `进入第 ${chapter.no} 章叙事 · ${story.subtitle.split(' · ')[0]}`);
@@ -171,13 +170,14 @@ export function createStoryWorkspace({
         onLog?.('叙事', `打开第 ${chapter.no} 章叙事 ${story.subtitle}`, 'signal');
         onOpenChapter?.(chapter.id);
       });
-      storyRow.append(openBtn, h('span', { class: 'tar' }, `开场目标 · ${story.beats.length} 个节拍 · 局限 · 实验 · 结果解读`));
-      section.append(storyRow);
+      storyRow.append(openBtn);
+      section.append(storyRow, conceptList, summary);
     } else {
       section.append(
         h('div', { class: 'story-chapter__story' },
           h('span', { class: 'tag tag--muted' }, '章节叙事 · 后续阶段（M1.4）'))
       );
+      section.append(conceptList);
     }
 
     chapterSections.set(chapter.id, section);
@@ -185,30 +185,22 @@ export function createStoryWorkspace({
   }
 
   /* ----------------------------- 右栏：状态与阶段说明 ----------------------------- */
-  const aside = h('aside', { class: 'story-aside surface', 'aria-label': '状态说明与阶段归属' });
+  const aside = h('aside', { class: 'story-aside surface', 'aria-label': '学习指引' });
   const asideBody = h('div', { class: 'story-aside__scroll' });
-  aside.append(h('div', { class: 'panel-head' }, '<span class="panel-head__title">状态与阶段</span>'), asideBody);
+  aside.append(h('div', { class: 'panel-head' }, '<span class="panel-head__title">学习指引</span>'), asideBody);
 
   asideBody.append(
     h('div', { class: 'section' }, `
-      <div class="section__label"><span>四种内容状态</span><span>决定可用性</span></div>
+      <div class="section__label"><span>从这里开始</span><span>按自己的节奏</span></div>
       <div class="kv">
-        <dt>内容建设中</dt><dd>只有索引元数据：可出现在目录与搜索里，但没有正文，不算学完</dd>
-        <dt>草稿 · 未审校</dt><dd>有正文但未核对，界面必须显示草稿标记</dd>
-        <dt>已审校</dt><dd>正文按 PRD 技术边界核对过，可完整学习</dd>
-        <dt>已发布 · 含实验</dt><dd>正文与可操作实验同时可用（当前 ${stats.byStatus.published} 个概念，对应 ${experimentStats().available} 个实验）</dd>
+        <dt>选一章</dt><dd>从左侧选择章节，或继续上次的学习。</dd>
+        <dt>读概念</dt><dd>打开感兴趣的概念，了解原理与常见误解。</dd>
+        <dt>动手试试</dt><dd>每章都有对应实验；调整条件，观察结果如何变化。</dd>
+        <dt>查看进度</dt><dd>学习日志保存在当前浏览器，可随时回来继续。</dd>
       </div>`),
     h('div', { class: 'section' }, `
-      <div class="section__label"><span>阶段归属</span><span>不虚构进度</span></div>
-      <div class="kv">
-        <dt>第 01–03 章</dt><dd>正文、叙事与实验 → M1.2（已开放）</dd>
-        <dt>第 04–06 章</dt><dd>正文、叙事与实验 → M1.3（已开放）</dd>
-        <dt>学习路径 / 星图 / 学习日志</dt><dd>已开放 · 共享本地学习进度</dd>
-        <dt>本轮交付</dt><dd>六章目录 + ${stats.concepts} 概念索引 + ${stats.byStatus.reviewed + stats.byStatus.published} 个已审校正文 + 6 章叙事 + ${experimentStats().available} 个可操作实验</dd>
-      </div>`),
-    h('div', { class: 'section' }, `
-      <div class="section__label"><span>实验登记</span><span>${experimentStats().available}/${experimentStats().total} 可操作</span></div>
-      <div class="mono kn-progress">只有登记为「可操作」的实验才会出现运行入口；其余显示「后续阶段开放」。Lab 页可查看完整登记表。</div>`)
+      <div class="section__label"><span>内容状态</span><span>阅读前可辨认</span></div>
+      <div class="kn-progress">已审校内容可以完整阅读；标有「含实验」的概念可以继续动手探索。当前共有 ${stats.concepts} 个概念和 ${experimentStats().available} 个可操作实验。</div>`)
   );
 
   el.append(head, h('div', { class: 'story-body' }, side, main, aside));

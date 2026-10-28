@@ -138,7 +138,7 @@
   z-index: var(--layer-projection);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  background: radial-gradient(110% 80% at 50% 40%, #0c1119 0%, #07090d 66%, #05070a 100%);
+  background: radial-gradient(110% 80% at 50% 40%, #0c1119 0%, var(--void) 66%, var(--surface-sunken) 100%);
 }
 .projection__main {
   display: grid;

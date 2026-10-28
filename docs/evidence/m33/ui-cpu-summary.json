@@ -1,0 +1,314 @@
+{
+  "label": "m33-ui-cpu",
+  "timestamp": "2026-10-28T05:51:12.589Z",
+  "browser": "Chrome/156.0.8078.48",
+  "conditions": "Production dist under /agent-zero/, local HTTP no-store, headless hardware GPU requested, software rasterizer disabled, 1440x900 DPR 1, no network throttling, 2s per scene after 500ms settle",
+  "cold": {
+    "navigation": [
+      {
+        "domContentLoaded": 255.39999997615814,
+        "load": 258.19999998807907,
+        "duration": 258.19999998807907,
+        "transferSize": 1496
+      }
+    ],
+    "resources": [
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/app.css",
+        "transferSize": 205556,
+        "duration": 5.599999964237213
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/app.js",
+        "transferSize": 1533045,
+        "duration": 7.100000023841858
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-IPV4WD5A.js",
+        "transferSize": 13284,
+        "duration": 3.199999988079071
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-MMWUGASJ.js",
+        "transferSize": 9303,
+        "duration": 3
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-JA3EGSJR.js",
+        "transferSize": 9954,
+        "duration": 3.599999964237213
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-HA7XUYBN.js",
+        "transferSize": 15593,
+        "duration": 3.299999952316284
+      }
+    ],
+    "ready": 435.39999997615814,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 16,
+    "deviceMemory": 32
+  },
+  "warm": {
+    "navigation": [
+      {
+        "domContentLoaded": 334.60000002384186,
+        "load": 375.30000001192093,
+        "duration": 375.30000001192093,
+        "transferSize": 1496
+      }
+    ],
+    "resources": [
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/app.css",
+        "transferSize": 205556,
+        "duration": 4.5
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/app.js",
+        "transferSize": 1533045,
+        "duration": 23.399999976158142
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-IPV4WD5A.js",
+        "transferSize": 13284,
+        "duration": 2.300000011920929
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-MMWUGASJ.js",
+        "transferSize": 9303,
+        "duration": 2.299999952316284
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-HA7XUYBN.js",
+        "transferSize": 15593,
+        "duration": 2.399999976158142
+      },
+      {
+        "name": "http://127.0.0.1:8192/agent-zero/assets/chunk-JA3EGSJR.js",
+        "transferSize": 9954,
+        "duration": 2.5
+      }
+    ],
+    "ready": 379,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 16,
+    "deviceMemory": 32
+  },
+  "scenes": [
+    {
+      "name": "hub",
+      "elapsedMs": 2003.699999988079,
+      "rafFrames": 330,
+      "rafP50": 6.099999999999909,
+      "rafP95": 6.199999999999818,
+      "over33ms": 0,
+      "tickCalls": 331,
+      "tickP50": 0.699999988079071,
+      "tickP95": 0.9000000357627869,
+      "stats": {
+        "calls": 130,
+        "triangles": 32622,
+        "programs": 19,
+        "geometries": 84,
+        "textures": 13,
+        "fps": 165.0427520381786
+      },
+      "canvas": {
+        "width": 810,
+        "height": 646,
+        "display": "block",
+        "pixelRatio": 1,
+        "bufferWidth": 810,
+        "bufferHeight": 646
+      },
+      "heap": 11613569,
+      "renderer": "ANGLE (Intel, Intel(R) Arc(TM) 140T GPU (16GB) (0x00007D51) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "diagnostic": "帧率165 fps单帧耗时6.1 ms绘制调用130三角面32,622 个几何体84纹理13渲染档位标准后期处理泛光 + 调色像素比1.00选中结构—"
+    }
+  ],
+  "stress": [],
+  "deepStress": [],
+  "uiCheck": {
+    "durations": {
+      "search": [
+        167.89999997615814,
+        170.10000002384186,
+        169.0999999642372,
+        169.80000001192093,
+        169.39999997615814,
+        169.69999998807907
+      ],
+      "editing": [
+        7.199999988079071,
+        5.600000023841858,
+        9,
+        6.399999976158142,
+        17.099999964237213
+      ],
+      "runtime": [
+        20.099999964237213,
+        17.600000023841858,
+        13.300000011920929,
+        15.5
+      ]
+    },
+    "summary": {
+      "search": {
+        "samples": 6,
+        "p50": 169.69999998807907,
+        "p95": 170.10000002384186
+      },
+      "editing": {
+        "samples": 5,
+        "p50": 7.199999988079071,
+        "p95": 17.099999964237213
+      },
+      "runtime": {
+        "samples": 4,
+        "p50": 17.600000023841858,
+        "p95": 20.099999964237213
+      }
+    },
+    "longTaskSupported": true,
+    "longTasks": [
+      {
+        "start": 2995.600000023842,
+        "duration": 78
+      },
+      {
+        "start": 4145.100000023842,
+        "duration": 73
+      }
+    ],
+    "spans": [
+      {
+        "name": "atlas-open-positive",
+        "start": 2996.899999976158,
+        "end": 3074.100000023842
+      },
+      {
+        "name": "search",
+        "start": 3074.100000023842,
+        "end": 3242
+      },
+      {
+        "name": "search",
+        "start": 3242,
+        "end": 3412.100000023842
+      },
+      {
+        "name": "search",
+        "start": 3412.100000023842,
+        "end": 3581.199999988079
+      },
+      {
+        "name": "search",
+        "start": 3581.300000011921,
+        "end": 3751.100000023842
+      },
+      {
+        "name": "search",
+        "start": 3751.100000023842,
+        "end": 3920.5
+      },
+      {
+        "name": "search",
+        "start": 3920.5,
+        "end": 4090.199999988079
+      },
+      {
+        "name": "go-hub",
+        "start": 4090.199999988079,
+        "end": 4100.800000011921
+      },
+      {
+        "name": "editing",
+        "start": 4100.800000011921,
+        "end": 4108
+      },
+      {
+        "name": "editing",
+        "start": 4108,
+        "end": 4113.600000023842
+      },
+      {
+        "name": "editing",
+        "start": 4113.600000023842,
+        "end": 4122.600000023842
+      },
+      {
+        "name": "editing",
+        "start": 4122.600000023842,
+        "end": 4129
+      },
+      {
+        "name": "editing",
+        "start": 4129.100000023842,
+        "end": 4146.199999988079
+      },
+      {
+        "name": "runtime-open",
+        "start": 4146.199999988079,
+        "end": 4202.300000011921
+      },
+      {
+        "name": "runtime-step",
+        "start": 4202.300000011921,
+        "end": 4222.399999976158
+      },
+      {
+        "name": "runtime-step",
+        "start": 4222.399999976158,
+        "end": 4240
+      },
+      {
+        "name": "runtime-step",
+        "start": 4240,
+        "end": 4253.300000011921
+      },
+      {
+        "name": "runtime-step",
+        "start": 4253.300000011921,
+        "end": 4268.800000011921
+      }
+    ]
+  },
+  "lifecycle": null,
+  "files": {
+    "dist/index.html": {
+      "bytes": 1196,
+      "gzipBytes": 820
+    },
+    "dist/assets/app.js": {
+      "bytes": 1532745,
+      "gzipBytes": 416223
+    },
+    "dist/assets/app.css": {
+      "bytes": 205256,
+      "gzipBytes": 39031
+    },
+    "index.html": {
+      "bytes": 2012677,
+      "gzipBytes": 528193
+    }
+  },
+  "requests": [
+    "http://127.0.0.1:8192/agent-zero/?m32=1",
+    "http://127.0.0.1:8192/agent-zero/assets/app.css",
+    "http://127.0.0.1:8192/agent-zero/assets/app.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-IPV4WD5A.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-MMWUGASJ.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-HA7XUYBN.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-JA3EGSJR.js",
+    "http://127.0.0.1:8192/favicon.ico",
+    "http://127.0.0.1:8192/agent-zero/?m32=1",
+    "http://127.0.0.1:8192/agent-zero/assets/app.css",
+    "http://127.0.0.1:8192/agent-zero/assets/app.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-IPV4WD5A.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-MMWUGASJ.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-HA7XUYBN.js",
+    "http://127.0.0.1:8192/agent-zero/assets/chunk-JA3EGSJR.js"
+  ],
+  "errors": []
+}

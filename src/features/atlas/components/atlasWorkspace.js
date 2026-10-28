@@ -55,9 +55,13 @@ export function createAtlasWorkspace({
   onOpenStory,
   onOpenLab,
   onViewInConstructor,
+  session = {},
   reducedMotion = false,
   onLog,
 } = {}) {
+  session = session && typeof session === 'object' ? session : {};
+  const initialViewState = session.view && typeof session.view === 'object' ? { ...session.view } : null;
+  const initialScrollState = session.scrolls && typeof session.scrolls === 'object' ? { ...session.scrolls } : {};
   const el = h('div', { class: 'workspace workspace--atlas', 'data-open': 'true' });
 
   const stats = graphStats();
@@ -112,6 +116,7 @@ export function createAtlasWorkspace({
   const center = h('section', { class: 'atlas-stage', 'aria-label': '知识星图画布' });
   const graph = createAtlasGraph({
     reducedMotion,
+    onViewChange: (view) => { session.view = view; },
     onSelectConcept: (concept) => selectConcept(concept.id, { focus: false, source: 'canvas' }),
     onSelectEdge: (edge) => selectEdge(edge),
     onOpenConcept: (id) => onOpenKnowledge?.(id, { from: 'atlas' }),
@@ -146,11 +151,37 @@ export function createAtlasWorkspace({
   const detailBody = h('div', { class: 'atlas-detail__scroll' });
   detail.append(h('div', { class: 'panel-head' }, '<span class="panel-head__title">节点详情 / 关系说明</span>'), detailBody);
 
-  el.append(head, h('div', { class: 'atlas-grid' }, side, center, detail));
+  const grid = h('div', { class: 'atlas-grid' }, side, center, detail);
+  el.append(head, grid);
 
   /* ----------------------------- 状态 ----------------------------- */
-  let selectedId = null;
-  let query = '';
+  let selectedId = getConcept(session.selectedId) ? session.selectedId : null;
+  let query = typeof session.query === 'string' ? session.query : '';
+
+  searchInput.value = query;
+  if ([...chapterFilter.options].some((option) => option.value === session.chapterFilter)) chapterFilter.value = session.chapterFilter;
+  if ([...relationFilter.options].some((option) => option.value === session.relationFilter)) relationFilter.value = session.relationFilter;
+
+  function persistContext() {
+    session.selectedId = selectedId;
+    session.query = query;
+    session.chapterFilter = chapterFilter.value;
+    session.relationFilter = relationFilter.value;
+    session.view = graph.getViewState();
+    session.scrolls = {
+      list: listEl.scrollTop,
+      detail: detailBody.scrollTop,
+      grid: grid.scrollTop,
+    };
+  }
+
+  function restoreScroll(scrolls = session.scrolls || {}) {
+    requestAnimationFrame(() => {
+      listEl.scrollTop = Number(scrolls.list) || 0;
+      detailBody.scrollTop = Number(scrolls.detail) || 0;
+      grid.scrollTop = Number(scrolls.grid) || 0;
+    });
+  }
 
   const graphNodeIds = new Set(GRAPH_ORDER);
 
@@ -262,9 +293,9 @@ export function createAtlasWorkspace({
     return wrap;
   }
 
-  function renderDetail() {
+  function renderDetail({ resetScroll = true } = {}) {
     detailBody.replaceChildren();
-    detailBody.scrollTop = 0;
+    if (resetScroll) detailBody.scrollTop = 0;
 
     if (!selectedId) {
       detailBody.append(
@@ -302,6 +333,11 @@ export function createAtlasWorkspace({
       </div>`);
     detailBody.append(hero);
 
+    const learn = h('button', { class: 'btn btn--primary atlas-detail__learn', type: 'button', 'data-act': 'learn' },
+      availability.hasBody ? '打开知识页' : '打开索引页（建设中）');
+    learn.addEventListener('click', () => onOpenKnowledge?.(concept.id, { from: 'atlas' }));
+    detailBody.append(learn);
+
     if (!availability.hasBody) {
       detailBody.append(
         h('div', { class: 'section' }, `
@@ -313,8 +349,8 @@ export function createAtlasWorkspace({
           </div>`)
       );
     } else {
-      const understand = h('div', { class: 'section' });
-      understand.append(h('div', { class: 'section__label' }, '<span>简明解释</span><span>已审校 · 完整内容在知识页</span>'));
+      const understand = h('details', { class: 'section atlas-detail__more' });
+      understand.append(h('summary', {}, '展开简明解释'));
       for (const para of concept.understand.slice(0, 2)) understand.append(h('p', { class: 'explain' }, md(para)));
       detailBody.append(understand);
     }
@@ -334,12 +370,7 @@ export function createAtlasWorkspace({
 
     /* ---------------- 操作区 ---------------- */
     const acts = h('div', { class: 'section atlas-actions' });
-    acts.append(h('div', { class: 'section__label' }, '<span>下一步</span><span>不含假按钮</span>'));
-
-    const learn = h('button', { class: 'btn btn--primary', type: 'button', 'data-act': 'learn' },
-      availability.hasBody ? 'LEARN · 打开知识页' : 'LEARN · 打开索引页（建设中）');
-    learn.addEventListener('click', () => onOpenKnowledge?.(concept.id, { from: 'atlas' }));
-    acts.append(learn);
+    acts.append(h('div', { class: 'section__label' }, '<span>继续探索</span>'));
 
     if (experiment) {
       const lab = h('button', { class: 'btn btn--ghost', type: 'button', 'data-act': 'open-lab' }, `进入本章实验 · ${experiment.title}`);
@@ -389,10 +420,16 @@ export function createAtlasWorkspace({
     const concept = getConcept(conceptId);
     if (!concept) return;
     if (source !== 'search') {
-      const visible = queryAtlas({ query, chapterId: chapterFilter.value || null }).nodes.some(c => c.id === conceptId);
-      if (!visible) { query = ''; searchInput.value = ''; chapterFilter.value = ''; }
+      const visible = queryAtlas({ query, chapterId: chapterFilter.value || null, relationType: relationFilter.value || null }).nodes.some(c => c.id === conceptId);
+      if (!visible) {
+        query = '';
+        searchInput.value = '';
+        chapterFilter.value = '';
+        relationFilter.value = '';
+      }
     }
     selectedId = conceptId;
+    persistContext();
     graph.setSelectedEdge(null);
     graph.setSelection(graphNodeIds.has(conceptId) ? conceptId : null);
     if (focus && graphNodeIds.has(conceptId)) graph.focusConcept(conceptId);
@@ -411,6 +448,7 @@ export function createAtlasWorkspace({
     if (!edge) return;
     const meta = relationMeta(edge.type);
     selectedId = null;
+    persistContext();
     graph.setSelection(null);
     graph.setSelectedEdge(edge.id);
     detailBody.replaceChildren();
@@ -445,9 +483,10 @@ export function createAtlasWorkspace({
   /* ---------------- 搜索 ---------------- */
   function applySearch(value) {
     query = String(value || '');
+    session.query = query;
     const result = searchConcepts(query, { chapterId: chapterFilter.value || null });
-    renderList();
     if (!result.cleared && !result.empty) {
+      // selectConcept updates both the detail and filtered list once.
       selectConcept(result.matches[0].concept.id, { focus: true, source: 'search' });
       onLog?.(
         '星图',
@@ -455,6 +494,7 @@ export function createAtlasWorkspace({
         'signal'
       );
     } else {
+      renderList();
       renderDetail();
     }
   }
@@ -471,6 +511,7 @@ export function createAtlasWorkspace({
   searchInput.addEventListener('compositionend', () => { composing = false; applySearch(searchInput.value); });
   for (const filter of [chapterFilter, relationFilter]) filter.addEventListener('change', () => {
     selectedId = null; graph.setSelection(null); graph.setSelectedEdge(null);
+    persistContext();
     renderList(); renderDetail(); graph.fitView();
   });
   searchInput.addEventListener('keydown', (e) => {
@@ -488,12 +529,14 @@ export function createAtlasWorkspace({
     clearTimeout(searchTimer);
     applySearch('');
     graph.resetView();
+    persistContext();
   });
 
+  for (const node of [listEl, detailBody, grid]) node.addEventListener('scroll', persistContext, { passive: true });
+
   /* ---------------- 对外接口 ---------------- */
-  renderList();
-  renderFoot();
-  renderDetail();
+  if (initialViewState) graph.restoreViewState(initialViewState);
+  restoreScroll(initialScrollState);
   const unsubscribeLearning = learning.subscribe(() => {
     renderList();
     renderFoot();
@@ -503,13 +546,18 @@ export function createAtlasWorkspace({
     el,
     /** 打开时恢复上次选中的概念（不触发模拟运行） */
     activate(conceptId = null) {
-      if (conceptId && getConcept(conceptId)) selectConcept(conceptId, { focus: true, source: 'open' });
+      if (conceptId && getConcept(conceptId) && conceptId !== selectedId) {
+        selectConcept(conceptId, { focus: true, source: 'open' });
+        renderFoot();
+      }
       else {
-        graph.resetView();
+        const savedScrolls = { ...(session.scrolls || {}) };
         graph.setSelection(selectedId);
         renderList();
         renderFoot();
-        renderDetail();
+        renderDetail({ resetScroll: false });
+        if (session.view) graph.restoreViewState(session.view);
+        restoreScroll(savedScrolls);
       }
     },
     selectConcept,
@@ -517,6 +565,7 @@ export function createAtlasWorkspace({
     /** Esc：先清除选中，不清空搜索、也不离开工作区（Back to Hub 始终可达） */
     clearSelection() {
       selectedId = null;
+      persistContext();
       graph.setSelection(null);
       graph.setSelectedEdge(null);
       renderDetail();
@@ -531,6 +580,7 @@ export function createAtlasWorkspace({
     conceptsOfChapter: (chapterId) => getConceptsByChapter(chapterId),
     graph,
     dispose() {
+      persistContext();
       clearTimeout(searchTimer);
       unsubscribeLearning?.();
       graph.destroy();

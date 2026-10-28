@@ -1,0 +1,218 @@
+{
+  "stage": "M2.2",
+  "generatedAt": "2026-10-28T05:40:32.481Z",
+  "total": 33,
+  "passed": 33,
+  "results": [
+    {
+      "id": "A02-A06",
+      "name": "预检进入真实 Runtime，统一配置与本地标记",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A10",
+      "name": "真实单步按钮仅推进一个动作",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A11",
+      "name": "连续继续可暂停，轨迹和计数保留",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A12-A13",
+      "name": "取消后无后续动作，相同快照重跑保留原记录",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A03",
+      "name": "现场编辑配置不会改当前快照",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A14",
+      "name": "九种场景可选择且触发对应实际轨迹",
+      "pass": true,
+      "note": "[{\"id\":\"NORMAL_PATH\",\"status\":\"completed\",\"steps\":7,\"requests\":0,\"errors\":0},{\"id\":\"MISSING_EVIDENCE\",\"status\":\"completed\",\"steps\":5,\"requests\":0,\"errors\":0},{\"id\":\"TOOL_FAILURE_ONCE\",\"status\":\"completed\",\"steps\":8,\"requests\":0,\"errors\":1},{\"id\":\"TOOL_FAILURE_EXHAUSTED\",\"status\":\"failed\",\"steps\":4,\"requests\":0,\"errors\":2},{\"id\":\"CONFLICTING_SOURCES\",\"status\":\"completed\",\"steps\":7,\"requests\":0,\"errors\":0},{\"id\":\"PERMISSION_REQUIRED\",\"status\":\"completed\",\"steps\":7,\"requests\":1,\"errors\":0},{\"id\":\"PERMISSION_DENIED\",\"status\":\"failed\",\"steps\":3,\"requests\":0,\"errors\":0},{\"id\":\"STEP_LIMIT_REACHED\",\"status\":\"failed\",\"steps\":24,\"requests\":0,\"errors\":0},{\"id\":\"UNTRUSTED_INSTRUCTION\",\"status\":\"completed\",\"steps\":8,\"requests\":0,\"errors\":0}]"
+    },
+    {
+      "id": "A22-A27",
+      "name": "审批面板说明范围并停止工具派发",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A23",
+      "name": "真实拒绝按钮阻止工具且无重试",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A22-approved",
+      "name": "批准按钮只执行当前动作，不重复批准",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A25-A28",
+      "name": "三角色完成、选择步骤与事件、摘要有真实数值",
+      "pass": true,
+      "note": "{\"steps\":9,\"toolCalls\":2,\"toolErrors\":0,\"retries\":0,\"permissionChecks\":2,\"requests\":0,\"approvals\":0,\"denials\":0,\"branches\":[\"workflow/task_intake\",\"workflow/plan\",\"workflow/search\",\"workflow/read\",\"workflow/handoff_verify\",\"workflow/evidence_check\",\"workflow/handoff_synthesize\",\"workflow/synthesize\",\"workflow/finalize\"],\"evidenceCount\":1,\"conflictCount\":0,\"evidenceStatus\":\"sufficient\",\"status\":\"completed\",\"terminationReason\":\"target_reached\"}"
+    },
+    {
+      "id": "A33",
+      "name": "知识链接使用统一概念页且可返回同一运行",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A30-A31",
+      "name": "删除单条运行保留其他命名空间，实际确认弹层",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A11-refresh-setup",
+      "name": "刷新前保存运行中轨迹",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A11-refresh",
+      "name": "刷新恢复暂停，等待后不偷偷运行",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A32-setup",
+      "name": "构造独立坏记录保留其他运行",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A32",
+      "name": "坏记录显式删除，正常记录保留",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A34-1920",
+      "name": "窄屏无页面溢出，关键控制可见",
+      "pass": true,
+      "note": "{\"width\":1920,\"scroll\":1920,\"right\":517.859375}"
+    },
+    {
+      "id": "A34-1440",
+      "name": "窄屏无页面溢出，关键控制可见",
+      "pass": true,
+      "note": "{\"width\":1440,\"scroll\":1440,\"right\":517.859375}"
+    },
+    {
+      "id": "A34-1280",
+      "name": "窄屏无页面溢出，关键控制可见",
+      "pass": true,
+      "note": "{\"width\":1280,\"scroll\":1280,\"right\":517.859375}"
+    },
+    {
+      "id": "A34-1024",
+      "name": "窄屏无页面溢出，关键控制可见",
+      "pass": true,
+      "note": "{\"width\":1024,\"scroll\":1024,\"right\":509.859375}"
+    },
+    {
+      "id": "A34-768",
+      "name": "窄屏无页面溢出，关键控制可见",
+      "pass": true,
+      "note": "{\"width\":768,\"scroll\":768,\"right\":169.859375}"
+    },
+    {
+      "id": "A34-390",
+      "name": "窄屏无页面溢出，关键控制可见",
+      "pass": true,
+      "note": "{\"width\":390,\"scroll\":390,\"right\":165.859375}"
+    },
+    {
+      "id": "A34-keyboard-setup",
+      "name": "键盘设置运行焦点",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A34-keyboard",
+      "name": "Enter 触发单步，焦点保留且可见",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A34-approval-focus",
+      "name": "窄屏审批有可见按钮，键盘可处理",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A34-approval-keyboard",
+      "name": "Enter 批准单次动作后返回可操作焦点",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A10-continuous",
+      "name": "连续运行到真实终态而非播放预制结果",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A10-reset",
+      "name": "复位视图保留运行快照与轨迹",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A37",
+      "name": "AZ-CORE 身份与开场视觉保持",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A35",
+      "name": "WebGL 不可用时运行检查器和审批仍完整可用",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A39-subpath",
+      "name": "真实静态子路径及 Runtime 深链",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A36",
+      "name": "运行不产生远程业务请求",
+      "pass": true,
+      "note": "{\"pass\":true}"
+    },
+    {
+      "id": "A36-network",
+      "name": "完整验收无远程请求",
+      "pass": true,
+      "note": "[\"file:///E:/%E6%BC%94%E7%A4%BA%E5%9E%8B%E5%85%A5%E9%97%A8%E4%BA%A4%E4%BA%92%E9%A1%B5/index.html\",\"http://127.0.0.1:4414/agent-zero/\",\"http://127.0.0.1:4414/agent-zero/assets/app.css\",\"http://127.0.0.1:4414/agent-zero/assets/app.js\",\"http://127.0.0.1:4414/agent-zero/assets/chunk-IPV4WD5A.js\",\"http://127.0.0.1:4414/agent-zero/assets/chunk-MMWUGASJ.js\",\"http://127.0.0.1:4414/agent-zero/assets/chunk-HA7XUYBN.js\",\"http://127.0.0.1:4414/agent-zero/assets/chunk-JA3EGSJR.js\",\"http://127.0.0.1:4414/favicon.ico\"]"
+    }
+  ],
+  "console": [],
+  "network": [
+    "file:///E:/%E6%BC%94%E7%A4%BA%E5%9E%8B%E5%85%A5%E9%97%A8%E4%BA%A4%E4%BA%92%E9%A1%B5/index.html",
+    "http://127.0.0.1:4414/agent-zero/",
+    "http://127.0.0.1:4414/agent-zero/assets/app.css",
+    "http://127.0.0.1:4414/agent-zero/assets/app.js",
+    "http://127.0.0.1:4414/agent-zero/assets/chunk-IPV4WD5A.js",
+    "http://127.0.0.1:4414/agent-zero/assets/chunk-MMWUGASJ.js",
+    "http://127.0.0.1:4414/agent-zero/assets/chunk-HA7XUYBN.js",
+    "http://127.0.0.1:4414/agent-zero/assets/chunk-JA3EGSJR.js",
+    "http://127.0.0.1:4414/favicon.ico"
+  ]
+}

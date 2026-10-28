@@ -100,6 +100,7 @@ export function readResearchHistory(storage, key = RESEARCH_STORAGE_KEY) {
   } catch {
     return {
       ...emptyHistory(),
+      locked: true,
       notice: { level: 'attention', code: 'RESEARCH_STORAGE_BLOCKED', message: '浏览器拒绝了本地运行记录的读取（可能处于隐私模式）：本次不恢复历史 Run，但仍可发起新的研究运行' },
     };
   }
@@ -123,15 +124,21 @@ export function readResearchHistory(storage, key = RESEARCH_STORAGE_KEY) {
   } catch {
     return {
       ...emptyHistory(),
-      notice: { level: 'error', code: 'RESEARCH_STORAGE_CORRUPT', message: '本地研究记录无法解析，已忽略（不影响装配配置、学习进度与开场偏好）', fix: '发起一次新的 New Run 即可覆盖该记录' },
+      locked: true,
+      notice: { level: 'error', code: 'RESEARCH_STORAGE_CORRUPT', message: '本地研究记录无法解析，原始数据已保留；新的运行仅在本次会话可见。' },
     };
   }
 
   if (!data || typeof data !== 'object' || !Array.isArray(data.runs)) {
     return {
       ...emptyHistory(),
-      notice: { level: 'error', code: 'RESEARCH_STORAGE_SHAPE', message: '本地研究记录结构不符合预期，已忽略', fix: '发起一次新的 New Run 即可覆盖该记录' },
+      locked: true,
+      notice: { level: 'error', code: 'RESEARCH_STORAGE_SHAPE', message: '本地研究记录结构不符合预期，原始数据已保留。' },
     };
+  }
+
+  if (data.schemaVersion !== 2 || data.runs.length > MAX_LOCAL_RUNS) {
+    return { ...emptyHistory(), locked: true, notice: { level: 'error', code: 'RESEARCH_STORAGE_VERSION', message: '研究记录版本或数量不兼容，原始数据已保留。' } };
   }
 
   const runs = [];
@@ -146,7 +153,8 @@ export function readResearchHistory(storage, key = RESEARCH_STORAGE_KEY) {
   return {
     runs,
     legacy: null,
-    notice: runs.length === 0 && problems.length > 0 ? problems[0] : null,
+    ...(problems.length ? { locked: true } : {}),
+    notice: problems.length ? { ...problems[0], message: `${problems[0].message}；原始研究记录已保留，新增运行仅在本次会话可见。` } : null,
   };
 }
 
@@ -161,6 +169,11 @@ export function appendResearchRun(storage, run, savedAt = new Date().toISOString
   }
 
   const current = readResearchHistory(store, key);
+  if (current.locked) {
+    return { ok: false, runs: current.runs, evicted: 0, notice: current.notice?.code === 'RESEARCH_STORAGE_BLOCKED'
+      ? { level: 'attention', code: 'RESEARCH_STORAGE_FULL', message: '无法读取原有研究记录，已停止写入以保留原始数据；本次运行刷新后不会恢复。' }
+      : current.notice };
+  }
   const next = [{ run, savedAt }, ...current.runs].slice(0, MAX_LOCAL_RUNS);
   const evicted = Math.max(0, current.runs.length + 1 - next.length);
 

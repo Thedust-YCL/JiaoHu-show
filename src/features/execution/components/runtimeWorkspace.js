@@ -6,14 +6,16 @@ import { readRuntimeHistory, saveRuntimeRun, deleteRuntimeRun } from '../state/r
 import { createExecutionCore } from './executionCore.js';
 import { getNotice } from '../../../research-packs/mission-001/notices.js';
 import { getModule } from '../../constructor/model/modules.js';
+import { downloadLocalFile } from '../../../components/ui/download.js';
 const actionLabels={TASK_INTAKE:'接收任务',PLAN:'确定执行计划',RETRIEVE:'检索本地片段',SEARCH:'搜索公告',ADDITIONAL_RESEARCH:'补充研究',READ:'读取资料',EVIDENCE_CHECK:'检查证据',INJECTION:'检查不可信指令',HANDOFF_VERIFY:'交接核验角色',HANDOFF_SYNTHESIZE:'交接综合角色',SYNTHESIZE:'整理有限结论',FINALIZE:'结束运行',RECHECK:'继续复核'};
 const stepLabels={running:'执行中',completed:'已完成',waiting_approval:'等待审批',failed:'失败',denied:'被拒绝',skipped:'已跳过',cancelled:'已取消'};
 const evidenceLabels={sufficient:'证据充分（限教学规则）',conflicting:'存在未决冲突',insufficient:'证据不足'};
 
 /** Timers only request the next engine action. No precomputed run is played as live work.
- * @param {import('../../../simulation/engine/runtimeTypes.js').RuntimeWorkspaceOptions} options */
-export function createRuntimeWorkspace({getConfiguration,storage=null,onBackToConstructor,onBackToHub,onLegacyExecution,onOpenKnowledge,onConfirm,onMountCanvas,onReleaseCanvas,onFocusScene,has3D=false,reducedMotion=false}={}) {
+  * @param {import('../../../simulation/engine/runtimeTypes.js').RuntimeWorkspaceOptions & {session?: Record<string, any>, onPresentation?: (presentation: any)=>void}} options */
+export function createRuntimeWorkspace({getConfiguration,storage=null,session={},onBackToConstructor,onBackToHub,onLegacyExecution,onOpenKnowledge,onConfirm,onMountCanvas,onReleaseCanvas,onFocusScene,onPresentation,has3D=false,reducedMotion=false}={}) {
   if(!storage)try{storage=globalThis.localStorage;}catch{}
+  session=session&&typeof session==='object'?session:{};
   const el=h('div',{class:'workspace runtime-workspace','data-open':'true'});
   const head=h('header',{class:'ws-head'},'<div class="ws-head__id"><span class="ws-head__tag">A/0</span><span class="ws-head__title">RUNTIME / 执行检查器</span><span class="ws-head__meta">SIMULATION / 本地模拟 · 虚构校园资料</span></div>');
   const toolbar=h('div',{class:'rt-toolbar'}),controls=h('div',{class:'rt-controls',role:'group','aria-label':'运行控制'});
@@ -31,8 +33,18 @@ export function createRuntimeWorkspace({getConfiguration,storage=null,onBackToCo
   const coreControls=h('div',{class:'rt-controls'});
   const history=h('section',{class:'rt-history','aria-label':'本地运行历史'});
   side.append(coreControls,core.el,history);body.append(timeline,detail,side);el.append(head,toolbar,status,notice,body);
-  let rt=null,active=false,timer=null,selectedStep=null,selectedEvent=null,viewedHistory=false;
+  let rt=null,active=false,timer=null,selectedStep=session.stepId||null,selectedEvent=session.eventSequence??null,viewedHistory=!!session.viewedHistory;
   const buttons={};
+  function persistSelection(){session.runId=rt?.getRun().runId||null;session.stepId=selectedStep;session.eventSequence=selectedEvent;session.viewedHistory=viewedHistory;}
+  function displayedEvent(run,step){
+    if(!run||!step)return null;
+    const events=run.events.filter(event=>event.stepId===step.stepId);
+    return events.find(event=>event.sequence===selectedEvent)||events.find(event=>event.type==='tool.error')||events.at(-1)||null;
+  }
+  function publishPresentation(run,event){
+    if(!run){onPresentation?.(null);return;}
+    onPresentation?.({configuration:run.configSnapshot,run,event:event||null,paused:reducedMotion||viewedHistory||run.status!=='running'});
+  }
   function button(label,id,fn,parent=controls) {
     const b=h('button',{type:'button',class:`btn btn--sm ${id==='step'?'btn--primary':'btn--ghost'}`,'data-rt-act':id},label);
     b.addEventListener('click',fn);parent.append(b);buttons[id]=b;return b;
@@ -45,13 +57,13 @@ export function createRuntimeWorkspace({getConfiguration,storage=null,onBackToCo
   function save(){if(!rt)return;const result=saveRuntimeRun(storage,rt.getRun());notice.textContent=result.notice||'';}
   function tick(){if(!active||!rt||rt.getRun().status!=='running'){stopTimer();return;}rt.step();selectedStep=null;selectedEvent=null;save();render();if(rt.getRun().status!=='running')stopTimer();}
   function schedule(){stopTimer();if(active&&rt?.getRun().status==='running')timer=setInterval(tick,reducedMotion?600:800);}
-  function action(name){if(!rt)newRun();if(!rt)return;const ok=rt[name]();if(ok){viewedHistory=false;selectedStep=null;selectedEvent=null;save();render();schedule();if(['approve','reject'].includes(name))(isRuntimeTerminal(rt.getRun().status)?buttons.new:buttons.step).focus();}}
+  function action(name){if(!rt)newRun();if(!rt)return;const ok=rt[name]();if(ok){viewedHistory=false;selectedStep=null;selectedEvent=null;persistSelection();save();render();schedule();if(['approve','reject'].includes(name))(isRuntimeTerminal(rt.getRun().status)?buttons.new:buttons.step).focus();}}
   function newRun(from=null) {
     stopTimer();
     if(rt&&!isRuntimeTerminal(rt.getRun().status)&&rt.getRun().status!=='idle'&&rt.getRun().events.length){rt.cancel('建立新运行，当前运行已取消并保留');save();}
     try{rt=from?createRuntime(from.configSnapshot,{scenarioId:from.scenarioId,seed:from.seed,collaboration:from.options.collaboration}):createRuntime(getConfiguration(),{scenarioId:scenario.value,seed:seed.value,collaboration:role.value});}
     catch(error){notice.textContent=`无法建立运行：${error.message}`;return false;}
-    viewedHistory=false;selectedStep=null;selectedEvent=null;save();render();return true;
+    viewedHistory=false;selectedStep=null;selectedEvent=null;persistSelection();save();render();return true;
   }
   button('新运行','new',()=>newRun());
   button('逐步执行','step',()=>action('step'));
@@ -63,8 +75,11 @@ export function createRuntimeWorkspace({getConfiguration,storage=null,onBackToCo
   button('相同快照重跑','restart',()=>{if(rt)newRun(rt.getRun());},utilities);
   button('复位视图','reset',()=>{selectedStep=null;selectedEvent=null;render();},utilities);
   button('导出运行 JSON','export',()=>{
-    if(!rt)return;const r=rt.getRun(),url=URL.createObjectURL(new Blob([JSON.stringify(r,null,2)],{type:'application/json'}));
-    const a=h('a',{href:url,download:`AGENT-ZERO_SIMULATION_${r.runId}.json`});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    if(!rt)return;
+    const r=rt.getRun();
+    const result=downloadLocalFile({content:JSON.stringify(r,null,2),filename:`AGENT-ZERO_SIMULATION_${r.runId}.json`,type:'application/json;charset=utf-8'});
+    notice.textContent=result.message;
+    notice.dataset.tone=result.ok?'success':'error';
   },utilities);
   for(const view of ['3d','2d'])button(view.toUpperCase(),view,()=>{core.setView(view,{has3D});if(view==='3d'&&has3D)onMountCanvas?.(core.stage);else onReleaseCanvas?.();},coreControls);
   function confirmDelete(key) {
@@ -80,7 +95,7 @@ export function createRuntimeWorkspace({getConfiguration,storage=null,onBackToCo
       const b=h('button',{class:'rt-history-item',type:'button','data-rt-history':run.runId},`${esc(RUNTIME_SCENARIOS.find(s=>s.id===run.scenarioId)?.label)} · ${esc(RUNTIME_STATUS[run.status])}<small>${esc(run.configSnapshot.name)} · ${run.summary.steps} 步 · 种子 ${esc(run.seed)}</small>`);
       b.onclick=()=>{
         stopTimer();if(rt?.getRun().status==='running'){rt.pause();save();}
-        try {rt=restoreRuntime(run);scenario.value=run.scenarioId;seed.value=run.seed;role.value=run.options.collaboration;viewedHistory=true;selectedStep=null;selectedEvent=null;render();}
+        try {rt=restoreRuntime(run);scenario.value=run.scenarioId;seed.value=run.seed;role.value=run.options.collaboration;viewedHistory=true;selectedStep=null;selectedEvent=null;persistSelection();render();history.querySelector(`[data-rt-history="${CSS.escape(run.runId)}"]`)?.focus({preventScroll:true});}
         catch(error){notice.textContent=`无法恢复：${error.message}`;}
       };
       const remove=h('button',{class:'btn btn--sm btn--ghost',type:'button','aria-label':`删除运行 ${run.runId}`,'data-rt-delete':run.runId},'移除');remove.onclick=()=>confirmDelete(run.runId);row.append(b,remove);history.append(row);
@@ -93,18 +108,21 @@ export function createRuntimeWorkspace({getConfiguration,storage=null,onBackToCo
     if(!run){detail.append(h('h2',{},'观察规则如何变成行动'),h('p',{},'从构建器读取统一配置。选择本地场景，逐步查看工具、权限、证据检查和终止原因。'));return;}
     if(run.pendingApproval) {
       const p=run.pendingApproval,box=h('section',{class:'rt-approval',role:'region','aria-label':'模拟权限审批'},`<span class="tag tag--attention">等待模拟审批</span><h2>${esc(getModule(p.toolId)?.cn||p.toolId)}</h2><p>${esc(p.reason)}</p><dl class="kv"><dt>权限</dt><dd>${esc(p.requiredPermission)}</dd><dt>影响范围</dt><dd>${esc(p.scope)}</dd></dl>`);
-      const ops=h('div',{class:'rt-controls'});button('批准本次模拟动作','approve',()=>action('approve'),ops);button('拒绝','reject',()=>action('reject'),ops);box.append(ops);detail.append(box);
+      const ops=h('div',{class:'rt-controls'});
+      button('批准本次模拟动作','approve',()=>action('approve'),ops);
+      button('拒绝','reject',()=>action('reject'),ops);
+      box.append(ops);detail.append(box);
     }
     if(!run.preflight.ready){detail.append(h('h2',{},'配置预检未通过'),h('p',{},'先回装配台修复错误，再建立新运行。'),jsonDetails('预检问题',run.preflight.issues,true));}
     if(step) {
       detail.append(h('div',{class:'section__label'},`<span>步骤 ${step.sequence} / ${run.configSnapshot.settings.maxSteps}</span><span>${esc(step.roleId||'单流程')}</span>`),h('h2',{},esc(actionLabels[step.action]||step.action)),h('p',{class:'rt-reason'},esc(step.reason)),h('p',{},`${esc(stepLabels[step.status]||step.status)} · ${esc(getModule(step.moduleId)?.cn||'运行控制')} · 重试 ${step.retryCount}`),h('p',{class:'rt-hint'},`下一动作 / 终止：${esc(actionLabels[step.next]||step.next||'等待审批回复')}`));
-      const learn=h('button',{class:'btn btn--sm btn--ghost',type:'button','data-rt-concept':step.conceptId},'了解这一步的概念');learn.onclick=()=>onOpenKnowledge?.(step.conceptId,{from:'runtime'});detail.append(learn);
+      const learn=h('button',{class:'btn btn--sm btn--ghost',type:'button','data-rt-concept':step.conceptId},'了解这一步的概念');learn.onclick=()=>{persistSelection();onOpenKnowledge?.(step.conceptId,/** @type {any} */({from:'runtime',runId:run.runId,stepId:step.stepId,eventSequence:selectedEvent}));};detail.append(learn);
       detail.append(jsonDetails('输入',step.input),jsonDetails('输出',step.output,true));
       const branch=h('section',{class:'rt-branches'},`<h3>分支轨迹</h3><p>已选择：${esc(step.branchId)} · ${esc(step.reason)}</p>`);
       for(const alternative of step.alternatives)branch.append(h('p',{class:'rt-hint'},`未执行：${esc(alternative.action)} — ${esc(alternative.reason)}`));detail.append(branch);
       const events=run.events.filter(e=>e.stepId===step.stepId);
       const eventList=h('div',{class:'rt-events','aria-label':'步骤事件'});
-      for(const e of events) {const b=h('button',{type:'button',class:'rt-event','data-rt-event':e.sequence,'aria-pressed':selectedEvent===e.sequence},`#${e.sequence} ${esc(e.type)} · ${esc(e.status)}`);b.onclick=()=>{selectedEvent=e.sequence;render();el.querySelector(`[data-rt-event="${e.sequence}"]`)?.focus({preventScroll:true});};eventList.append(b);}
+      for(const e of events) {const b=h('button',{type:'button',class:'rt-event','data-rt-event':e.sequence,'aria-pressed':selectedEvent===e.sequence},`#${e.sequence} ${esc(e.type)} · ${esc(e.status)}`);b.onclick=()=>{selectedEvent=e.sequence;persistSelection();render();el.querySelector(`[data-rt-event="${e.sequence}"]`)?.focus({preventScroll:true});};eventList.append(b);}
       detail.append(eventList);
       const e=events.find(e=>e.sequence===selectedEvent)||events.find(e=>e.type==='tool.error')||events.at(-1);
       if(e) {
@@ -130,13 +148,16 @@ export function createRuntimeWorkspace({getConfiguration,storage=null,onBackToCo
     timeline.replaceChildren(h('h3',{},'步骤时间线'),h('p',{class:'rt-hint'},esc(selectedScenario.condition)));
     for(const step of run?.steps||[]) {
       const b=h('button',{type:'button',class:'rt-step','data-rt-step':step.stepId,'aria-pressed':selectedStep===step.stepId||!selectedStep&&step===run.steps.at(-1)},`<small>${String(step.sequence).padStart(2,'0')} · ${esc(stepLabels[step.status]||step.status)}</small><b>${esc(actionLabels[step.action]||step.action)}</b><span>${esc(step.action)} · ${esc(step.roleId||getModule(step.moduleId)?.name||'运行控制')}</span>`);
-      b.onclick=()=>{selectedStep=step.stepId;selectedEvent=null;render();el.querySelector(`[data-rt-step="${step.stepId}"]`)?.focus({preventScroll:true});};timeline.append(b);
+      b.onclick=()=>{selectedStep=step.stepId;selectedEvent=null;persistSelection();render();el.querySelector(`[data-rt-step="${step.stepId}"]`)?.focus({preventScroll:true});};timeline.append(b);
     }
-    renderDetail(run,run?.steps.find(s=>s.stepId===selectedStep)||run?.steps.at(-1));renderHistory();
+    const activeStep=run?.steps.find(s=>s.stepId===selectedStep)||run?.steps.at(-1);
+    core.render(run||null,displayedEvent(run,activeStep));
+    renderDetail(run,activeStep);renderHistory();persistSelection();publishPresentation(run,displayedEvent(run,activeStep));
   }
-  return {el,coreStage:()=>core.stage,currentRun:()=>rt?.getRun()||null,controller:()=>rt,newRun,selectStep:id=>{selectedStep=id;render();},
-    activate(){active=true;const saved=readRuntimeHistory(storage);notice.textContent=saved.notice||'';if(saved.runs.length){try{rt=restoreRuntime(saved.runs[0]);scenario.value=saved.runs[0].scenarioId;seed.value=saved.runs[0].seed;role.value=saved.runs[0].options.collaboration;viewedHistory=true;}catch(error){notice.textContent=error.message;}}if(!rt)try{rt=createRuntime(getConfiguration());}catch(error){notice.textContent=error.message;}render();if(has3D)onMountCanvas?.(core.stage);},
-    deactivate(){active=false;stopTimer();if(rt?.getRun().status==='running'){rt.pause();save();}onFocusScene?.(null);onReleaseCanvas?.();},
-    dispose(){active=false;stopTimer();onReleaseCanvas?.();},
+  return {el,coreStage:()=>core.stage,currentRun:()=>rt?.getRun()||null,controller:()=>rt,newRun,selection:()=>({runId:rt?.getRun().runId||null,stepId:selectedStep,eventSequence:selectedEvent,viewedHistory}),selectStep:id=>{selectedStep=id;selectedEvent=null;persistSelection();render();},
+    onWebGLLost(){has3D=false;core.setView('2d',{has3D});onReleaseCanvas?.();},
+    activate(){active=true;const saved=readRuntimeHistory(storage);notice.textContent=saved.notice||'';if(saved.runs.length){const stored=saved.runs.find(run=>run.runId===session.runId)||saved.runs[0],sameRun=session.runId===stored.runId;try{rt=restoreRuntime(stored);scenario.value=stored.scenarioId;seed.value=stored.seed;role.value=stored.options.collaboration;viewedHistory=sameRun?!!session.viewedHistory:true;if(!sameRun){selectedStep=null;selectedEvent=null;}}catch(error){notice.textContent=error.message;}}if(!rt)try{rt=createRuntime(getConfiguration());}catch(error){notice.textContent=error.message;}render();if(has3D)onMountCanvas?.(core.stage);},
+    deactivate(){active=false;stopTimer();if(rt?.getRun().status==='running'){rt.pause();save();}persistSelection();onPresentation?.(null);onFocusScene?.(null);onReleaseCanvas?.();},
+    dispose(){active=false;stopTimer();persistSelection();onPresentation?.(null);onReleaseCanvas?.();},
   };
 }

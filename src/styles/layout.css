@@ -323,7 +323,7 @@
   overflow: hidden;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-l);
-  background: radial-gradient(120% 90% at 50% 42%, #0d121a 0%, #07090d 62%, #05070a 100%);
+  background: radial-gradient(120% 90% at 50% 42%, #0d121a 0%, var(--void) 62%, var(--surface-sunken) 100%);
 }
 .stage__canvas {
   position: absolute;
@@ -674,7 +674,7 @@
   left: 0;
   right: 0;
   height: 7.5vh;
-  background: linear-gradient(180deg, #05070a, rgba(5, 7, 10, 0.4));
+  background: linear-gradient(180deg, var(--surface-sunken), rgba(5, 7, 10, 0.4));
   pointer-events: none;
 }
 .boot__bars::before {

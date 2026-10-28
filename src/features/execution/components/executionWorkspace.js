@@ -41,6 +41,8 @@ export function createExecutionWorkspace({
   onMountCanvas,
   onReleaseCanvas,
   onFocusScene,
+  onViewChange,
+  initialRunId = null,
   has3D = false,
   reducedMotion = false,
   storage = null,
@@ -342,6 +344,7 @@ export function createExecutionWorkspace({
     }
     runView = target;
     el.dataset.view = target;
+    onViewChange?.(target);
     bExecution.setAttribute('aria-pressed', target === 'execution' ? 'true' : 'false');
     bReport.setAttribute('aria-pressed', target === 'report' ? 'true' : 'false');
     grid.hidden = target === 'report';
@@ -494,11 +497,12 @@ export function createExecutionWorkspace({
         const restored = readResearchHistory(storage);
         if (restored.notice) onLog?.('执行', `${restored.notice.message}${restored.notice.fix ? ` · ${restored.notice.fix}` : ''}`, restored.notice.level || 'attention');
         history = restored.runs;
-        historyIndex = 0;
+        historyIndex = Math.max(0, history.findIndex(entry=>entry.run.runId===initialRunId));
         legacyRun = restored.legacy || null;
         if (history.length > 0) {
-          attachRun(history[0].run, { restored: true, saved: history[0].savedAt });
-          onLog?.('执行', `已从本地记录恢复最近一次运行（${history[0].run.events.length} 个事件 · ${history[0].run.outcome}）：恢复的是快照，不会重新运行引擎`, 'signal');
+          const entry=history[historyIndex];
+          attachRun(entry.run, { restored: true, saved: entry.savedAt });
+          onLog?.('执行', `已从本地记录恢复运行（${entry.run.events.length} 个事件 · ${entry.run.outcome}）：恢复的是快照，不会重新运行引擎`, 'signal');
         } else if (legacyRun) {
           attachRun(legacyRun.run, { restored: true, saved: legacyRun.savedAt });
           onLog?.('执行', '已恢复 M0.3 的历史运行：只有执行轨迹，没有结构化报告（不会被新资料包补造结论）', 'attention');
@@ -506,7 +510,7 @@ export function createExecutionWorkspace({
           renderAll('空状态');
         }
       }
-      core.setView(core.getView(), { has3D });
+      core.setView(has3D ? core.getView() : '2d', { has3D });
       if (core.getView() === '3d' && has3D) onMountCanvas?.();
       if (view === 'report') setRunView('report', { silent: true });
       renderInfo();
@@ -542,6 +546,14 @@ export function createExecutionWorkspace({
       if (target === '3d' && has3D) onMountCanvas?.();
       else onReleaseCanvas?.();
       if (run) renderAll('视图切换');
+    },
+    onWebGLLost() {
+      has3D = false;
+      core.setView('2d', { has3D });
+      b3d.setAttribute('aria-pressed', 'false');
+      b2d.setAttribute('aria-pressed', 'true');
+      el.dataset.coreView = '2d';
+      onReleaseCanvas?.();
     },
     currentView: () => core.getView(),
     /** 中央列容器：app 层把真实三维画布停靠到这里（执行台不新建 WebGL 上下文） */

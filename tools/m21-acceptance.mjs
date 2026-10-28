@@ -1,6 +1,6 @@
 /** Local browser harness, independent temporary profile. No product network or backend. */
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { createServer } from 'node:http';
@@ -82,9 +82,10 @@ try {
     await check('A34-mobile-preflight','窄屏目录可进入预检并让出抽屉空间',`const dockButton=document.querySelector('.topbar [aria-label^="显示或隐藏左侧导航"]');dockButton.click();document.querySelector('.dock__scroll').scrollTop=0;document.querySelector('[data-config-act="preflight"]').click();const r=document.querySelector('.configuration-preflight').getBoundingClientRect();return {pass:r.width>0&&r.x>=0&&r.right<=innerWidth+1&&document.querySelector('.shell').dataset.dock==='closed',note:JSON.stringify({x:r.x,right:r.right,width:innerWidth})};`);
     await shot('preflight-mobile.png');
     await cdp.send('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
-    await check('A34-keyboard-setup','键盘确认弹层准备',`__AZ.goHub();const button=document.querySelector('[data-config-act="starter"]');button.closest('details').open=true;button.focus();return {pass:document.activeElement===button};`);
+    await sleep(280); // Wait for resize/closed-drawer inert and the shared 240ms layout transition.
+    await check('A34-keyboard-setup','键盘确认弹层准备',`__AZ.goHub();__AZ.configureModule('instructions',{objective:'键盘确认回归：保留未保存草稿'});const button=document.querySelector('[data-config-act="starter"]');button.closest('details').open=true;button.focus();return {pass:document.activeElement===button&&__AZ.constructor.isDirty(),dirty:__AZ.constructor.isDirty()};`);
     await key('Enter');
-    await check('A34-dialog-focus','Enter 打开确认并聚焦取消',`return {pass:document.querySelector('.confirm').dataset.open==='true'&&document.activeElement.textContent==='取消'};`);
+    await check('A34-dialog-focus','Enter 打开确认并聚焦取消',`return {pass:document.querySelector('.confirm').dataset.open==='true'&&document.activeElement.textContent==='取消',open:document.querySelector('.confirm').dataset.open,focus:document.activeElement.outerHTML.slice(0,220),dirty:__AZ.constructor.isDirty(),shellInert:document.querySelector('.shell').inert};`);
     await key('Tab');
     await check('A34-focus-trap','确认弹层焦点圈定',`return {pass:document.querySelector('.confirm__actions').contains(document.activeElement)};`);
     await key('Escape');
@@ -112,9 +113,10 @@ try {
     await shot('fallback.png');
     await check('A36','无远程运行资源',`return {pass:performance.getEntriesByType('resource').filter(e=>/^https?:/.test(e.name)&&!e.name.startsWith(location.origin)).length===0};`);
     const files=new Map([['/agent-zero/',['dist/index.html','text/html']],['/agent-zero/assets/app.js',['dist/assets/app.js','text/javascript']],['/agent-zero/assets/app.css',['dist/assets/app.css','text/css']]]);
+    for (const name of await readdir('dist/assets')) if (/^chunk-[A-Z0-9]+\.js$/.test(name)) files.set(`/agent-zero/assets/${name}`,[`dist/assets/${name}`,'text/javascript']);
     server=createServer(async(req,res)=>{const file=files.get(req.url);if(!file){res.writeHead(404);res.end();return;}res.writeHead(200,{'content-type':file[1]+'; charset=utf-8'});res.end(await readFile(file[0]));});
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-    await cdp.send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/agent-zero/#/knowledge/rag`});await waitReady(cdp);
+    await cdp.send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/agent-zero/#/knowledge/rag`});if(!await waitReady(cdp))throw Error('静态子路径应用未就绪');
     await check('A39-subpath','真实静态项目子路径与知识深链',`return {pass:__AZ.knowledgeApi()?.currentConcept()==='rag'&&performance.getEntriesByType('resource').some(e=>e.name.includes('/agent-zero/assets/app.js'))};`);
   }
 }catch(error){results.push({id:'HARNESS',pass:false,note:error.stack});console.error(error);}

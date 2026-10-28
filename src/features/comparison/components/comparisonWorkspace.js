@@ -12,6 +12,8 @@ import {createArchive,ARCHIVE_LIMITS} from '../state/archive.js';
 import {downloadExperiment,valueText} from '../export/markdown.js';
 const labels={equal:'相同',changed:'不同',different:'不同',added:'B 新增',missing:'B 未执行',unavailable:'N/A', 'not-comparable':'不可直接比较'};
 const txt=(tag,text,attrs={})=>h(tag,{...attrs,text:valueText(text)});
+/** UI-only saved marker; never changes the experiment or runtime snapshot. */
+export function hasUnsavedComparison(session){return !!session?.experiment&&session.savedExperimentId!==session.experiment.experimentId;}
 
 /** Session outlives the workspace when visiting knowledge or editing the existing Constructor.
  * @param {import('../model/types.js').ComparisonWorkspaceOptions} options */
@@ -36,11 +38,22 @@ export function createComparisonWorkspace({store,session={},onBack,onEdit,onKnow
   const run=side=>current()?.[side].run||null;
   const selected=side=>run(side)?.events.find(e=>e.eventId===session.events[side])||null;
   const stop=()=>{if(timer!==null)clearInterval(timer);timer=null;};
+  const tableWrap=table=>h('div',{class:'ab-table-wrap'},table);
+  let pendingFocusSelector=null;
+  const queueFocus=selector=>{pendingFocusSelector=selector;};
+  const restoreFocus=()=>{const selector=pendingFocusSelector;if(!selector)return;const target=el.querySelector(selector);if(target){pendingFocusSelector=null;if(!target.matches('button,input,select,textarea,a[href],[tabindex]'))target.tabIndex=-1;target.focus({preventScroll:true});}};
   function preserveScroll(){for(const s of ['A','B']){const node=main.querySelector(`[data-ab-trace="${s}"]`);if(node)session.scrolls[s]=node.scrollTop;}session.scrolls.main=main.scrollTop;}
   function setTab(tab){preserveScroll();stop();session.tab=tab;fullReport=null;render();}
   button(headOps,'装配台','constructor',()=>onBack?.());
-  button(headOps,'新建实验','new',()=>{stop();session.experiment=null;session.drafts={A:store.getConfiguration(),B:copyVariant(store.getConfiguration())};session.events={A:null,B:null};session.tab='config';render();});
-  button(headOps,'保存实验','save',async()=>{if(!current()){message('先运行配对实验，再保存配置快照与轨迹。');return;}message((await archive.save(current())).notice);});
+  function resetExperiment(){stop();session.experiment=null;session.drafts={A:store.getConfiguration(),B:copyVariant(store.getConfiguration())};session.events={A:null,B:null};session.tab='config';render();title.focus({preventScroll:true});}
+  function guardReplacement(label,proceed){
+    if(!hasUnsavedComparison(session)){proceed();return;}
+    const description='当前配对实验尚未保存到本地档案。继续将替换当前 A/B 快照、轨迹与报告；构建器配置、Runtime 历史、Journal 和学习进度不受影响。';
+    if(onConfirm)onConfirm(label,description,proceed);
+    else if(globalThis.confirm?.(description))proceed();
+  }
+  button(headOps,'新建实验','new',()=>guardReplacement('新建 A/B 实验',resetExperiment));
+  button(headOps,'保存实验','save',async()=>{if(!current()){message('先运行配对实验，再保存配置快照与轨迹。');return;}const experiment=current(),result=await archive.save(experiment);if(result.ok)session.savedExperimentId=experiment.experimentId;message(result.notice);});
   button(headOps,'下载 Markdown','export',()=>{if(!current())return message('先运行配对实验以生成对比报告。');message(downloadExperiment(current()).message);});
   button(headOps,'按原条件重跑','rerun',()=>{if(!current())return message('尚无可重跑实验。');try{session.experiment=rerunExperiment(current());session.events={A:null,B:null};session.tab='trace';render();message('已创建新实验与独立 Run；原档案未被覆盖。');}catch(error){message(error.message);}});
   for(const [id,label] of [['config','01 配置'],['trace','02 指标与轨迹'],['report','03 研究报告'],['archive','04 实验档案']])button(tabs,label,`tab-${id}`,()=>setTab(id));
@@ -102,10 +115,10 @@ export function createComparisonWorkspace({store,session={},onBack,onEdit,onKnow
     for(const side of /** @type {const} */ (['A','B'])){
       const c=session.drafts[side],panel=h('section',{class:'ab-column','data-ab-config':side});panel.append(txt('h3',`${side} / ${side==='A'?'BASELINE':'VARIANT'}`),txt('p',c.name));
       const select=h('select',{'aria-label':`${side} 选择已有配置`});select.append(txt('option','选择本地已保存配置…',{value:''}));for(const config of store.listConfigurations())select.append(txt('option',config.name,{value:config.configId}));
-      select.onchange=()=>{const config=store.getSavedConfiguration(select.value);if(config){session.drafts[side]=config;render();}};panel.append(select);
-      button(panel,'使用当前装配配置',`capture-${side}`,()=>{session.drafts[side]=store.getConfiguration();render();});
+      select.onchange=()=>{const config=store.getSavedConfiguration(select.value);if(config){session.drafts[side]=config;queueFocus(`[aria-label="${side} 选择已有配置"]`);render();}};panel.append(select);
+      button(panel,'使用当前装配配置',`capture-${side}`,()=>{session.drafts[side]=store.getConfiguration();queueFocus(`[data-ab-act="capture-${side}"]`);render();});
       button(panel,'复制并到装配台编辑',`edit-${side}`,()=>onEdit?.(c,()=>{session.editingSide=side;}));
-      if(side==='B')button(panel,'复制 A 为 B','copy-A',()=>{session.drafts.B=copyVariant(session.drafts.A);render();});
+      if(side==='B')button(panel,'复制 A 为 B','copy-A',()=>{session.drafts.B=copyVariant(session.drafts.A);queueFocus('[data-ab-act="copy-A"]');render();});
       const preflight=snapshotProjection(c).preflight();panel.append(txt('p',`${preflight.ready?'预检通过':'预检阻断'} · ${preflight.counts.error} 错误 / ${preflight.counts.warning} 警告`));
       for(const issue of preflight.issues.filter(i=>i.level!=='info'))panel.append(txt('p',issue.description,{class:'ab-warning'}));
       disclosure('启用模块与 Runtime 策略',{modules:c.modules.map(m=>({module:m.moduleId,enabled:m.enabled})),runtime:c.settings},panel);columns.append(panel);
@@ -113,11 +126,12 @@ export function createComparisonWorkspace({store,session={},onBack,onEdit,onKnow
     main.append(columns);
     const differences=configurationDiff(session.drafts.A,session.drafts.B),changed=differences.filter(x=>!x.equal);
     main.append(txt('h3',`配置差异 · ${changed.length} 项不同 / ${differences.length-changed.length} 项相同`));
-    const all=h('details');all.append(txt('summary','展开相同字段'));const table=h('table',{class:'ab-table'},'<thead><tr><th>字段</th><th>A</th><th>B</th></tr></thead>');const tbody=h('tbody');table.append(tbody);main.append(table);
-    for(const d of differences){const row=h('tr');for(const value of [d.field,valueText(d.A),valueText(d.B)])row.append(txt('td',value));if(d.equal)all.append(row);else tbody.append(row);}
+    const all=h('details');all.append(txt('summary','展开相同字段'));const table=h('table',{class:'ab-table'},'<thead><tr><th>字段</th><th>A</th><th>B</th></tr></thead>');const tbody=h('tbody');table.append(tbody);main.append(tableWrap(table));
+    const equalTable=h('table',{class:'ab-table'},'<thead><tr><th>字段</th><th>A</th><th>B</th></tr></thead>');const equalBody=h('tbody');equalTable.append(equalBody);
+    for(const d of differences){const row=h('tr');for(const value of [d.field,valueText(d.A),valueText(d.B)])row.append(txt('td',value));if(d.equal)equalBody.append(row);else tbody.append(row);}
     if(!changed.length)main.append(txt('p','两套配置没有语义差异；允许产生相同的轨迹与结果。'));
     // Same fields use a separate semantic table inside the disclosure.
-    const equalTable=h('table',{class:'ab-table'});const equalRows=[...all.querySelectorAll('tr')];equalTable.append(...equalRows);all.append(equalTable);main.append(all);
+    all.append(tableWrap(equalTable));main.append(all);
     main.append(txt('p',`共同任务 ${controls.taskId} · 资料 ${controls.datasetId}@${controls.datasetVersion} · 审批：${APPROVAL_POLICIES[controls.approvalPolicyId]}`,{class:'ab-hint'}));
     if(current())main.append(txt('p','下方 Inspector 当前展示上次运行的不可变快照。新编辑只在下一次配对运行生效。',{class:'ab-warning'}));
   }
@@ -132,16 +146,16 @@ export function createComparisonWorkspace({store,session={},onBack,onEdit,onKnow
     for(const w of e.comparison.warnings)main.append(txt('p',w,{class:'ab-warning'}));
     const mt=h('table',{class:'ab-table ab-metrics'},'<thead><tr><th>指标 / 口径</th><th>A</th><th>B</th><th>B − A</th></tr></thead>');const mb=h('tbody');mt.append(mb);
     for(const metric of e.comparison.metrics){const row=h('tr');const name=txt('th',metric.definition,{scope:'row'});name.append(txt('small',metric.algorithm));row.append(name);
-      for(const side of ['A','B']){const cell=h('td');const b=button(cell,valueText(metric[side].value),`metric-${metric.metricId}-${side}`,()=>{const id=metric[side].eventIds.at(-1);if(id)selectEvent(side,id,{linked:false});else selectSide(side);if(metric.metricId==='coverage'||metric.metricId==='citations')setTab('report');message(`${metric.algorithm}；${metric.explanation}`);});b.title=metric.algorithm;row.append(cell);}row.append(txt('td',metric.delta===null?labels[metric.status]:`${metric.delta>0?'+':''}${metric.delta}`));mb.append(row);}
+      for(const side of ['A','B']){const cell=h('td');const b=button(cell,valueText(metric[side].value),`metric-${metric.metricId}-${side}`,()=>{const id=metric[side].eventIds.at(-1);if(id)selectEvent(side,id,{linked:false});else selectSide(side);if(metric.metricId==='coverage'||metric.metricId==='citations'){queueFocus('.ab-main h2');setTab('report');}message(`${metric.algorithm}；${metric.explanation}`);});b.title=metric.algorithm;row.append(cell);}row.append(txt('td',metric.delta===null?labels[metric.status]:`${metric.delta>0?'+':''}${metric.delta}`));mb.append(row);}
     const readout=h('div',{class:'ab-readout'});
     for(const id of ['steps','toolCalls','coverage']){const m=e.comparison.metrics.find(m=>m.metricId===id),cell=h('div');cell.append(txt('small',m.definition),txt('p',`A ${valueText(m.A.value)} / B ${valueText(m.B.value)}`));readout.append(cell);}main.append(readout);
-    const metricDetails=h('details',{'data-ab-metrics':true,open:session.metricsOpen});metricDetails.append(txt('summary',`展开 ${e.comparison.metrics.length} 项指标、口径与事件定位`),mt,txt('p','每项指标均可点击定位来源事件。额外核验可能增加调用，不代表某一侧必然更好。',{class:'ab-hint'}));metricDetails.ontoggle=()=>{session.metricsOpen=metricDetails.open;};main.append(metricDetails);
-    const ops=h('div',{class:'ab-controls'});button(ops,'Side-by-side · 双栏','view-side',()=>{session.difference=false;render();});button(ops,'Difference View · 差异','view-diff',()=>{session.difference=true;render();});
+    const metricDetails=h('details',{'data-ab-metrics':true,open:session.metricsOpen});metricDetails.append(txt('summary',`展开 ${e.comparison.metrics.length} 项指标、口径与事件定位`),tableWrap(mt),txt('p','每项指标均可点击定位来源事件。额外核验可能增加调用，不代表某一侧必然更好。',{class:'ab-hint'}));metricDetails.ontoggle=()=>{session.metricsOpen=metricDetails.open;};main.append(metricDetails);
+    const ops=h('div',{class:'ab-controls'});button(ops,'Side-by-side · 双栏','view-side',()=>{session.difference=false;queueFocus('[data-ab-act="view-side"]');render();});button(ops,'Difference View · 差异','view-diff',()=>{session.difference=true;queueFocus('[data-ab-act="view-diff"]');render();});
     const linked=h('input',{type:'checkbox','aria-label':'联动定位对应事件',checked:session.linked});linked.onchange=()=>{session.linked=linked.checked;};const ll=txt('label','联动定位');ll.prepend(linked);ops.append(ll);
     const replay=button(ops,'播放已保存轨迹','play',()=>{if(timer!==null){stop();replay.textContent='播放已保存轨迹';onFocus?.({moduleId:selected(session.side)?.toolId,paused:true});return;}replay.textContent='暂停回放';timer=setInterval(()=>seek(1,true),800/(session.speed||1));});
     button(ops,'上一事件','previous',()=>seek(-1));button(ops,'下一事件','next',()=>seek(1));
     const speed=h('select',{'aria-label':'回放速度'});for(const v of [0.5,1,2,4])speed.append(txt('option',`${v}×`,{value:v}));speed.value=session.speed||1;speed.onchange=()=>{session.speed=Number(speed.value);stop();replay.textContent='播放已保存轨迹';};ops.append(speed);main.append(ops);
-    if(session.difference){const diff=h('div',{class:'ab-difference'});for(const row of e.alignment){if(row.status==='equal'&&!session.showEqual)continue;const wrap=h('div',{class:'ab-diff-row','data-diff-status':row.status});wrap.append(txt('p',`${labels[row.status]} · ${row.reason}`));for(const side of ['A','B']){const ev=run(side)?.events.find(x=>x.eventId===row[side]);if(ev)eventButton(wrap,side,ev);else wrap.append(txt('p',`${side} 未执行该步骤`));}diff.append(wrap);}if(!diff.childNodes.length)diff.append(txt('p','没有不同事件。相同配置的语义结果可以相同。'));main.append(diff);button(main,session.showEqual?'隐藏相同事件':'同时查看相同事件','show-equal',()=>{session.showEqual=!session.showEqual;render();});}
+    if(session.difference){const diff=h('div',{class:'ab-difference'});for(const row of e.alignment){if(row.status==='equal'&&!session.showEqual)continue;const wrap=h('div',{class:'ab-diff-row','data-diff-status':row.status});wrap.append(txt('p',`${labels[row.status]} · ${row.reason}`));for(const side of ['A','B']){const ev=run(side)?.events.find(x=>x.eventId===row[side]);if(ev)eventButton(wrap,side,ev);else wrap.append(txt('p',`${side} 未执行该步骤`));}diff.append(wrap);}if(!diff.childNodes.length)diff.append(txt('p','没有不同事件。相同配置的语义结果可以相同。'));main.append(diff);button(main,session.showEqual?'隐藏相同事件':'同时查看相同事件','show-equal',()=>{session.showEqual=!session.showEqual;queueFocus('[data-ab-act="show-equal"]');render();});}
     else{const cols=h('div',{class:'ab-columns'});for(const side of ['A','B']){const panel=h('section',{class:'ab-column'});panel.append(txt('h3',`${side} / ${snapshot(side).name}`),txt('p',run(side)?`${RUNTIME_STATUS[run(side).status]} · ${run(side).result?.terminationReason}`:'未运行 · 预检未通过'));
       const list=h('div',{class:'ab-trace','data-ab-trace':side,tabindex:0,'aria-label':`${side} 执行轨迹`});for(const ev of run(side)?.events||[])eventButton(list,side,ev);panel.append(list);cols.append(panel);requestAnimationFrame(()=>{list.scrollTop=session.scrolls[side]||0;});}main.append(cols);}
   }
@@ -151,7 +165,7 @@ export function createComparisonWorkspace({store,session={},onBack,onEdit,onKnow
     if(fullReport){renderFullReport(fullReport);return;}
     const cols=h('div',{class:'ab-columns'});
     for(const side of ['A','B']){const panel=h('section',{class:'ab-column','data-ab-report':side}),s=current()[side];panel.append(txt('h3',`${side} / 研究报告`),txt('p',`${s.report?.status||'未生成'} · ${s.run?.result?.terminationReason||'未运行'}`),txt('p',s.run?.result?.conclusion||'预检未通过，没有完整研究结论。'));
-      if(s.report){for(const claim of s.report.claims.filter(c=>c.kind==='finding')){const block=h('div',{class:'ab-finding'});block.append(txt('p',claim.text),txt('small',`${claim.status} · ${claim.id}`));for(const id of claim.citationIds)button(block,`[${id}]`,`cite-${side}-${id}`,()=>showCitation(side,id));panel.append(block);}panel.append(txt('h4','局限与未解决项'));for(const text of s.report.limitations)panel.append(txt('p',text,{class:'ab-hint'}));button(panel,'打开完整 Research Report',`full-report-${side}`,()=>{fullReport=side;render();});}cols.append(panel);}
+      if(s.report){for(const claim of s.report.claims.filter(c=>c.kind==='finding')){const block=h('div',{class:'ab-finding'});block.append(txt('p',claim.text),txt('small',`${claim.status} · ${claim.id}`));for(const id of claim.citationIds)button(block,`[${id}]`,`cite-${side}-${id}`,()=>showCitation(side,id));panel.append(block);}panel.append(txt('h4','局限与未解决项'));for(const text of s.report.limitations)panel.append(txt('p',text,{class:'ab-hint'}));button(panel,'打开完整 Research Report',`full-report-${side}`,()=>{fullReport=side;queueFocus('.rp-doc__title');render();});}cols.append(panel);}
     main.append(cols);
   }
   function showCitation(side,id){
@@ -165,28 +179,29 @@ export function createComparisonWorkspace({store,session={},onBack,onEdit,onKnow
   function renderFullReport(side){
     const s=current()[side],p=runtimeReport(s.run),viewRun={...s.run,artifacts:{evidence:p.evidence,reads:p.reads,report:s.report},stats:s.run.summary};
     const view=createReportView({getRun:()=>viewRun,mission:{title:s.run.result.objective,getNotice:id=>p.reads.find(r=>r.sourceId===id)},onViewEvent:id=>{selectEvent(side,id,{linked:false});setTab('trace');},onSwitchMode:()=>setTab('report')});
-    button(main,'返回双栏报告','back-report',()=>{fullReport=null;render();});view.render({run:viewRun,report:s.report,metrics:{...s.report.metrics,...s.run.summary,eventCount:s.run.events.length},context:{}});main.append(view.el);
+    button(main,'返回双栏报告','back-report',()=>{fullReport=null;queueFocus(`[data-ab-act="full-report-${side}"]`);render();});view.render({run:viewRun,report:s.report,metrics:{...s.report.metrics,...s.run.summary,eventCount:s.run.events.length},context:{}});main.append(view.el);const reportTitle=view.el.querySelector('.rp-doc__title');if(reportTitle)reportTitle.tabIndex=-1;
   }
   async function archivePanel(){
     main.append(txt('h2','本地实验档案'),txt('p',`仅当前浏览器 · 最多 ${ARCHIVE_LIMITS.rows} 条 / 20 MiB · 不自动淘汰。删除只影响选中的实验档案。`,{class:'ab-hint'}));
-    const list=h('div',{class:'ab-archive-list'});main.append(list);list.append(txt('p','正在读取本地档案…'));const data=await archive.list();if(!active||session.tab!=='archive')return;
+    const list=h('div',{class:'ab-archive-list','aria-busy':'true',role:'status'});main.append(list);list.append(txt('p','正在读取本地档案…'));const data=await archive.list();if(!active||session.tab!=='archive')return;list.setAttribute('aria-busy','false');list.removeAttribute('role');
     list.replaceChildren();if(data.notice)list.append(txt('p',data.notice,{class:'ab-warning'}));if(!data.experiments.length)list.append(txt('p','暂无实验档案。运行后点击“保存实验”，即可在此重新打开。'));
     for(const e of data.experiments){const row=h('section',{class:'ab-archive-row','data-ab-archive':e.experimentId}),exact=reproducibility(e);row.append(txt('h3',e.title),txt('p',`${e.createdAt} · ${e.controls.scenarioId} · ${exact.exact?'可精确复现':'不可精确复现'}`,{class:'ab-hint'}),txt('p',`A ${e.A.configSnapshot.name} / ${e.A.run?.status||'未运行'} · B ${e.B.configSnapshot.name} / ${e.B.run?.status||'未运行'}`));
       const name=h('input',{'aria-label':`重命名 ${e.title}`,value:e.title,maxlength:80});row.append(name);
-      button(row,'打开','archive-open',()=>{session.experiment=e;session.events={A:null,B:null};session.drafts={A:e.A.configSnapshot,B:e.B.configSnapshot};Object.assign(controls,e.controls);title.value=session.title=e.title;seed.value=String(controls.seed);for(const [key,label] of [['scenarioId','共同场景'],['approvalPolicyId','共同审批脚本'],['collaboration','共同角色模式']])toolbar.querySelector(`[aria-label="${label}"]`).value=controls[key];session.tab='trace';render();message(exact.exact?'已打开不可变实验快照；配置页可复制这些历史快照到装配台编辑。':`旧版本摘要可浏览；${exact.reasons.join('；')}`);});
-      button(row,'重命名','archive-rename',async()=>{message((await archive.rename(e.experimentId,name.value)).notice);render();});
-      button(row,'复制','archive-copy',async()=>{message((await archive.save(copyExperiment(e))).notice);render();});
-      button(row,'重跑','archive-rerun',()=>{try{session.experiment=rerunExperiment(e);session.tab='trace';session.events={A:null,B:null};render();}catch(error){message(error.message);}}).disabled=!exact.exact;
+      button(row,'打开','archive-open',()=>guardReplacement('打开实验档案',()=>{session.experiment=e;session.savedExperimentId=e.experimentId;session.events={A:null,B:null};session.drafts={A:e.A.configSnapshot,B:e.B.configSnapshot};Object.assign(controls,e.controls);title.value=session.title=e.title;seed.value=String(controls.seed);for(const [key,label] of [['scenarioId','共同场景'],['approvalPolicyId','共同审批脚本'],['collaboration','共同角色模式']])toolbar.querySelector(`[aria-label="${label}"]`).value=controls[key];session.tab='trace';render();message(exact.exact?'已打开不可变实验快照；配置页可复制这些历史快照到装配台编辑。':`旧版本摘要可浏览；${exact.reasons.join('；')}`);}));
+      button(row,'重命名','archive-rename',async()=>{message((await archive.rename(e.experimentId,name.value)).notice);queueFocus(`[data-ab-archive="${e.experimentId}"] [data-ab-act="archive-rename"]`);render();});
+      button(row,'复制','archive-copy',async()=>{message((await archive.save(copyExperiment(e))).notice);queueFocus(`[data-ab-archive="${e.experimentId}"] [data-ab-act="archive-copy"]`);render();});
+      button(row,'重跑','archive-rerun',()=>guardReplacement('从档案重跑',()=>{try{session.experiment=rerunExperiment(e);session.tab='trace';session.events={A:null,B:null};render();}catch(error){message(error.message);}})).disabled=!exact.exact;
       button(row,'删除','archive-delete',()=>confirmRemoval(e.experimentId,e.title));list.append(row);
     }
-    for(const broken of data.corrupt){const row=h('section',{class:'ab-archive-row'});row.append(txt('p',broken.reason));button(row,'删除此损坏条目','archive-corrupt-delete',()=>confirmRemoval(broken.experimentId,'损坏条目'));list.append(row);}
+    for(const broken of data.corrupt){const row=h('section',{class:'ab-archive-row'});row.append(txt('p',broken.reason));button(row,'删除此损坏条目','archive-corrupt-delete',()=>confirmRemoval(broken.experimentId,'损坏条目'));list.append(row);}restoreFocus();
   }
-  function confirmRemoval(id,name){const fn=async()=>{message((await archive.remove(id)).notice);render();};if(onConfirm)onConfirm('删除实验档案',`仅删除“${name}”及档案内的 A/B 快照与运行副本。不会删除构建器配置、Journal、学习进度或独立 Runtime 历史。`,fn);}
+  function confirmRemoval(id,name){const fn=async()=>{const result=await archive.remove(id);if(result.ok&&session.savedExperimentId===id)session.savedExperimentId=null;message(result.notice);render();};if(onConfirm)onConfirm('删除实验档案',`仅删除“${name}”及档案内的 A/B 快照与运行副本。不会删除构建器配置、Journal、学习进度或独立 Runtime 历史。`,fn);}
   function render(){stop();preserveScroll();main.replaceChildren();for(const b of tabs.querySelectorAll('button')){const selected=b.dataset.abAct===`tab-${session.tab}`;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;}
     if(session.tab==='config')configurationPanel();else if(session.tab==='trace')tracePanel();else if(session.tab==='report')reportPanel();else archivePanel();
-    renderInspector();renderSelection();main.scrollTop=session.scrolls.main||0;
+    renderInspector();renderSelection();main.scrollTop=session.scrolls.main||0;requestAnimationFrame(restoreFocus);
   }
   return {el,currentExperiment:current,session,archive,selectEvent,selectSide,showCitation,render,
+    onWebGLLost(){has3D=false;core.setView('2d',{has3D});onReleaseCanvas?.();},
     activate(){active=true;render();if(has3D&&core.getView()==='3d')onMountCanvas?.(core.stage);},
     deactivate(){preserveScroll();stop();active=false;onReleaseCanvas?.();onSnapshot?.(null);onFocus?.(null);},
     dispose(){stop();active=false;},

@@ -52,12 +52,7 @@ import { createKnowledgePage } from './features/knowledge/components/knowledgePa
 import { createLabWorkspace } from './features/knowledge/components/labWorkspace.js';
 /* M1.2 三章叙事与三个实验 */
 import { createChapterNarrative } from './features/knowledge/components/chapterNarrative.js';
-import { createTokenLab } from './features/laboratory/token/tokenLab.js';
-import { createContextLab } from './features/laboratory/context/contextLab.js';
-/* M1.3 三个新实验：Knowledge / Runtime / Reliability（各自逻辑层与界面层分离） */
-import { createKnowledgeLab } from './features/laboratory/knowledge/knowledgeLab.js';
-import { createRuntimeLab } from './features/laboratory/runtime/runtimeLab.js';
-import { createReliabilityLab } from './features/laboratory/reliability/reliabilityLab.js';
+import { loadLabFactory } from './features/laboratory/lazyLabs.js';
 import { getChapterStory } from './content/chapters/index.js';
 import {
   CHAPTERS as KNOWLEDGE_CHAPTERS,
@@ -73,7 +68,8 @@ import {
 } from './knowledge/index.js';
 import { createExecutionWorkspace } from './features/execution/components/executionWorkspace.js';
 import { createRuntimeWorkspace } from './features/execution/components/runtimeWorkspace.js';
-import { createComparisonWorkspace } from './features/comparison/components/comparisonWorkspace.js';
+import { createComparisonWorkspace, hasUnsavedComparison } from './features/comparison/components/comparisonWorkspace.js';
+import { snapshotProjection } from './features/comparison/model/projection.js';
 import { deriveToolAvailability } from './simulation/rules/availability.js';
 import { MISSION_001 } from './research-packs/mission-001/index.js';
 import { MISSION_001_MINI } from './research-packs/mission-001-mini/index.js';
@@ -83,6 +79,24 @@ const STORE = {
   intro: 'az0.intro.seen.v1',
   prefs: 'az0.prefs.v1',
 };
+
+export function appRouteHash(kind, id = '') {
+  return `#/${kind}${id ? `/${encodeURIComponent(id)}` : ''}`;
+}
+
+export function parseAppRoute(hash, navigationState = null) {
+  let parts;
+  try {
+    parts = String(hash || '').replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  } catch {
+    return { kind: 'chapters', id: '', context: {} };
+  }
+  return {
+    kind: parts[0] || 'hub',
+    id: parts[1] || '',
+    context: navigationState?.azRoute?.context || {},
+  };
+}
 
 /** 端口序号 → 端口标识：二维结构投影需要与三维接口共用同一份定位（M0.2_TASK §3.2） */
 const PORT_MARKS = Object.fromEntries(Object.values(PORTS).map((p) => [p.anchorIndex, p.id]));
@@ -104,6 +118,18 @@ function safeSet(key, value) {
 }
 
 export function createApp(root) {
+  let activeWorkspace = null;
+  let disposed = false;
+  const pendingFrames = new Set();
+  function queueFrame(callback) {
+    if (disposed) return 0;
+    const id = requestAnimationFrame((time) => {
+      pendingFrames.delete(id);
+      if (!disposed) callback(time);
+    });
+    pendingFrames.add(id);
+    return id;
+  }
   const reducedMotion =
     typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -163,9 +189,10 @@ export function createApp(root) {
     onTerm: (term) => bindTermClick(term),
     bayEl: library.el,
     onToggleCollapse: (collapsed) => {
+      if (window.innerWidth < 768) { toggleDock(); return; }
       prefs.dockRail = collapsed;
       persistPrefs();
-      setState({}, 'dock-collapse');
+      applyShellState();
     },
   });
 
@@ -190,7 +217,18 @@ export function createApp(root) {
 
   const scrim = createEl('div', { class: 'scrim', 'data-open': 'false' });
   scrim.addEventListener('click', () => {
-    setState({ dockOpen: false }, 'scrim');
+    const hadDock = state.dockOpen;
+    const hadInspector = state.inspectOpen && window.innerWidth <= 1100;
+    const hadStatus = state.statusOpen && window.innerWidth < 768;
+    setState({
+      dockOpen: false,
+      inspectOpen: hadInspector ? false : state.inspectOpen,
+      statusOpen: hadStatus ? false : state.statusOpen,
+    }, 'scrim');
+    applyShellState();
+    if (hadDock) topbar.focusNavigation?.();
+    else if (hadInspector) topbar.focusInspector?.();
+    else if (hadStatus) topbar.el.querySelector('[aria-controls="az-status"]')?.focus({ preventScroll: true });
   });
 
   const toast = createEl('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
@@ -301,6 +339,8 @@ export function createApp(root) {
       canvasHost: stage.canvasHost,
       onLog: (kind, message, level) => log(kind, message, level),
       onContextLost: () => {
+        activeWorkspace?.api?.onWebGLLost?.();
+        if (scene) scene.ok = false;
         setState({ webgl: false }, 'context-lost');
         fallbackReason = 'CONTEXT_LOST';
         showProjection(true);
@@ -360,9 +400,12 @@ export function createApp(root) {
       scene.visual.bootLight = 1;
       scene.visual.idle = true;
       scene.core.update(0.016, scene.visual);
-      scene.rig.enterIdle(!!reason && reason.includes('SKIP'));
+      scene.rig.enterIdle(reducedMotion || (!!reason && reason.includes('SKIP')));
     }
     stage.setCanvasOpacity(1);
+    if (!String(reason).includes('DEEPLINK')) {
+      queueFrame(() => stage.el.focus({ preventScroll: true }));
+    }
     log('开场', `开场结束（${reason}）· 进入稳定待机（IDLE）+ 控制台终态`, 'success');
   }
 
@@ -380,6 +423,8 @@ export function createApp(root) {
     }
     bootFinished = true; // 允许重播：先稳定，再重新开始
     startIntro();
+    if(reducedMotion){finishIntro('REDUCED MOTION · 静态核心');return;}
+    queueFrame(() => boot.focusSkip());
     log('开场', '重播开场已触发 · 时间线重置（不含任何残留动画）', 'attention');
   }
 
@@ -482,6 +527,7 @@ export function createApp(root) {
         prefs.dockRail = false;
         persistPrefs();
       }
+      applyShellState();
       syncTopbar();
       log('导航', '装配台已激活 · 左侧能力架与三维装配视图使用同一份权威配置', 'signal');
       return;
@@ -492,38 +538,52 @@ export function createApp(root) {
   function toggleDock() {
     if (window.innerWidth < 768) {
       const open = !state.dockOpen;
-      setState({ dockOpen: open }, 'dock');
-      scrim.dataset.open = open ? 'true' : 'false';
+      setState({ dockOpen: open, inspectOpen: open ? false : state.inspectOpen, statusOpen: open ? false : state.statusOpen }, 'dock');
       applyShellState();
+      queueFrame(() => {
+        if (open) dock.el.querySelector('button:not([disabled])')?.focus({ preventScroll: true });
+        else topbar.focusNavigation?.();
+      });
     } else {
       shell.dataset.dock = shell.dataset.dock === 'rail' ? 'full' : 'rail';
       prefs.dockRail = shell.dataset.dock === 'rail';
       persistPrefs();
+      applyShellState();
       log('界面', `左侧导航已${prefs.dockRail ? '折叠为图标栏' : '展开'}`, 'info');
     }
-    topbar.setPressed({ dock: shell.dataset.dock !== 'rail', inspect: state.inspectOpen, status: state.statusOpen });
+    topbar.setPressed({ dock: window.innerWidth < 768 ? state.dockOpen : shell.dataset.dock !== 'rail', inspect: state.inspectOpen, status: state.statusOpen });
   }
 
   function toggleInspect() {
     const open = !state.inspectOpen;
-    setState({ inspectOpen: open }, 'inspect');
+    const drawer = window.innerWidth <= 1100;
+    setState({ inspectOpen: open, dockOpen: drawer && open ? false : state.dockOpen, statusOpen: drawer && open && window.innerWidth < 768 ? false : state.statusOpen }, 'inspect');
     inspector.setCollapsed(!open);
     prefs.inspect = open;
     persistPrefs();
     applyShellState();
-    topbar.setPressed({ dock: shell.dataset.dock !== 'rail', inspect: open, status: state.statusOpen });
+    topbar.setPressed({ dock: window.innerWidth < 768 ? state.dockOpen : shell.dataset.dock !== 'rail', inspect: open, status: state.statusOpen });
     log('界面', `检视面板已${open ? '展开' : '收起'}`, 'info');
+    if (drawer) queueFrame(() => {
+      if (open) inspector.el.querySelector('button:not([disabled]),input,select,textarea,[tabindex="0"]')?.focus({ preventScroll: true });
+      else topbar.focusInspector?.();
+    });
   }
 
   function toggleStatus() {
     const open = !state.statusOpen;
-    setState({ statusOpen: open }, 'status');
+    const drawer = window.innerWidth < 768;
+    setState({ statusOpen: open, dockOpen: drawer && open ? false : state.dockOpen, inspectOpen: drawer && open ? false : state.inspectOpen }, 'status');
     stage.setStatusLabel(open);
     prefs.status = open;
     persistPrefs();
     applyShellState();
-    topbar.setPressed({ dock: shell.dataset.dock !== 'rail', inspect: state.inspectOpen, status: open });
+    topbar.setPressed({ dock: window.innerWidth < 768 ? state.dockOpen : shell.dataset.dock !== 'rail', inspect: state.inspectOpen, status: open });
     log('界面', `底部事件区已${open ? '展开' : '收起'}`, 'info');
+    if (drawer) queueFrame(() => {
+      if (open) status.el.querySelector('button:not([disabled]),[tabindex="0"]')?.focus({ preventScroll: true });
+      else topbar.el.querySelector('[aria-controls="az-status"]')?.focus({ preventScroll: true });
+    });
   }
 
   function persistPrefs() {
@@ -638,6 +698,7 @@ export function createApp(root) {
     sg?.render();
     sg?.setSelection(s.ui.selectedModuleId);
     if(comparisonDisplay)applyComparisonSnapshot(comparisonDisplay.configuration,comparisonDisplay.projection,comparisonDisplay.side);
+    else if(runtimeDisplay)applyRuntimePresentation(runtimeDisplay);
   }
 
   /** 二维结构投影上的兼容接口状态：与三维热点、系统图节点共用同一份配置 */
@@ -674,7 +735,7 @@ export function createApp(root) {
       },onFocusIssue:issue=>{
         if(issue.moduleId) {
           preflightOpen=false;constructor.actions.select(issue.moduleId);
-          requestAnimationFrame(()=>document.getElementById(`azf-${issue.moduleId}-${issue.field}`)?.focus());
+          queueFrame(()=>document.getElementById(`azf-${issue.moduleId}-${issue.field}`)?.focus());
         } else if(issue.field==='name')document.getElementById('agent-config-name')?.focus();
       }}));return;
     }
@@ -934,6 +995,8 @@ export function createApp(root) {
 
   /* ---------------- 重置构建器（二次确认） ---------------- */
   const confirmLayer = createEl('div', { class: 'confirm', 'data-open': 'false' });
+  confirmLayer.inert = true;
+  confirmLayer.setAttribute('aria-hidden', 'true');
   const confirmTitle = createEl('h2', { class: 'confirm__title', id: 'az-confirm-title' }, '重置构建器');
   const confirmText = createEl('p', { class: 'confirm__text' });
   const confirmOk = createEl('button', { class: 'btn btn--primary', type: 'button' }, '确认重置');
@@ -946,15 +1009,28 @@ export function createApp(root) {
 
   let confirmAction = null;
   let confirmReturnFocus=null;
+  let confirmBackgroundState=[];
   function closeConfirm() {
     confirmLayer.dataset.open = 'false';
+    confirmLayer.inert = true;
+    confirmLayer.setAttribute('aria-hidden', 'true');
+    for (const { node, inert, ariaHidden } of confirmBackgroundState) {
+      node.inert = inert;
+      if (ariaHidden === null) node.removeAttribute('aria-hidden');
+      else node.setAttribute('aria-hidden', ariaHidden);
+    }
+    confirmBackgroundState=[];
     confirmAction = null;
     if(confirmReturnFocus?.isConnected)confirmReturnFocus.focus({preventScroll:true});
   }
   function requestConfirmation(title,message,action) {
     confirmReturnFocus=document.activeElement;
+    confirmBackgroundState=[...root.children]
+      .filter(node=>node!==confirmLayer)
+      .map(node=>({node,inert:node.inert,ariaHidden:node.getAttribute('aria-hidden')}));
+    for(const {node} of confirmBackgroundState){node.inert=true;node.setAttribute('aria-hidden','true');}
     confirmTitle.textContent=title;confirmText.textContent=message;confirmOk.textContent='确认';
-    confirmAction=action;confirmLayer.dataset.open='true';confirmCancel.focus({preventScroll:true});
+    confirmAction=action;confirmLayer.inert=false;confirmLayer.removeAttribute('aria-hidden');confirmLayer.dataset.open='true';confirmCancel.focus({preventScroll:true});
   }
   confirmBox.addEventListener('keydown',e=>{
     if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeConfirm();return;}
@@ -978,7 +1054,7 @@ export function createApp(root) {
   });
 
   /* ---------------- 订阅：唯一数据流的下游 ---------------- */
-  constructor.subscribe((s, { action, prev }) => {
+  const unsubscribeConstructor = constructor.subscribe((s, { action, prev }) => {
     if(s.ui.selectedModuleId) {
       if(!state.inspectOpen){setState({inspectOpen:true},'module-inspector');inspector.setCollapsed(false);}
       if(window.innerWidth<768&&state.dockOpen){setState({dockOpen:false},'module-inspector');scrim.dataset.open='false';}
@@ -1001,11 +1077,12 @@ export function createApp(root) {
       if (notice.level !== 'info') showToast(notice.message);
     }
   });
-  window.addEventListener('beforeunload',event=>{
+  const onBeforeUnload = event=>{
     const active=document.activeElement;
     if(active?.classList?.contains('field__control'))active.dispatchEvent(new Event('change',{bubbles:true}));
-    if((constructor.isDirty()&&constructor.getState().modules.length)||constructor.getState().ui.notice?.code==='INVALID_CONFIG'){event.preventDefault();event.returnValue='';}
-  });
+    if((constructor.isDirty()&&constructor.getState().modules.length)||constructor.getState().ui.notice?.code==='INVALID_CONFIG'||hasUnsavedComparison(comparisonSession)){event.preventDefault();event.returnValue='';}
+  };
+  window.addEventListener('beforeunload', onBeforeUnload);
 
   /* ----------------------- 渲染循环 ----------------------- */
   let last = performance.now();
@@ -1013,10 +1090,30 @@ export function createApp(root) {
   let frames = 0;
   let diagTimer = 0;
   let portLabelTimer = 0;
+  let suspendedDiagnostic = null;
+
+  function markRenderingSuspended(reason) {
+    if (suspendedDiagnostic === reason) return;
+    suspendedDiagnostic = reason;
+    patchReadout({ fps: 0, ms: 0, drawCalls: 0, triangles: 0 });
+    const info = [['渲染', reason], ['帧率', '—'], ['单帧耗时', '—'], ['绘制调用', '0']];
+    info.fps = 0;
+    info.barNote = reason;
+    status.updateDiag(info);
+  }
+
+  function currentDrawer() {
+    if (activeWorkspace) return null;
+    if (window.innerWidth < 768 && state.dockOpen) return { kind: 'dock', el: dock.el };
+    if (window.innerWidth <= 1100 && state.inspectOpen) return { kind: 'inspector', el: inspector.el };
+    if (window.innerWidth < 768 && state.statusOpen) return { kind: 'status', el: status.el };
+    return null;
+  }
 
   function applyShellState() {
     const narrow = window.innerWidth < 768;
     shell.dataset.dock = narrow ? (state.dockOpen ? 'open' : 'closed') : prefs.dockRail ? 'rail' : 'full';
+    dock.setCollapsed(!narrow && prefs.dockRail, narrow);
     // 窄视图下不让浮层默认遮挡主舞台：Inspector 与事件区默认收起，由用户主动打开
     shell.dataset.inspect = state.inspectOpen ? 'on' : 'off';
     shell.dataset.status = state.statusOpen ? 'on' : 'off';
@@ -1024,16 +1121,40 @@ export function createApp(root) {
     if (activeWorkspace) shell.dataset.workspace = activeWorkspace.kind;
     else delete shell.dataset.workspace;
     boot.el.dataset.phase = bootFinished ? 'done' : 'run';
+
+    const drawer = currentDrawer();
+    const dockVisible = !activeWorkspace && (!narrow || state.dockOpen);
+    const dockExpanded = dockVisible && (narrow ? state.dockOpen : !prefs.dockRail);
+    const inspectorVisible = !activeWorkspace && state.inspectOpen;
+    const statusVisible = state.statusOpen;
+    const drawerOpen = !!drawer;
+    topbar.el.inert = drawerOpen;
+    stage.el.inert = drawerOpen;
+    topbar.el.setAttribute('aria-hidden', String(drawerOpen));
+    stage.el.setAttribute('aria-hidden', String(drawerOpen));
+    dock.el.inert = drawerOpen ? drawer.el !== dock.el : !dockVisible;
+    dock.el.setAttribute('aria-hidden', String(drawerOpen ? drawer.el !== dock.el : !dockVisible));
+    inspector.el.inert = drawerOpen ? drawer.el !== inspector.el : !inspectorVisible;
+    inspector.el.setAttribute('aria-hidden', String(drawerOpen ? drawer.el !== inspector.el : !inspectorVisible));
+    status.el.inert = drawerOpen ? drawer.el !== status.el : !statusVisible;
+    status.el.setAttribute('aria-hidden', String(drawerOpen ? drawer.el !== status.el : !statusVisible));
+    scrim.dataset.open = drawerOpen ? 'true' : 'false';
+    scrim.setAttribute('aria-hidden', String(!drawerOpen));
+    topbar.setPressed({ dock: dockExpanded, inspect: inspectorVisible, status: statusVisible });
   }
 
   function loop(now) {
     raf = requestAnimationFrame(loop);
+    // Do not advance the intro or scene while the document is hidden.
+    if (document.hidden) { last = now; return; }
     frames += 1;
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const elapsed = Math.max(0, (now - last) / 1000);
+    const dt = Math.min(0.05, elapsed);
     last = now;
 
     if (!scene?.ok) {
       // 无 3D 时的最小开销：仍然更新开场 HUD，避免界面停滞
+      markRenderingSuspended('3D 不可用');
       portOverlay.dataset.open = 'false';
       if (!bootFinished && timeline.t.playing) {
         timeline.advance(dt);
@@ -1066,11 +1187,23 @@ export function createApp(root) {
       let activity = assembling ? 0.72 : 0.35;
       // M0.3：执行台回放期间数据流强度跟随真实播放状态；暂停即回到静态
       if (activeWorkspace?.kind === 'execution') activity = execApi?.isPlaying() ? 0.92 : 0.34;
+      if (activeWorkspace?.kind === 'runtime') activity = runtimeDisplay?.paused ? 0.3 : 0.92;
       v.activity = activity;
       stage.setCanvasOpacity(1);
     }
 
-    scene.tick(dt);
+    // Learning workspaces cover the stage. Runtime, execution and comparison
+    // park the same canvas in their own visible view and must keep rendering.
+    // A lost WebGL context stays on the existing 2D fallback path.
+    if (!state.webgl || (bootFinished && activeWorkspace && !canvasParked)) {
+      markRenderingSuspended('3D 已暂停');
+      return;
+    }
+    if (suspendedDiagnostic) {
+      suspendedDiagnostic = null;
+      diagTimer = 0.46;
+    }
+    scene.tick(dt, elapsed);
 
     // 端口文字标注：位置跟随三维投影，但不需要每帧写 DOM
     portLabelTimer += dt;
@@ -1126,7 +1259,7 @@ export function createApp(root) {
   }
 
   /* ----------------------- 状态同步 ----------------------- */
-  subscribe((s, reason) => {
+  const unsubscribeState = subscribe((s, reason) => {
     if (s.selection !== undefined) {
       if (scene?.ok) scene.visual.selection = s.selection;
       applySvgSelection(projectionSvg, s.selection);
@@ -1172,33 +1305,39 @@ export function createApp(root) {
   stage.el.append(workspaceHost);
 
   /** 当前工作区：{ kind, api, el } —— 同时最多一个，避免多份回放调度并存 */
-  let activeWorkspace = null;
   let execApi = null;
   let canvasParked = false;
   const comparisonSession={};
+  const runtimeSession={};
+  const atlasSession={};
   let comparisonDisplay=null;
+  let runtimeDisplay=null;
   let applyingRoute = false;
-  function setLearningRoute(kind, id = '') {
+  function setLearningRoute(kind, id = '', context = {}, { replace = false } = {}) {
     if (applyingRoute) return;
-    const hash = `#/${kind}${id ? '/' + encodeURIComponent(id) : ''}`;
-    if (location.hash !== hash) history.pushState(null, '', hash);
+    const hash = appRouteHash(kind, id);
+    const routeState = { azRoute: { kind, id, context } };
+    if (location.hash !== hash) history[replace ? 'replaceState' : 'pushState'](routeState, '', hash);
+    else history.replaceState(routeState, '', hash);
   }
 
   function followLearningRoute() {
-    let parts;
-    try { parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent); }
-    catch { showToast('链接格式无法识别，已返回六章目录。'); openStory(); return; }
-    const [kind, id] = parts;
+    const { kind, id, context } = parseAppRoute(location.hash, history.state);
     applyingRoute = true;
     try {
       if (kind === 'atlas') openAtlas(getConcept(id) ? id : null);
-      else if (kind === 'knowledge' && getConcept(id)) openKnowledge(id, {from:'atlas'});
+      else if (kind === 'knowledge' && getConcept(id)) openKnowledge(id, Object.keys(context).length ? context : {from:'atlas'});
       else if (kind === 'chapters') id && getChapterStory(id) ? openChapterStory(id) : openStory();
       else if (kind === 'labs') id && knowledgeGetExperiment(id) ? openLabExperiment(id) : openLab();
       else if (kind === 'journal') openJournal();
       else if (kind === 'constructor') openConstructorContext();
-      else if (kind === 'runtime') openRuntime();
-      else if (kind === 'compare') openComparison();
+      else if (kind === 'execution') openExecution({ runId:context.runId,eventSequence: context.eventSequence });
+      else if (kind === 'report') openExecution({ view: 'report',runId:context.runId,eventSequence: context.eventSequence });
+      else if (kind === 'runtime') openRuntime(context);
+      else if (kind === 'compare') {
+        if (context.comparison) Object.assign(comparisonSession, context.comparison);
+        openComparison();
+      }
       else if (kind === 'hub' || !kind) goHub();
       else { showToast('未找到这个学习入口，已返回六章目录。'); openStory(); }
     } finally { applyingRoute = false; }
@@ -1210,10 +1349,12 @@ export function createApp(root) {
   }
 
   function syncTopbar() {
-    topbar.setPressed({ dock: shell.dataset.dock !== 'rail', inspect: state.inspectOpen, status: state.statusOpen });
+    topbar.setPressed({ dock: window.innerWidth < 768 ? state.dockOpen : shell.dataset.dock !== 'rail', inspect: state.inspectOpen, status: state.statusOpen });
   }
 
-  function closeWorkspace() {
+  let workspaceReturnFocus = null;
+
+  function closeWorkspace({ restoreFocus = true } = {}) {
     if (!activeWorkspace) return false;
     const { kind, api, el } = activeWorkspace;
     try {
@@ -1235,16 +1376,29 @@ export function createApp(root) {
     delete stage.el.dataset.workspace;
     applyShellState();
     setState({ workspace: null }, 'workspace-close');
+    if (restoreFocus) {
+      const target = workspaceReturnFocus?.isConnected ? workspaceReturnFocus : null;
+      workspaceReturnFocus = null;
+      const focusAfterClose = document.activeElement;
+      queueFrame(() => {
+        // A newer user focus wins over this deferred return-to-origin action.
+        if (document.activeElement !== focusAfterClose && document.activeElement !== document.body) return;
+        if (target) target.focus({ preventScroll: true });
+        else topbar.focusNavigation?.();
+      });
+    }
     return true;
   }
 
-  function openWorkspace(kind, build) {
-    closeWorkspace();
+  function openWorkspace(kind, build, activationArgs = []) {
+    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!activeWorkspace && activeElement?.isConnected) workspaceReturnFocus = activeElement;
+    closeWorkspace({ restoreFocus: false });
     const api = build();
     const nav = createEl('nav', {class:'learning-nav','aria-label':'学习工作区导航'});
-    for (const [label, action] of [['章节',()=>openStory()],['星图',()=>openAtlas()],['实验',()=>openLab()],['学习日志',()=>openJournal()],['A/B 对比',()=>openComparison()],['中央核心',()=>goHub()]]) {
+    for (const [label, action] of [['章节',()=>openStory()],['星图',()=>openAtlas()],['实验',()=>openLab()],['学习日志',()=>openJournal()],['装配台',()=>openConstructorContext()],['Runtime',()=>openRuntime()],['A/B 对比',()=>openComparison()],['中央核心',()=>goHub()]]) {
       const button = createEl('button',{class:'btn btn--sm btn--ghost',type:'button'},label);
-      const selected = (label === '章节' && ['story','chapter'].includes(kind)) || (label === '星图' && ['atlas','knowledge'].includes(kind)) || (label === '实验' && kind.startsWith('lab')) || (label === '学习日志' && kind === 'journal');
+      const selected = (label === '章节' && ['story','chapter'].includes(kind)) || (label === '星图' && ['atlas','knowledge'].includes(kind)) || (label === '实验' && kind.startsWith('lab')) || (label === '学习日志' && kind === 'journal') || (label === 'Runtime' && kind === 'runtime') || (label === 'A/B 对比' && kind === 'comparison');
       if (selected) button.setAttribute('aria-current','page');
       button.addEventListener('click',action); nav.append(button);
     }
@@ -1255,9 +1409,20 @@ export function createApp(root) {
     stage.el.dataset.workspace = 'true';
     activeWorkspace = { kind, api, el: api.el };
     applyShellState();
-    // 导航高亮跟随工作区：知识页属于 Atlas，避免出现「高亮执行台却在看知识页」
-    setState({ workspace: kind, mode: kind === 'knowledge' ? 'atlas' : kind }, 'workspace');
-    api.activate?.();
+    // 导航高亮跟随工作区语义，而不是直接使用内部组件 kind。
+    const mode = ['story','chapter'].includes(kind)
+      ? 'story'
+      : ['atlas','knowledge'].includes(kind)
+        ? 'atlas'
+        : kind.startsWith('lab')
+          ? 'lab'
+          : ['execution','runtime'].includes(kind)
+            ? 'execution'
+            : kind === 'comparison'
+              ? 'constructor'
+              : kind;
+    setState({ workspace: kind, mode }, 'mode');
+    api.activate?.(...activationArgs);
     const title = api.el.querySelector('.ws-head__title');
     if (title) { title.setAttribute('tabindex','-1'); title.focus({preventScroll:true}); }
     return api;
@@ -1286,7 +1451,7 @@ export function createApp(root) {
       });
       canvasObserver.observe(target);
     }
-    requestAnimationFrame(() => {
+    queueFrame(() => {
       if (!canvasParked) return;
       scene?.resize?.();
     });
@@ -1304,7 +1469,7 @@ export function createApp(root) {
     stage.el.prepend(host);
     canvasParked = false;
     scene.resize();
-    requestAnimationFrame(() => {
+    queueFrame(() => {
       if (canvasParked) return;
       scene?.resize?.();
     });
@@ -1321,12 +1486,37 @@ export function createApp(root) {
   }
 
   function applyComparisonSnapshot(configuration,projection,side){
+    runtimeDisplay=null;
     comparisonDisplay=configuration?{configuration,projection,side}:null;
     if(!configuration){if(scene?.ok){scene.bay.setPlaybackPaused(false);syncConstructor();}return;}
     if(!scene?.ok)return;
     const statuses=Object.fromEntries(configuration.modules.map(m=>[m.moduleId,projection.statusOf(m.moduleId)]));
     scene.bay.sync(configuration.modules,statuses);scene.bay.clearPreview();
     scene.bay.setPortStates(Object.fromEntries(Object.values(PORTS).map(p=>[p.id,configuration.modules.some(m=>m.portId===p.id)?'occupied':'free'])));
+  }
+
+  /** Runtime immutable snapshot + selected event → the single parked 3D core. */
+  function applyRuntimePresentation(presentation) {
+    runtimeDisplay = presentation || null;
+    comparisonDisplay = null;
+    if (!scene?.ok) return;
+    if (!presentation?.configuration) {
+      scene.bay.setPlaybackPaused(false);
+      scene.bay.clearExecutionFocus();
+      syncConstructor();
+      return;
+    }
+    const { configuration, event, paused } = presentation;
+    const projection = snapshotProjection(configuration);
+    const statuses = Object.fromEntries(configuration.modules.map((m) => [m.moduleId, projection.statusOf(m.moduleId)]));
+    scene.bay.sync(configuration.modules, statuses);
+    scene.bay.clearPreview();
+    scene.bay.setPortStates(Object.fromEntries(Object.values(PORTS).map((p) => [
+      p.id,
+      configuration.modules.some((m) => m.portId === p.id) ? 'occupied' : 'free',
+    ])));
+    scene.bay.setPlaybackPaused(!!paused || reducedMotion);
+    applyExecutionFocus(event?.toolId ? { moduleId: event.toolId, tone: event.status || 'signal' } : null);
   }
 
   /* ---------------- 导航：知识 ↔ 构建器 ↔ 执行 ---------------- */
@@ -1349,6 +1539,7 @@ export function createApp(root) {
       prefs.dockRail = false;
       persistPrefs();
     }
+    applyShellState();
     syncTopbar();
     if (selectedModuleId && constructor.getInstalled(selectedModuleId)) constructor.actions.select(selectedModuleId);
     if (reason) log('导航', reason, 'signal');
@@ -1396,6 +1587,7 @@ export function createApp(root) {
     const api = openWorkspace('atlas', () =>
       createAtlasWorkspace({
         learning,
+        session: atlasSession,
         reducedMotion,
         onLog: (kind, message, level) => log(kind, message, level),
         onBackToHub: () => goHub(),
@@ -1403,9 +1595,9 @@ export function createApp(root) {
         onOpenStory: () => openStory(),
         onOpenLab: (id, concept) => openLabExperiment(id, concept),
         onViewInConstructor: (concept) => locateInConstructor(concept, { from: 'atlas' }),
-      })
+      }),
+      [conceptId]
     );
-    api.activate(conceptId);
     log(
       '导航',
       `知识星图已打开${conceptId && getConcept(conceptId) ? ` · 已定位 ${getConcept(conceptId).cn}` : ''}（概念关系图；打开知识页不会触发模拟运行，也不会清空运行轨迹）`,
@@ -1527,41 +1719,62 @@ export function createApp(root) {
       return null;
     }
     const conceptId = experiment.conceptIds.includes(entryConceptId) ? entryConceptId : experiment.entryConceptId;
-    learning.markLabStarted(experiment.id);
     setLearningRoute('labs',experiment.id);
     if (experiment.openMode === 'lab-workspace') {
       /**
        * labKind → 工作区种类 / 工厂。M1.3 起六个实验共用同一条路由，
        * 但每个实验仍是独立模块（不复制第二套引擎，也不共用一个巨型组件）。
        */
-      const LAB_REGISTRY = {
-        token: { kind: 'lab-token', factory: createTokenLab },
-        context: { kind: 'lab-context', factory: createContextLab },
-        knowledge: { kind: 'lab-knowledge', factory: createKnowledgeLab },
-        runtime: { kind: 'lab-runtime', factory: createRuntimeLab },
-        reliability: { kind: 'lab-reliability', factory: createReliabilityLab },
-      };
-      const entry = LAB_REGISTRY[experiment.labKind];
-      if (!entry) {
+      const factory = loadLabFactory(experiment.labKind);
+      if (!factory) {
         log('实验', `实验 ${experiment.id} 的实验室类型未知：${String(experiment.labKind)}`, 'error');
         return null;
       }
-      const api = openWorkspace(entry.kind, () =>
-        entry.factory({
-          learning,
-          entryConceptId: conceptId,
-          reducedMotion,
-          onLog: (kind, message, level) => log(kind, message, level),
-          onBackToHub: () => goHub(),
-          onOpenLab: () => openLab(),
-          onOpenConcept: (id, ctx = {}) => openKnowledge(id, { from: 'lab', experimentId: experiment.id, ...ctx }),
-        })
-      );
-      api.activate();
-      log('实验', `已打开 ${experiment.title}（${experiment.dataNote}）`, 'signal');
-      return api;
+      const showLab = makeLab => {
+        learning.markLabStarted(experiment.id);
+        const api = openWorkspace(`lab-${experiment.labKind}`, () =>
+          makeLab({
+            learning,
+            entryConceptId: conceptId,
+            reducedMotion,
+            onLog: (kind, message, level) => log(kind, message, level),
+            onBackToHub: () => goHub(),
+            onOpenLab: () => openLab(),
+            onOpenConcept: (id, ctx = {}) => openKnowledge(id, { from: 'lab', experimentId: experiment.id, ...ctx }),
+          })
+        );
+        api.activate();
+        log('实验', `已打开 ${experiment.title}（${experiment.dataNote}）`, 'signal');
+        return api;
+      };
+      if (typeof factory === 'function') return showLab(factory);
+      const loading = openWorkspace('lab-loading', () => {
+        const el = createEl('section', { class: 'workspace workspace--lab-loading', 'data-open': 'true' });
+        const head = createEl('header', { class: 'ws-head' });
+        const title = createEl('h1', { class: 'ws-head__title' }, '正在加载实验');
+        const status = createEl('p', { role: 'status' }, `正在加载 ${experiment.title} 的本地资源…`);
+        const retry = createEl('button', { class: 'btn', type: 'button', hidden: true }, '重新载入页面');
+        const back = createEl('button', { class: 'btn btn--ghost', type: 'button' }, '返回实验目录');
+        // Failed ESM imports can remain cached as failures for the current document.
+        retry.addEventListener('click', () => location.reload());
+        back.addEventListener('click', () => openLab());
+        head.append(title); el.append(head, status, retry, back);
+        return { el, status, retry };
+      });
+      return factory.then(makeLab => {
+        if (disposed || activeWorkspace?.api !== loading) return null;
+        return showLab(makeLab);
+      }).catch(error => {
+        if (disposed || activeWorkspace?.api !== loading) return null;
+        loading.status.textContent = '实验资源加载失败，请检查网络后重新载入页面。已保存的本地记录不会因此清除。';
+        loading.status.setAttribute('role', 'alert');
+        loading.retry.hidden = false;
+        log('实验', `加载失败：${error.message}`, 'error');
+        return null;
+      });
     }
     // knowledge-step：工具调用实验保留 M0.3 的四步路径，M1.2 增加 MCP 对照模式
+    learning.markLabStarted(experiment.id);
     return openKnowledge(experiment.entryConceptId, { from: 'lab', step: experiment.entryStep || 'experiment', experimentId: experiment.id });
   }
 
@@ -1578,8 +1791,16 @@ export function createApp(root) {
    *     仅索引者显示「内容建设中」与计划阶段，绝不伪装完成。
    */
   function openKnowledge(conceptId = 'tool_calling', context = {}) {
-    if (context.from === 'lab' && context.step === 'experiment') setLearningRoute('labs',context.experimentId || 'exp-tool-calling-demo');
-    else setLearningRoute('knowledge',conceptId);
+    if(context.from==='execution')context={...context,runId:execApi?.currentRun?.()?.runId||context.runId};
+    // Before pushing the knowledge route, enrich the current history entry so
+    // browser Back can restore the exact Runtime/Execution inspection point.
+    if (context.from === 'runtime') setLearningRoute('runtime', '', context, { replace: true });
+    else if (context.from === 'execution') setLearningRoute('execution', '', context, { replace: true });
+    else if (context.from === 'comparison') {
+      setLearningRoute('compare', '', { comparison: context.comparison || {} }, { replace: true });
+    }
+    if (context.from === 'lab' && context.step === 'experiment') setLearningRoute('labs',context.experimentId || 'exp-tool-calling-demo',context);
+    else setLearningRoute('knowledge',conceptId,context);
     const concept = getConcept(conceptId);
 
     /** 返回上一处：按来源回到原上下文，绝不重置 M0.4 研究 Run */
@@ -1590,10 +1811,11 @@ export function createApp(root) {
           reason: `从 ${concept ? concept.cn : conceptId} 知识节点返回装配台 · 保持原有 Inspector 上下文（${context.selectedModuleId || '未选中模块'}）`,
         });
       } else if (context.from === 'execution') {
-        openExecution();
+        openExecution({ runId:context.runId,eventSequence: context.eventSequence });
       } else if (context.from === 'runtime') {
-        openRuntime();
+        openRuntime(context);
       } else if (context.from === 'comparison') {
+        if (context.comparison) Object.assign(comparisonSession, context.comparison);
         openComparison();
       } else if (context.from === 'atlas') {
         openAtlas(context.conceptId || conceptId);
@@ -1665,7 +1887,7 @@ export function createApp(root) {
   function openComparison(){
     setLearningRoute('compare');
     return openWorkspace('comparison',()=>createComparisonWorkspace({store:constructor,session:comparisonSession,has3D:!!scene?.ok,reducedMotion,
-      onBack:()=>openConstructorContext(),onKnowledge:id=>openKnowledge(id,{from:'comparison'}),onConfirm:requestConfirmation,
+      onBack:()=>openConstructorContext(),onKnowledge:id=>openKnowledge(id,{from:'comparison',comparison:{side:comparisonSession.side,tab:comparisonSession.tab,events:{...(comparisonSession.events||{})}}}),onConfirm:requestConfirmation,
       onEdit:(configuration,confirmed)=>{
         const edit=()=>{constructor.actions.editSnapshot(configuration,true);confirmed();openConstructorContext();showToast('正在编辑实验副本；完成后点击 A/B 对比自动带回该侧。');};
         if(constructor.isDirty())requestConfirmation('编辑实验配置副本','当前装配草稿有未保存修改。请先保存，或确认用实验副本替换草稿；已保存配置和历史实验保留。',edit);else edit();
@@ -1674,23 +1896,36 @@ export function createApp(root) {
       onFocus:focus=>{applyExecutionFocus(focus);scene?.bay?.setPlaybackPaused(!!focus?.paused);},
     }));
   }
-  function openRuntime() {
-    setLearningRoute('runtime');
+  function openRuntime(context = {}) {
+    Object.assign(runtimeSession, context || {});
+    setLearningRoute('runtime', '', {
+      runId: runtimeSession.runId || null,
+      stepId: runtimeSession.stepId || runtimeSession.selectedStep || null,
+      eventSequence: runtimeSession.eventSequence ?? runtimeSession.selectedEvent ?? null,
+    });
     return openWorkspace('runtime',()=>createRuntimeWorkspace({
-      getConfiguration:()=>constructor.getConfiguration(),has3D:!!scene?.ok,reducedMotion,
+      getConfiguration:()=>constructor.getConfiguration(),session:runtimeSession,has3D:!!scene?.ok,reducedMotion,
       onBackToConstructor:()=>openConstructorContext(),onBackToHub:()=>goHub(),
       onLegacyExecution:()=>openExecution(),onOpenKnowledge:(id,context)=>openKnowledge(id,context),onConfirm:requestConfirmation,
       onMountCanvas:stage=>parkCanvas(stage),onReleaseCanvas:()=>unparkCanvas(),onFocusScene:focus=>applyExecutionFocus(focus),
+      onPresentation:presentation=>{
+        applyRuntimePresentation(presentation);
+        if (presentation?.run) setLearningRoute('runtime', '', {
+          runId: presentation.run.runId,
+          stepId: presentation.event?.stepId || runtimeSession.stepId || null,
+          eventSequence: presentation.event?.sequence ?? runtimeSession.eventSequence ?? null,
+        });
+      },
     }));
   }
-  function openExecution({ autorun = false, view = null } = {}) {
-    // 执行与构建器属于既有工作流，离开学习区后刷新回中央核心。
-    setLearningRoute('hub');
+  function openExecution({ autorun = false, view = null, eventSequence = null,runId = null } = {}) {
+    setLearningRoute(view === 'report' ? 'report' : 'execution', '', {runId,eventSequence});
     const api = openWorkspace('execution', () => {
       execApi = createExecutionWorkspace({
         getConfigSnapshot: constructorSnapshot,
         has3D: !!scene?.ok,
         reducedMotion,
+        initialRunId:runId,
         onLog: (kind, message, level) => log(kind, message, level),
         onBackToHub: () => goHub(),
         onBackToConstructor: () => openConstructorContext({ selectedModuleId: constructor.getState().ui.selectedModuleId }),
@@ -1700,9 +1935,14 @@ export function createApp(root) {
         onMountCanvas: () => parkCanvas(execApi?.coreStage?.() || null),
         onReleaseCanvas: () => unparkCanvas(),
         onFocusScene: (focus) => applyExecutionFocus(focus),
+        onViewChange: (mode) => setLearningRoute(mode === 'report' ? 'report' : 'execution', '', {
+          runId:execApi?.currentRun?.()?.runId||null,
+          eventSequence: execApi?.currentEvent?.()?.sequence ?? null,
+        }),
       });
       return execApi;
     });
+    if (Number.isInteger(eventSequence)) api.seek?.(eventSequence);
     if (view) api.setRunView?.(view);
     log('导航', '执行台已打开：使用装配台当前配置快照在浏览器本地运行教学模拟（无真实检索、无在线 AI）', 'signal');
     if (autorun) api.newRun();
@@ -1712,6 +1952,24 @@ export function createApp(root) {
   /* ----------------------- 键盘与事件 ----------------------- */
   function onKey(e) {
     if (document.querySelector('dialog[open]')) return;
+    if (confirmLayer.dataset.open==='true' && e.key!=='Escape') return;
+    const drawer = currentDrawer();
+    if (drawer && e.key === 'Tab') {
+      const items = [...drawer.el.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+        .filter(node => !node.hidden && getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden');
+      if (!items.length) {
+        e.preventDefault();
+        drawer.el.focus?.({ preventScroll: true });
+        return;
+      }
+      const first = items[0];
+      const last = items.at(-1);
+      if (!drawer.el.contains(document.activeElement) || (e.shiftKey && document.activeElement === first) || (!e.shiftKey && document.activeElement === last)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus({ preventScroll: true });
+      }
+      return;
+    }
     if (e.key === 'Escape') {
       if (confirmLayer.dataset.open === 'true') {
         closeConfirm();
@@ -1752,10 +2010,12 @@ export function createApp(root) {
       if (cancelTransientAssembly()) return;
       if (state.dockOpen) {
         setState({ dockOpen: false }, 'esc');
-        scrim.dataset.open = 'false';
+        applyShellState();
+        topbar.focusNavigation?.();
         return;
       }
       if(window.innerWidth<=1100&&state.inspectOpen){toggleInspect();return;}
+      if(window.innerWidth<768&&state.statusOpen){toggleStatus();return;}
       if (state.selection) selectPart(null);
       return;
     }
@@ -1802,29 +2062,37 @@ export function createApp(root) {
   window.addEventListener('keydown', onKey);
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
+  let sceneCanvas = null;
+  let onControlStart = null;
+  let onCanvasDown = null;
+  let onCanvasUp = null;
   if (scene?.ok) {
-    scene.renderer.domElement.addEventListener('pointerup', onPointerUp);
-    scene.rig.controls.addEventListener('start', () => {
+    sceneCanvas = scene.renderer.domElement;
+    sceneCanvas.addEventListener('pointerup', onPointerUp);
+    onControlStart = () => {
       if (!bootFinished) skipIntro('用户拖拽');
-    });
-    const canvas = scene.renderer.domElement;
+    };
+    scene.rig.controls.addEventListener('start', onControlStart);
     let downX = 0;
     let downY = 0;
-    canvas.addEventListener('pointerdown', (e) => {
+    onCanvasDown = (e) => {
       downX = e.clientX;
       downY = e.clientY;
-    });
-    canvas.addEventListener('pointerup', (e) => {
+    };
+    onCanvasUp = (e) => {
       scene.rig.moved = Math.hypot(e.clientX - downX, e.clientY - downY) > 6;
-    });
+    };
+    sceneCanvas.addEventListener('pointerdown', onCanvasDown);
+    sceneCanvas.addEventListener('pointerup', onCanvasUp);
   }
 
-  document.addEventListener('visibilitychange', () => {
+  const onVisibilityChange = () => {
     if (!document.hidden) last = performance.now();
-  });
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   /* ----------------------- 启动 ----------------------- */
-  onLog((entry) => status.append(entry));
+  const unsubscribeLog = onLog((entry) => status.append(entry));
   status.renderAll(logEntries);
 
   BOOT_LOG.forEach(([kind, message]) => log(kind, message, kind === 'SIM' ? 'attention' : 'info'));
@@ -1855,7 +2123,7 @@ export function createApp(root) {
 
   applyShellState();
   dock.setMode('system');
-  topbar.setPressed({ dock: !prefs.dockRail, inspect: state.inspectOpen, status: state.statusOpen });
+  topbar.setPressed({ dock: window.innerWidth < 768 ? state.dockOpen : !prefs.dockRail, inspect: state.inspectOpen, status: state.statusOpen });
   stage.setStatusLabel(state.statusOpen);
 
   // 装配状态初始化：先同步已恢复的配置，再渲染检视面板，避免出现“面板与配置不一致”
@@ -1876,7 +2144,10 @@ export function createApp(root) {
     log('配置', '构建器本地配置为空：可从左侧能力架装配 Announcement Search 或 Document Reader', 'info');
   }
 
-  if (introSeen && !forceIntro) {
+  let introFocusTimer = 0;
+  if(reducedMotion){
+    finishIntro('REDUCED MOTION · 静态进入');
+  } else if (introSeen && !forceIntro) {
     bootFinished = true;
     boot.setDone();
     shell.dataset.boot = 'false';
@@ -1891,7 +2162,7 @@ export function createApp(root) {
     log('开场', '检测到本地首访标记：本次直接进入控制台（顶栏可重播开场）', 'info');
   } else {
     startIntro();
-    setTimeout(() => boot.focusSkip(), 400);
+    introFocusTimer = setTimeout(() => boot.focusSkip(), 400);
   }
 
   raf = requestAnimationFrame(loop);
@@ -2131,13 +2402,38 @@ export function createApp(root) {
       return true;
     },
     dispose() {
+      if (disposed) return;
+      disposed = true;
+      unsubscribeConstructor();
+      unsubscribeState();
+      unsubscribeLog();
+      if (confirmLayer.dataset.open === 'true') {
+        confirmReturnFocus = null;
+        closeConfirm();
+      }
+      closeWorkspace({ restoreFocus: false });
       window.removeEventListener('hashchange', followLearningRoute);
+      window.removeEventListener('beforeunload', onBeforeUnload);
       cancelAnimationFrame(raf);
+      for (const frame of pendingFrames) cancelAnimationFrame(frame);
+      pendingFrames.clear();
+      clearTimeout(toastTimer);
+      clearTimeout(introFocusTimer);
       endDragInteraction();
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (sceneCanvas) {
+        sceneCanvas.removeEventListener('pointerup', onPointerUp);
+        sceneCanvas.removeEventListener('pointerdown', onCanvasDown);
+        sceneCanvas.removeEventListener('pointerup', onCanvasUp);
+        scene.rig.controls.removeEventListener('start', onControlStart);
+      }
       scene?.dispose?.();
+      for (const el of [shell, topbar.el, scrim, toast, boot.el, dragLayer.el, confirmLayer]) el.remove();
+      root.classList.remove('is-ready');
+      if (window.__AZ === api) delete window.__AZ;
     },
   };
   window.__AZ = api;

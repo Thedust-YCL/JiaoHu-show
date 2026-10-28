@@ -64,6 +64,26 @@ function detectCapability() {
   return { reduced, webgl, lowPower, coarse };
 }
 
+/** Frame-rate diagnostics use real elapsed time, not the capped animation step. */
+export function createFrameMeter() {
+  let elapsed = 0;
+  let frames = 0;
+  let fps = 0;
+  return {
+    recordFrame(seconds) {
+      if (!Number.isFinite(seconds) || seconds <= 0) return;
+      elapsed += seconds;
+      frames++;
+      if (elapsed + Number.EPSILON >= 0.5) {
+        fps = frames / elapsed;
+        elapsed = 0;
+        frames = 0;
+      }
+    },
+    getFps: () => fps,
+  };
+}
+
 export function createScene({ stageEl, canvasHost, onLog, onContextLost }) {
   const caps = detectCapability();
 
@@ -143,6 +163,9 @@ export function createScene({ stageEl, canvasHost, onLog, onContextLost }) {
     composer.addPass(gradePass);
   } catch (error) {
     onLog?.('渲染', `后期通道不可用，已回退直接渲染：${error.message}`, 'attention');
+    gradePass?.dispose();
+    bloomPass?.dispose();
+    composer?.dispose();
     composer = null;
     gradePass = null;
     bloomPass = null;
@@ -205,21 +228,16 @@ export function createScene({ stageEl, canvasHost, onLog, onContextLost }) {
   }
 
   /* ---------------- 上下文丢失兜底 ---------------- */
-  canvas.addEventListener(
-    'webglcontextlost',
-    (e) => {
-      e.preventDefault();
-      onLog?.('GL', 'WebGL 上下文丢失，已切换到 2D/SVG 兜底视图', 'error');
-      onContextLost?.();
-    },
-    false
-  );
+  const handleContextLost = (e) => {
+    e.preventDefault();
+    onLog?.('GL', 'WebGL 上下文丢失，已切换到 2D/SVG 兜底视图', 'error');
+    onContextLost?.();
+  };
+  canvas.addEventListener('webglcontextlost', handleContextLost, false);
 
   /* ---------------- 每帧 ---------------- */
   const visual = { selection: null, lit: 0, activity: 0.35, idle: false, reduced: caps.reduced, assembly: [1, 1, 1] };
-  let fpsAcc = 0;
-  let fpsFrames = 0;
-  let fps = 0;
+  const frameMeter = createFrameMeter();
   let firstFrameDone = false;
   const lastStats = { calls: 0, triangles: 0 };
 
@@ -254,7 +272,7 @@ export function createScene({ stageEl, canvasHost, onLog, onContextLost }) {
     });
   }
 
-  function tick(dt) {
+  function tick(dt, elapsed = dt) {
     // 页面不可见时冻结更新，避免无意义渲染
     if (document.hidden) return;
 
@@ -276,13 +294,7 @@ export function createScene({ stageEl, canvasHost, onLog, onContextLost }) {
     lastStats.triangles = renderer.info.render.triangles;
 
     // 真实性能读数
-    fpsAcc += dt;
-    fpsFrames++;
-    if (fpsAcc >= 0.5) {
-      fps = fpsFrames / fpsAcc;
-      fpsAcc = 0;
-      fpsFrames = 0;
-    }
+    frameMeter.recordFrame(elapsed);
     if (!firstFrameDone) {
       firstFrameDone = true;
       onLog?.('GL', `首帧渲染完成 · ${renderer.getContext().getParameter(renderer.getContext().VERSION)}`, 'signal');
@@ -308,14 +320,14 @@ export function createScene({ stageEl, canvasHost, onLog, onContextLost }) {
     pickAt,
     pickPortAt,
     isInsideStage,
-    getFps: () => fps,
+    getFps: () => frameMeter.getFps(),
     getStats: () => ({
       calls: lastStats.calls,
       triangles: lastStats.triangles,
       programs: renderer.info.programs?.length ?? 0,
       geometries: renderer.info.memory.geometries,
       textures: renderer.info.memory.textures,
-      fps,
+      fps: frameMeter.getFps(),
     }),
     dispose() {
       rig.controls.dispose();
@@ -330,8 +342,12 @@ export function createScene({ stageEl, canvasHost, onLog, onContextLost }) {
           m.dispose();
         });
       });
+      gradePass?.dispose();
+      bloomPass?.dispose();
       composer?.dispose?.();
       renderer.dispose();
+      canvas.removeEventListener('webglcontextlost', handleContextLost, false);
+      renderer.forceContextLoss();
       canvas.remove();
     },
   };

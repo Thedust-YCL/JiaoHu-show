@@ -84,7 +84,7 @@ export function createTimeline({ reduced = false } = {}) {
     const camera = new THREE.Vector3().copy(HUB_POS);
     const target = new THREE.Vector3(0, 0, 0);
 
-    if (!t.finished) {
+    if (!t.finished && !reduced) {
       let active = SHOTS[0];
       for (const s of SHOTS) if (time >= s.start) active = s;
       const span = active.end - active.start || 1;

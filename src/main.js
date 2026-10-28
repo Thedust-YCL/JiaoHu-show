@@ -7,16 +7,17 @@ import { createApp } from './app.js';
 function boot() {
   const root = document.getElementById('app');
   if (!root) throw new Error('#app 容器缺失');
-  root.removeAttribute('aria-busy');
   try {
+    root.replaceChildren();
     createApp(root);
+    root.removeAttribute('aria-busy');
   } catch (error) {
-    root.innerHTML = `
-      <div class="noscript" style="padding:48px">
-        <h1>AGENT / ZERO</h1>
-        <p>初始化失败：${String(error && error.message ? error.message : error)}</p>
-        <p style="color:var(--text-3)">本页面为纯前端静态演示，不依赖任何后端服务；请刷新重试。</p>
-      </div>`;
+    root.removeAttribute('aria-busy');
+    const box=document.createElement('section');box.className='noscript';box.setAttribute('role','alert');
+    const title=document.createElement('h1');title.textContent='AGENT / ZERO';
+    const detail=document.createElement('p');detail.textContent=`初始化失败：${String(error && error.message ? error.message : error)}`;
+    const retry=document.createElement('button');retry.className='btn btn--primary';retry.textContent='重新载入';retry.onclick=()=>location.reload();
+    box.append(title,detail,retry);root.replaceChildren(box);
     throw error;
   }
 }

@@ -38,7 +38,7 @@ function svgEl(tag, attrs = {}) {
   return el;
 }
 
-export function createAtlasGraph({ onSelectConcept, onOpenConcept, onSelectEdge, reducedMotion = false } = {}) {
+export function createAtlasGraph({ onSelectConcept, onOpenConcept, onSelectEdge, onViewChange, reducedMotion = false } = {}) {
   const root = document.createElement('div');
   root.className = 'atlas-graph';
 
@@ -179,6 +179,7 @@ export function createAtlasGraph({ onSelectConcept, onOpenConcept, onSelectEdge,
   function applyTransform() {
     viewport.setAttribute('transform', `translate(${transform.x.toFixed(2)},${transform.y.toFixed(2)}) scale(${transform.k.toFixed(4)})`);
     root.dataset.density = transform.k < 1.3 ? 'overview' : 'detail';
+    onViewChange?.({ ...transform });
   }
 
   function clampTransform() {
@@ -375,6 +376,16 @@ export function createAtlasGraph({ onSelectConcept, onOpenConcept, onSelectEdge,
     resetView,
     fitView,
     zoomBy,
+    getViewState: () => ({ ...transform }),
+    restoreViewState(state) {
+      if (!state || typeof state !== 'object') return false;
+      const k = Number(state.k);
+      const x = Number(state.x);
+      const y = Number(state.y);
+      if (![k, x, y].every(Number.isFinite)) return false;
+      setTransform({ k, x, y });
+      return true;
+    },
     setFilter(nodes, edges) {
       visibleNodes = new Set(nodes.map(n => n.id));
       visibleEdges = new Set(edges.map(e => e.id));

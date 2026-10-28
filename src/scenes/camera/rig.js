@@ -7,7 +7,7 @@
  * ------------------------------------------------------------------
  */
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OrbitControls } from '../vendor/OrbitControls.js';
 import { GEOMETRY } from '../../data/content.js';
 
 export function createRig(canvas, camera, target, { reduced = false } = {}) {
